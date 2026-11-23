@@ -109,7 +109,7 @@ design:                                 # inputs of calc/power_budget.py: each {
     loads:                              # all at the cell (rail: cell); each recomputed by calc/tree_power.py
       nrf: {ua: 2.143, rail: cell, source: "calc/tree_power.py: nRF54L15 System ON idle GRTC + LFXO 1.5 uA at 3 V (PS HTML summary, UNVERIFIED) x 3.0 V / (3.0 V x 0.70)"}
       tps63900: {ua: 0.075, ua_max: 1.0, rail: cell, source: "TPS63900 SLVSET3D 6.5 Iq into VIN typ 75 nA, max 1 uA"}
-      divider: {ua: 1.5, ua_max: 1.53, rail: cell, source: "R40 + R41 = 1 M + 1 M unswitched across the cell: 3.0 V / 2 Mohm (calc/tree_power.py); a switched divider (VBAT_DIV_EN, P2.02) removes it"}
+      divider: {ua: 0.682, ua_max: 0.696, rail: cell, source: "R40 + R41 = 2.2 M + 2.2 M (C5140754) unswitched across the cell: 3.0 V / 4.4 Mohm (calc/tree_power.py, D21); a switched divider (VBAT_DIV_EN, P2.02) would remove it"}
 
 tree_power:                             # inputs of calc/tree_power.py; each {value, source}
   supply:
@@ -180,4 +180,4 @@ tree_power:                             # inputs of calc/tree_power.py; each {va
     nrf_ua: {value: 1.5, source: "nRF54L15 System ON idle, GRTC + LFXO, 64 kB RAM retained, 3 V DC/DC (PS HTML summary, UNVERIFIED); 128 kB would be 1.9 uA"}
     tps_iq_ua: {value: 0.075, source: "TPS63900 6.5 typ"}
     tps_iq_max_ua: {value: 1.0, source: "TPS63900 6.5 max"}
-    divider_ohm: {value: 2000000, source: "R40 + R41 (ARCHITECTURE.md VBAT_SENSE 1M/1M)"}
+    divider_ohm: {value: 4400000, source: "R40 + R41 = 2.2 M + 2.2 M (D21, C5140754)"}
