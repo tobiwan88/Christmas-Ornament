@@ -7,7 +7,8 @@ Circuit (gen/tree_a.py NETS): pouch J2.1 = BAT -> Q1 SI2301CDS drain; Q1 source 
 Rows (OK / WARN / FAIL, numbers printed), ends with `tree_charge_path: OK|FAILED`, exit 1 on FAIL:
   1  charge current direction through Q1 and gate drive at the lowest charging VIN
   2  Q1 drop and dissipation at 100 mA and at IREG max; cell shortfall at the end of charge (termination current)
-  3  reversed pouch: no USB (Q1 off, body diode reverse), USB present (Q1 linear, VIN clamps near VGS(th))
+  3  reversed pouch: no USB (Q1 off, body diode reverse), USB present (Q1 linear, VIN clamps near VGS at 12.5 mA: Q1 and U3
+     dissipation), and the state after the pack protection cuts off (WARN, pack limits UNVERIFIED)
   4  no cell, USB present: U3 output feeds VIN; C31 on VBAT; VREG max vs TPS63900 VI range
   5  VBAT_SENSE divider from bom.csv: source impedance, filter time constant, sleep current; stale board.yaml input flagged
 Inputs: hardware/tree-a/board.yaml `tree_power` (fet, charger, sleep), cards parts/SI2301CDS.yaml, MCP73831T-2ACI-OT.yaml,
@@ -26,6 +27,9 @@ import yaml
 
 HW = Path(__file__).resolve().parent.parent
 CHARGE_TEST_A = 0.100            # job: drop at 100 mA (MCP73831 IREG typ at PROG 10 k)
+VGS_AT_IPRE_EST = 1.2            # V, EST: |VGS| of Q1 at 12.5 mA (reversed pouch, precondition current). SI2301CDS page 3 transfer
+                                 # characteristics give the 25 C curve about 0.85 V at 12.5 mA; the card threshold maximum is 1.0 V at
+                                 # 250 uA: 1.0 V + about 0.2 V of curve rise is taken as the pessimistic value. Graph read, UNVERIFIED.
 
 
 def card(board: Path, name: str) -> dict:
@@ -103,13 +107,26 @@ def rows(board: Path, bom: dict | None = None) -> list:
                 f"BAT = -{cell_max} V, VIN = 0: VGS = 0 (off), body diode (anode = drain) reverse biased, VDS -{cell_max} V "
                 f"vs -{vds_max} V; U3, C31, U2 and the divider see 0 V"))
     vin_clamp = vth_min, vth_max
-    p = (cell_max + vth_max) * ipre
-    out.append(("OK" if vin_clamp[0] > 0 and cell_max + vth_max <= vds_max and p * rth <= 40 else "WARN",
+    vbus_max = v("charger", "vbus_max_v")
+    p = (cell_max + vth_max) * ipre                       # at VGS = VGS(th) max (the 250 uA test point of the card)
+    vds_pre = cell_max + VGS_AT_IPRE_EST                  # VGS at the precondition current: above the 250 uA threshold
+    p_q1 = vds_pre * ipre
+    p_u3 = (vbus_max - VGS_AT_IPRE_EST) * ipre            # U3 drops VDD - VBAT (VBAT = VIN = VGS of the conducting Q1)
+    rth_u3 = v("charger", "rth_ja_c_per_w")[1]
+    out.append(("OK" if vin_clamp[0] > 0 and vds_pre <= vds_max and p_q1 * rth <= 40 and p_u3 * rth_u3 <= 40 else "WARN",
                 "reversed pouch, USB present",
-                f"U3 output pulls VIN up, Q1 turns on and holds VIN near |VGS(th)| {vin_clamp[0]}-{vin_clamp[1]} V (>= 0, "
-                f"U3 VBAT abs min -0.3 V OK); U3 sees VBAT < VPTH: precondition {ipre * 1000:.1f} mA max through Q1 at VDS "
-                f"{cell_max + vth_max:.1f} V = {p * 1000:.0f} mW, +{p * rth:.0f} C ({rth} C/W); the pouch is discharged at that "
-                f"current until its protection cuts off (no damage to U3; reversed-cell drain on the pouch)"))
+                f"U3 output pulls VIN up, Q1 turns on and holds VIN near |VGS| {VGS_AT_IPRE_EST} V at {ipre * 1000:.1f} mA (EST: "
+                f"VGS(th) {vin_clamp[0]}-{vin_clamp[1]} V is the 250 uA point; U3 VBAT abs min -0.3 V OK); U3 sees VBAT < VPTH: "
+                f"precondition {ipre * 1000:.1f} mA max through Q1 at VDS {vds_pre:.1f} V = {p_q1 * 1000:.0f} mW (VGS {VGS_AT_IPRE_EST} V; "
+                f"{p * 1000:.0f} mW at VGS(th) max 1.0 V), +{p_q1 * rth:.0f} C ({rth} C/W); U3 dissipates ({vbus_max} - "
+                f"{VGS_AT_IPRE_EST}) V x {ipre * 1000:.1f} mA = {p_u3 * 1000:.0f} mW, +{p_u3 * rth_u3:.0f} C ({rth_u3} C/W); the pouch "
+                f"is discharged at that current until its protection cuts off (no damage to U3; reversed-cell drain on the pouch)"))
+    out.append(("WARN", "reversed pouch, USB present, after the pack protection has cut off",
+                f"the open protection removes the load: U3 pulls VIN and BAT up to VREG ({mcp['vreg_v']['value']['min']}-{cell_max} V, "
+                f"Q1 fully on, U2 starts) and the protection switches see VIN plus the reversed cell voltage in series, up to "
+                f"{cell_max + cell_max:.1f} V; the abuse limits of the pack protection (overvoltage / reverse behaviour) are not in any "
+                f"document read: UNVERIFIED. Documentation and a meter polarity check before the first plug-in (ORDER.md 11a, D26); "
+                f"hardware protection belongs to the variant B hardening with DS-B1"))
     # 4 no cell
     cout = mcp["cout_min_uf"]["value"]
     vi_max = tps["vin_range_v"]["value"][1]

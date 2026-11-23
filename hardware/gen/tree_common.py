@@ -27,7 +27,8 @@ LED_PAD = {"R": "1", "G": "2", "A": "3", "B": "4"}
 
 # ---------------------------------------------------------------- LED matrix (R4.1, D9)
 # Cyclic pattern: LED with anode on line a has colour c on line ((a - 1 + OFFSETS[board][c]) mod 8) + 1.
-# Board A offsets are the negatives (mod 8) of board B's: D(n+8) mirrors D(n). Offset 4 is unused: line a and line a+4
+# Board A offsets are the negatives (mod 8) of board B's; D(n+8) shares anode line n with D(n). That is a colour-to-line assignment,
+# not a position mirror (D14: the two top views coincide, no coordinate mirror). Offset 4 is unused: line a and line a+4
 # never form a die (no firmware slot drives that pair). Red offsets 2 and 6: no red+red sneak chain spans a drivable
 # line pair (2+2 = 6+6 = 4 unused, 2+6 = 0). Chosen by `led_matrix.py --search` (one of 4 equal optima).
 OFFSETS = {"B": {"R": 2, "G": 3, "B": 7}, "A": {"R": 6, "G": 5, "B": 1}}
