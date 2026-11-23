@@ -1,0 +1,11 @@
+hardware/out/
+.privacy-patterns
+*.kicad_prl
+*-backups/
+__pycache__/
+CLAUDE.local.md
+.DS_Store
+
+# vendor datasheets and conversions: local only (copyright); the datasheet cards in parts/ carry the facts and URLs
+hardware/*/datasheets/*
+!hardware/*/datasheets/README.md
