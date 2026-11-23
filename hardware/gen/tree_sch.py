@@ -71,14 +71,18 @@ class Draw(Sheet):
         rot = (GND_ROT if net == "GND" else RAIL_ROT)[d]
         self.power(net, x, y, lib=POWER_LIB.get(net, "power:VCC"), rot=rot)
 
+    FLAG_VALUE_AT = {0: (0, -3.6, "center"), 180: (1.6, 1.4, "left"), 90: (-4.0, -0.6, "right"), 270: (4.0, -0.6, "left")}
+
     def pflag(self, x, y, rot=0):
-        """PWR_FLAG with its pin at (x, y) (cells): the net is supplied from outside the sheet's power pins (cell, USB)."""
+        """PWR_FLAG with its pin at (x, y) (cells): the net is supplied from outside the sheet's power pins (cell, USB).
+        Its value 'PWR_FLAG' is shown so the diamond does not read as an orphaned part (review RR-B)."""
         Draw.flags += 1
         ref = f"#FLG{Draw.flags:02d}"
         self.sch.components.add("power:PWR_FLAG", ref, "PWR_FLAG", (schkit.mm(x), schkit.mm(y)), rotation=rot)
         self.refs.append(ref)
+        self.rots[ref] = rot
         self.pins.add((schkit.mm(x), schkit.mm(y)))
-        self.tags[ref] = {"Reference": "hide", "Value": "hide"}
+        self.tags[ref] = {"Reference": "hide", "Value": self.FLAG_VALUE_AT[rot]}
 
     def nc(self, ref, pins):
         self.no_connect(ref, [str(p) for p in pins])

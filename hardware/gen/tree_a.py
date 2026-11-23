@@ -122,7 +122,7 @@ for _n, _net in enumerate(tc.LINE_NETS, start=1):
     P(tc.LINE_RESISTOR[_net], "Device:R", "22R", R0402, "C25092", "Basic", "22R 1% (0402)", f"line resistor {_net} (D13)")
 for _ref, _d in tc.LED_MATRIX.items():
     if _d["board"] == "A":
-        P(_ref, "tree:LED_RGB_CA_XL1010", "XL-1010RGB", "tree:LED_XL-1010RGB-YG", "C965834", "Extended", "XL-1010RGB-YG (1010)",
+        P(_ref, "tree:LED_RGB_CA_XL1010", "XL-1010RGB-YG", "tree:LED_XL-1010RGB-YG", "C965834", "Extended", "XL-1010RGB-YG (1010)",
           "RGB LED, outer face (B.Cu)")
 P("J3", "Connector_Generic:Conn_02x04_Odd_Even", "2x4 F 8.5mm", "tree:PinSocket_2x04_SMD_HC-PM254-8.5H", "C22373945", "Extended",
   "HC-PM254-8.5H-2x4PS (SMD 2x4 2.54)", "female header to board B (D3)")
@@ -234,7 +234,7 @@ def power_sheet():
     s.rail("GND", 12, 33, 270)
     s.pflag(12, 32, rot=90)
     s.part("J2", 26, 30)
-    s.tag("J2", reference=(2.5, -1.0), value=(2.5, 1.5))
+    s.tag("J2", reference=(0.5, 8.4), value=(0.5, 10.6))
     s.wire(("J2", "1"), (22, 30), (22, 20))
     s.wire(("J2", "2"), (23, 31), (23, 33))
     s.rail("GND", 23, 33, 270)
@@ -318,14 +318,14 @@ def power_sheet():
 def charger_sheet():
     s = new("charger", "charger.kicad_sch", "Variant B: USB-C power input and MCP73831 Li-ion charger (DNP in order 1, D10)")
     s.part("J1", 16, 30)
-    s.tag("J1", reference=(-4.0, -15.5), value=(-4.0, -13.5))
+    s.tag("J1", reference=(-4.0, -19.0), value=(-4.0, -17.0))
     s.wire(("J1", "A9"), (26, 27), (44, 27), (54, 27), ("U3", "4"))
-    above(s, "VBUS", 22.5, 27)
     s.wire((26, 27), (26, 25))
-    s.pflag(26, 25)
+    s.rail("VBUS", 26, 25, 90)
+    s.pflag(26, 25, rot=180)                 # USB supplies VBUS (ERC power-flag on the rail symbol)
     s.part("R30", 34, 33.5)
     s.part("R31", 27, 34.5)
-    s.tag("R31", reference=(-1.5, 1.2), value=(-1.5, 3.4), just="right")
+    s.tag("R31", reference=(-2.6, 1.2), value=(-2.6, 3.4), just="right")
     s.wire(("J1", "A5"), ("R30", "1"))
     s.wire(("J1", "B5"), ("R31", "1"))
     above(s, "CC1", 28.5, 32)
@@ -346,7 +346,7 @@ def charger_sheet():
     s.tag("U3", reference=(-3.0, -11.5), value=(-3.0, -9.3))
     s.pwr("U3", "2", "GND")
     s.part("R32", 63, 32.5)
-    s.tag("R32", reference=(-1.5, -0.2), value=(-1.5, 2.0), just="right")
+    s.tag("R32", reference=(-2.6, -0.2), value=(-2.6, 2.0), just="right")
     s.wire(("U3", "5"), ("R32", "1"))
     above(s, "PROG", 63.3, 31)
     s.pwr("R32", "2", "GND")
@@ -374,14 +374,28 @@ def charger_sheet():
     return s
 
 
+DECOUPLING_PIN = {"C3": "47/48", "C10": "47/48", "C4": "36", "C8": "22", "C7": "10"}
+assert all(DECOUPLING_PIN[r].split("/")[0] in PARTS[r]["note"] for r in DECOUPLING_PIN), "decoupling pin vs PARTS note"
+
+
+def dnp_tags(s) -> None:
+    """Reference/value of not-fitted two-pin parts beside the DNP cross, not under it (review RR-B)."""
+    for ref in s.refs:
+        if ref in DNP_ORDER1 and ref not in s.tags and PARTS[ref]["sym"] in ("Device:R", "Device:C"):
+            if s.rots.get(ref, 0) in (90, 270):
+                s.tags[ref] = {"Reference": (0, -6.6, "center"), "Value": (0, -4.4, "center")}
+            else:
+                s.tags[ref] = {"Reference": (3.6, -1.3, "left"), "Value": (3.6, 1.3, "left")}
+
+
 # nRF54L15 symbol geometry (cells): origin (80, 58); left pins x = 73, right x = 87, top y = 39, bottom y = 77
-UX, UY = 80, 58
+UX, UY = 82, 58        # U1 two cells right of the block frames (review RR-B: frames clear of the U1 pins)
 
 
 def mcu_sheet():
-    s = new("mcu", "mcu.kicad_sch", "nRF54L15-QFAA (U1, BOM nRF54L10 per D2): Nordic reference config 1, crystals, SWD, SW1")
+    s = new("mcu", "mcu.kicad_sch", "U1 nRF54L10 (BOM, D2; symbol nRF54L15-QFAA, same pins): Nordic reference config 1, crystals, SWD, SW1")
     s.part("U1", UX, UY)
-    s.tag("U1", reference=(-17.0, -51.0), value=(-17.0, -48.5), just="right")
+    s.tag("U1", reference=(12.7, -51.0), value=(12.7, -48.5), just="left")
     for pin in ("48", "47", "36", "22", "10"):
         s.pwr("U1", pin, "VDD")
     for pin in ("44", "49"):
@@ -391,6 +405,7 @@ def mcu_sheet():
         s.part(ref, 50 + 5 * i, 30)
         s.pwr(ref, "1", "VDD")
         s.pwr(ref, "2", "GND")
+        s.text(50 + 5 * i - 1.4, 34.0, "pin " + DECOUPLING_PIN[ref], 1.0)
     # DC/DC: L1 DCC-DECD, C1, FB1 to DECA/DECRF, C2 C12 C5
     s.part("L1", 66, 43.5)
     s.wire(("U1", "46"), (66, 42))
@@ -441,11 +456,11 @@ def mcu_sheet():
     s.label("nRESET_TC", 63, 73, 180, kind="local")
     s.lab("TC1", "3", "nRESET_TC", 2, kind="local")
     # VSS_PA: net tie NT1 to GND at the exposed pad; C6 (rf sheet) grounds through it
-    s.part("NT1", 82, 81, rot=270)
+    s.part("NT1", UX, 81, rot=270)
     s.tags["NT1"] = {"Reference": (1.8, 0.6, "left"), "Value": "hide"}
-    s.wire(("U1", "32"), (82, 79), ("NT1", "1"))
-    s.wire((82, 79), (85, 79))
-    s.label("VSS_PA", 85, 79, 0, kind="hier")
+    s.wire(("U1", "32"), (UX, 79), ("NT1", "1"))
+    s.wire((UX, 79), (UX + 3, 79))
+    s.label("VSS_PA", UX + 3, 79, 0, kind="hier")
     s.pwr("NT1", "2", "GND")
     # right side: GPIOs from the pin plan
     shape = {"led": "output", "out": "output", "ain": "input", "in": "input"}
@@ -469,13 +484,13 @@ def mcu_sheet():
     s.pwr("SW1", "2", "GND")
     # frames and notes
     s.frame(44, 22, 73.5, 37.5, "VDD decoupling (reference config 1)")
-    s.text(45, 35.4, "C3 10uF + C10 100nF at VDD 47/48; C4 pin 36,\nC8 pin 22, C7 pin 10 (one each, at the pin).", 1.1)
+    s.text(45, 35.2, "C3 10uF + C10 100nF at VDD 47/48; C4 pin 36, C8 pin 22, C7 pin 10 (at the pin).", 1.0)
     s.frame(44, 37.5, 73.5, 57.5, "DC/DC and DEC pins")
     s.text(45, 39.7, "L1 4.7uH DCC(46)-DECD(45); C1 2.2uF on DECD; FB1 DECD -> DECA.\n"
                      "DECRF(33) tied to DECA(43): C2 2.2uF, C12 10nF, C5 2.2nF.", 1.0)
     s.frame(44, 57.5, 73.5, 84, "Crystals, SWD pads, reset")
     s.text(45, 76, "Pads only, outer face (DNL).\n1 VDD 2 SWDIO 3 nRESET\n4 SWDCLK 5 GND 6 SWO (P2.07).", 1.0)
-    s.text(91, 84, "No external load caps on X1 / X2 (internal INTCAP): firmware must set INTCAP from CL\n"
+    s.text(93, 84, "No external load caps on X1 / X2 (internal INTCAP): firmware must set INTCAP from CL\n"
                    "(X2 8 pF, X1 9 pF = the LFXO maximum of 6-9 pF: start-up test at 1.7-3.6 V, PARTS-REVIEW 7).\n"
                    "Unused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\n"
                    "VSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\n"
@@ -549,17 +564,20 @@ def leds_sheet():
         for pad, net in tc.led_pad_nets(ref).items():
             s.lab(ref, pad, net, 2, kind="local")
     s.part("J3", 112, 20)
-    s.tag("J3", reference=(1.27, -7.0, ), value=(1.27, -5.0), just="center")
+    s.tag("J3", reference=(1.27, -12.4), value=(1.27, -10.2), just="center")
     for p, net in tc.HEADER_J3.items():
         s.lab("J3", str(p), net, 3, kind="local")
+    s.text(107.9, 17.15, "pin 1 v", 1.0)
     s.frame(4, 12, 30, 46, "Line resistors (D13)")
     s.text(5, 41.5, "One 22R per line, GPIO side\n(LED_Ln_MCU) to line (LED_Ln).", 1.1)
-    s.frame(32, 12, 86, 50, "RGB LEDs D9-D16 (XL-1010RGB, common anode)")
+    s.frame(32, 12, 86, 50, "RGB LEDs D9-D16 (XL-1010RGB-YG, common anode)")
     s.text(33, 47, "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board A: R on a+6, G on a+5, B on a+1 (tree_common.LED_MATRIX).", 1.0)
     s.frame(92, 12, 130, 46, "J3 to board B (D3, D14)")
     pl = [f"{p}={n[4:]}" for p, n in sorted(tc.HEADER_J3.items())]
-    s.text(101, 28, f"J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: {', '.join(pl[:4])}\n{', '.join(pl[4:])}\nMates J4 on B by position\n"
-                    "(tree_common.mate_table).\nNo supply, no ground.", 1.0)
+    mates = ", ".join(f"J3.{a}-J4.{b}" for a, b, _, _ in tc.mate_table()[:4])
+    s.text(94, 28, f"J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: {', '.join(pl[:4])}\n{', '.join(pl[4:])}\n"
+                   f"Mirrored (J4 on B.Cu of board B): J3 pin n mates\nJ4 pin n+1 (n odd) / n-1 (n even): {mates}, ...\n"
+                   "(tree_common.mate_table). No supply, no ground.", 1.0)
     return s
 
 
@@ -567,51 +585,77 @@ SHEETS = [("power", "power.kicad_sch"), ("charger", "charger.kicad_sch"), ("mcu"
           ("leds", "leds.kicad_sch")]
 
 
+# root block diagram (cells); boxes in power-flow order charger -> power -> mcu, then rf and leds
+ROOT_ARROWS = [  # graphic power-path arrows: rails are power symbols on the sheets (no hierarchical label on a rail)
+    ((30, 19), (38, 19), "VIN (variant B: U3 VBAT)"),
+    ((64, 19), (74, 19), "VDD 3.0 / 3.5 V"),
+]
+
+
+def _arrow_items(seed: str) -> list:
+    out = []
+    for n, ((x1, y1), (x2, y2), _) in enumerate(ROOT_ARROWS):
+        mm = lambda v: round(v * 2.54, 2)  # noqa: E731
+        u = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{seed}/arrow/{n}/{k}")) for k in range(2)]
+        out.append(f'\t(polyline (pts (xy {mm(x1)} {mm(y1)}) (xy {mm(x2 - 0.6)} {mm(y2)})) '
+                   f'(stroke (width 0.6) (type solid) (color 200 0 0 1)) (fill (type none)) (uuid "{u[0]}"))')
+        out.append(f'\t(polyline (pts (xy {mm(x2 - 0.8)} {mm(y2 - 0.4)}) (xy {mm(x2)} {mm(y2)}) (xy {mm(x2 - 0.8)} {mm(y2 + 0.4)}) '
+                   f'(xy {mm(x2 - 0.8)} {mm(y2 - 0.4)})) (stroke (width 0.2) (type solid) (color 200 0 0 1)) '
+                   f'(fill (type color) (color 200 0 0 1)) (uuid "{u[1]}"))')
+    return out
+
+
 def build_root(sheet_uuids: dict) -> Path:
     led_pins = [("right", 52 + i, tc.MCU_NETS[n]) for i, n in enumerate(tc.LINE_NETS)]
     sheets = [
-        dict(name="power", file="power.kicad_sch", x=10, y=14, w=26, h=16, page="2",
-             pins=[("right", 22, "TPS_SEL"), ("right", 24, "VBAT_SENSE")], shapes={"TPS_SEL": "input", "VBAT_SENSE": "output"}),
-        dict(name="charger", file="charger.kicad_sch", x=10, y=44, w=26, h=16, page="3",
-             pins=[("right", 52, "VBUS_DET"), ("right", 54, "CHG_STAT")], shapes={"VBUS_DET": "output", "CHG_STAT": "output"},
+        dict(name="charger", file="charger.kicad_sch", x=6, y=16, w=24, h=14, page="3",
+             pins=[("bottom", 18, "VBUS_DET"), ("bottom", 14, "CHG_STAT")], shapes={"VBUS_DET": "output", "CHG_STAT": "output"},
              fill=(235, 235, 235)),
-        dict(name="mcu", file="mcu.kicad_sch", x=60, y=14, w=30, h=54, page="4",
+        dict(name="power", file="power.kicad_sch", x=38, y=16, w=26, h=14, page="2",
+             pins=[("right", 22, "TPS_SEL"), ("right", 24, "VBAT_SENSE")], shapes={"TPS_SEL": "input", "VBAT_SENSE": "output"}),
+        dict(name="mcu", file="mcu.kicad_sch", x=74, y=16, w=28, h=52, page="4",
              pins=[("left", 22, "TPS_SEL"), ("left", 24, "VBAT_SENSE"), ("left", 52, "VBUS_DET"), ("left", 54, "CHG_STAT"),
                    ("right", 22, "ANT_PA"), ("right", 24, "VSS_PA")] + led_pins,
              shapes={"VBUS_DET": "input", "CHG_STAT": "input", "TPS_SEL": "output", "VBAT_SENSE": "input", "ANT_PA": "output",
                      **{p[2]: "output" for p in led_pins}}),
-        dict(name="rf", file="rf.kicad_sch", x=114, y=14, w=26, h=16, page="5",
+        dict(name="rf", file="rf.kicad_sch", x=120, y=16, w=26, h=14, page="5",
              pins=[("left", 22, "ANT_PA"), ("left", 24, "VSS_PA")], shapes={"ANT_PA": "input"}),
-        dict(name="leds", file="leds.kicad_sch", x=114, y=44, w=26, h=24, page="6",
+        dict(name="leds", file="leds.kicad_sch", x=120, y=44, w=26, h=24, page="6",
              pins=[("left", 52 + i, tc.MCU_NETS[n]) for i, n in enumerate(tc.LINE_NETS)],
              shapes={tc.MCU_NETS[n]: "input" for n in tc.LINE_NETS}),
     ]
     for sh in sheets:
         sh["uuid"] = sheet_uuids[sh["name"]]
-    wires = [((36, 22), (60, 22)), ((36, 24), (60, 24)), ((36, 52), (60, 52)), ((36, 54), (60, 54)),
-             ((90, 22), (114, 22)), ((90, 24), (114, 24))] + [((90, 52 + i), (114, 52 + i)) for i in range(8)]
+    wires = [((64, 22), (74, 22)), ((64, 24), (74, 24)),
+             ((18, 30), (18, 52)), ((18, 52), (74, 52)), ((14, 30), (14, 54)), ((14, 54), (74, 54)),
+             ((102, 22), (120, 22)), ((102, 24), (120, 24))] + [((102, 52 + i), (120, 52 + i)) for i in range(8)]
+    dnp_b = ", ".join(sorted(VARB, key=ts._ref_key))
+    never = ", ".join(sorted((r for r, q in PARTS.items() if q["var"] == "DNP"), key=ts._ref_key))
+    dnl = ", ".join(sorted((r for r, q in PARTS.items() if q["var"] == "DNL"), key=ts._ref_key))
+    fit_a_only = ", ".join(sorted((r for r, q in PARTS.items() if q["var"] == "A"), key=ts._ref_key))
     texts = [
-        (10, 4, "#TREE-01 board A (tree-a): main board, 4 layers, inner face = parts, outer face = LEDs D9-D16, SW1, TC1"),
-        (10, 7.5, "Power flow: cell (BT1 2xAAA, variant A) or pouch (J2, variant B; charged by U3 from USB-C J1) -> BAT -> Q1 "
-                  "reverse-polarity P-FET -> VIN -> U2 TPS63900 -> VDD 3.0 V idle / 3.5 V lit (SEL = TPS_SEL from U1) -> U1 nRF54L15"),
-        (10, 9.5, "and the LED lines (GPIO -> R1-R8 -> J3 -> board B). Rails BAT, VDD, GND are power symbols on the sheets."),
-        (11, 16, "Cell BT1 (A) / pouch J2 (B)\n-> Q1 P-FET -> VIN\n-> U2 TPS63900 -> VDD\nVBAT_SENSE divider"),
-        (11, 46, "Variant B, DNP in order 1:\nUSB-C J1 -> U3 MCP73831\n-> BAT (charges the pouch)"),
-        (12, 34, "^ BAT rail (power symbol):\n  U3 charges the cell node"),
-        (37, 17, "VDD rail ->\n(power symbol)"),
-        (61, 30, "U1 nRF54L15 (BOM nRF54L10, D2)\nDC/DC, HFXO 32 MHz, LFXO 32.768 kHz\nSWD pads TC1, button SW1\n"
-                 "LED lines on P1 (GPIOTE scan)"),
-        (115, 16, "Nordic network L3-L5, C6, C9, C11\npi slot C50 / R50 / C51\nchip antenna ANT1"),
-        (115, 46, "R1-R8 22R, D9-D16,\nheader J3 to board B"),
-        (10, 72, "Variant A (order 1, D10): BT1 fitted; charger sheet (J1, J2, U3, R30-R32, R42, R44, C30, C31) DNP, R43/R45 fitted.\n"
-                 "Variant B: BT1 not fitted, charger parts fitted (bom-variant-b.csv). Holder and USB-C / JST / charger\n"
-                 "footprints overlap on the board on purpose (D15).\n"
-                 "Firmware: INTCAP for X1/X2 (no load caps), SEL high >= 1 ms before lighting and low before sleep,\n"
-                 "one die at a time from tree_common.slot_table(), all lines Hi-Z in sleep, read CHG_STAT/VBUS_DET at VDD 3.0 V."),
-        (10, 86, "RF: tuning values (C50, R50, C51) by VNA on the first board. U1 BOM line nRF54L10-QFAA-R7 C44800139 (D2).\n"
-                 "Mounting holes and the hanging hole are board-only footprints (layout generator)."),
+        (6, 4, "#TREE-01 board A (tree-a): main board, 4 layers, inner face = parts, outer face = LEDs D9-D16, SW1, TC1"),
+        (6, 7.5, "Power path (red arrows; the rails BAT, VIN, VDD are power symbols on the sheets): cell BT1 or pouch J2 -> BAT -> "
+                 "Q1 reverse-polarity P-FET -> VIN -> U2 TPS63900 -> VDD -> U1 nRF54L10."),
+        (6, 9.5, "Variant B adds USB-C J1 -> U3 MCP73831 -> VIN (charges the pouch through Q1). LED lines: GPIO -> R1-R8 -> J3 -> board B."),
+        (31, 17.2, ROOT_ARROWS[0][2].split(" (")[0]),
+        (65, 17.2, ROOT_ARROWS[1][2]),
+        (7, 18, "USB-C J1 -> U3 MCP73831\n-> VIN (variant B,\nDNP in A); R43/R45\nfitted on A and B"),
+        (39, 18, f"{variant_text('BT1')}\n{variant_text('J2')}\n(both on this sheet) -> BAT -> Q1 -> VIN\n-> U2 TPS63900 -> VDD; VBAT_SENSE"),
+        (75, 30, "U1 nRF54L10 (BOM, D2;\nsymbol nRF54L15-QFAA, same pins)\nDC/DC, HFXO 32 MHz, LFXO 32.768 kHz\n"
+                 "SWD pads TC1, SW1 + R10"),
+        (121, 18, "Nordic network L3-L5, C6, C9 (GND_C9 via NT2),\nC11; pi slot C50 / R50 / C51; ANT1"),
+        (121, 46, "R1-R8 22R, D9-D16 XL-1010RGB-YG,\nheader J3 to board B"),
+        (6, 72, f"Variant A (order 1, D10): {fit_a_only} fitted; DNP: {dnp_b}. Both variants: {never} DNP (tuning slots), "
+                f"{dnl} footprint only.\n"
+                f"Variant B: {fit_a_only} not placed, the DNP parts above fitted (bom-variant-b.csv). Holder and USB-C / JST / "
+                "charger footprints overlap on the board on purpose (D15).\n"
+                "Mounting holes and the hanging hole are board-only footprints (layout generator)."),
     ]
     path, _ = root_sheet(BOARD, "root", sheets, texts, wires, [], project=NAME, title="tree-a: block diagram")
+    txt = path.read_text()
+    txt = txt.replace("\t(sheet_instances", "\n".join(_arrow_items(NAME)) + "\n\t(sheet_instances", 1)
+    path.write_text(txt)
     return path
 
 
@@ -625,6 +669,7 @@ def main() -> int:
     warnings = []
     for n, f in SHEETS:
         s = builders[n]()
+        dnp_tags(s)
         warnings += s.warnings()
         files.append(s.save_dnp(BOARD, root_uuid, sheet_uuids[n], DNP_ORDER1))
     root = build_root(sheet_uuids)

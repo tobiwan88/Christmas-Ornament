@@ -12,42 +12,61 @@
 		(comment 1 "Sheet: root (block diagram)")
 	)
 	(lib_symbols)
-	(text "Power flow: cell (BT1 2xAAA, variant A) or pouch (J2, variant B; charged by U3 from USB-C J1) -> BAT -> Q1 reverse-polarity P-FET -> VIN -> U2 TPS63900 -> VDD 3.0 V idle / 3.5 V lit (SEL = TPS_SEL from U1) -> U1 nRF54L15"
-		(exclude_from_sim no)
-		(at 25.4 19.05 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-			)
-			(justify left top)
+	(polyline
+		(pts
+			(xy 185.93 47.24) (xy 187.96 48.26) (xy 185.93 49.28) (xy 185.93 47.24)
 		)
-		(uuid "05f9aef9-f908-53a1-b24c-880cb1cd2bd5")
-	)
-	(text "Variant B, DNP in order 1:\nUSB-C J1 -> U3 MCP73831\n-> BAT (charges the pouch)"
-		(exclude_from_sim no)
-		(at 27.94 116.84 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-			)
-			(justify left top)
+		(stroke
+			(width 0.2)
+			(type solid)
+			(color 200 0 0 1)
 		)
-		(uuid "0901e72e-e9f1-5cfe-afc3-4319f7d716fb")
+		(fill
+			(type color)
+			(color 200 0 0 1)
+		)
+		(uuid "2e5675cc-efa1-57cc-a716-4e7cb4e26cba")
 	)
-	(text "U1 nRF54L15 (BOM nRF54L10, D2)\nDC/DC, HFXO 32 MHz, LFXO 32.768 kHz\nSWD pads TC1, button SW1\nLED lines on P1 (GPIOTE scan)"
+	(polyline
+		(pts
+			(xy 94.49 47.24) (xy 96.52 48.26) (xy 94.49 49.28) (xy 94.49 47.24)
+		)
+		(stroke
+			(width 0.2)
+			(type solid)
+			(color 200 0 0 1)
+		)
+		(fill
+			(type color)
+			(color 200 0 0 1)
+		)
+		(uuid "8364e935-ae6a-5b48-891e-37157fb426cf")
+	)
+	(text "TREE-01 board A (tree-a): main board, 4 layers, inner face = parts, outer face = LEDs D9-D16, SW1, TC1"
 		(exclude_from_sim no)
-		(at 154.94 76.2 0)
+		(at 15.24 10.16 0)
 		(effects
 			(font
-				(size 1.5 1.5)
+				(size 2 2)
 			)
 			(justify left top)
 		)
 		(uuid "0f63147e-58c9-5c56-ac3e-3bfb899041ce")
 	)
-	(text "Variant A (order 1, D10): BT1 fitted; charger sheet (J1, J2, U3, R30-R32, R42, R44, C30, C31) DNP, R43/R45 fitted.\nVariant B: BT1 not fitted, charger parts fitted (bom-variant-b.csv). Holder and USB-C / JST / charger\nfootprints overlap on the board on purpose (D15).\nFirmware: INTCAP for X1/X2 (no load caps), SEL high >= 1 ms before lighting and low before sleep,\none die at a time from tree_common.slot_table(), all lines Hi-Z in sleep, read CHG_STAT/VBUS_DET at VDD 3.0 V."
+	(text "Variant A (order 1, D10): BT1 fitted; DNP: C30, C31, J1, J2, R30, R31, R32, R42, R44, U3. Both variants: C50, C51 DNP (tuning slots), TC1 footprint only.\nVariant B: BT1 not placed, the DNP parts above fitted (bom-variant-b.csv). Holder and USB-C / JST / charger footprints overlap on the board on purpose (D15).\nMounting holes and the hanging hole are board-only footprints (layout generator)."
 		(exclude_from_sim no)
-		(at 25.4 182.88 0)
+		(at 15.24 182.88 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "104bb958-9227-5bb2-8f97-317733a8e898")
+	)
+	(text "VIN"
+		(exclude_from_sim no)
+		(at 78.74 43.69 0)
 		(effects
 			(font
 				(size 1.5 1.5)
@@ -56,20 +75,31 @@
 		)
 		(uuid "30833fba-a85a-542f-85bb-1d0ae311d499")
 	)
-	(text "^ BAT rail (power symbol):\n  U3 charges the cell node"
+	(text "Nordic network L3-L5, C6, C9 (GND_C9 via NT2),\nC11; pi slot C50 / R50 / C51; ANT1"
 		(exclude_from_sim no)
-		(at 30.48 86.36 0)
+		(at 307.34 45.72 0)
 		(effects
 			(font
 				(size 1.5 1.5)
 			)
 			(justify left top)
 		)
-		(uuid "40e46bf3-45d8-5fb2-85cf-40e97302b03d")
+		(uuid "4d565a64-1001-5d67-bc63-26fd274c1910")
 	)
-	(text "R1-R8 22R, D9-D16,\nheader J3 to board B"
+	(text "U1 nRF54L10 (BOM, D2;\nsymbol nRF54L15-QFAA, same pins)\nDC/DC, HFXO 32 MHz, LFXO 32.768 kHz\nSWD pads TC1, SW1 + R10"
 		(exclude_from_sim no)
-		(at 292.1 116.84 0)
+		(at 190.5 76.2 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "4ec0b649-979b-5f6f-abb7-d5b1bd9869c4")
+	)
+	(text "Variant B adds USB-C J1 -> U3 MCP73831 -> VIN (charges the pouch through Q1). LED lines: GPIO -> R1-R8 -> J3 -> board B."
+		(exclude_from_sim no)
+		(at 15.24 24.13 0)
 		(effects
 			(font
 				(size 1.5 1.5)
@@ -78,31 +108,42 @@
 		)
 		(uuid "52483efa-c317-5f76-8a87-9f7d51d4dc56")
 	)
-	(text "TREE-01 board A (tree-a): main board, 4 layers, inner face = parts, outer face = LEDs D9-D16, SW1, TC1"
+	(text "USB-C J1 -> U3 MCP73831\n-> VIN (variant B,\nDNP in A); R43/R45\nfitted on A and B"
 		(exclude_from_sim no)
-		(at 25.4 10.16 0)
-		(effects
-			(font
-				(size 2 2)
-			)
-			(justify left top)
-		)
-		(uuid "5e083068-817e-5899-a4b0-b0b1abe7a2d6")
-	)
-	(text "Cell BT1 (A) / pouch J2 (B)\n-> Q1 P-FET -> VIN\n-> U2 TPS63900 -> VDD\nVBAT_SENSE divider"
-		(exclude_from_sim no)
-		(at 27.94 40.64 0)
+		(at 17.78 45.72 0)
 		(effects
 			(font
 				(size 1.5 1.5)
 			)
 			(justify left top)
 		)
-		(uuid "9493562c-6174-5e3c-b6c3-7a295a9ae9e3")
+		(uuid "591a1125-ca83-56f6-a2a4-fbd3f7a5d3bf")
 	)
-	(text "RF: tuning values (C50, R50, C51) by VNA on the first board. U1 BOM line nRF54L10-QFAA-R7 C44800139 (D2).\nMounting holes and the hanging hole are board-only footprints (layout generator)."
+	(text "R1-R8 22R, D9-D16 XL-1010RGB-YG,\nheader J3 to board B"
 		(exclude_from_sim no)
-		(at 25.4 218.44 0)
+		(at 307.34 116.84 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "7af10053-ed7b-5894-ba08-e9f9bfa23dba")
+	)
+	(text "BT1 2xAAA holder: fitted in A, not placed in B\nJ2 pouch: fitted in B, DNP in A\n(both on this sheet) -> BAT -> Q1 -> VIN\n-> U2 TPS63900 -> VDD; VBAT_SENSE"
+		(exclude_from_sim no)
+		(at 99.06 45.72 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "84f23216-0592-5547-a6c3-57bfeb14d5b3")
+	)
+	(text "VDD 3.0 / 3.5 V"
+		(exclude_from_sim no)
+		(at 165.1 43.69 0)
 		(effects
 			(font
 				(size 1.5 1.5)
@@ -111,20 +152,9 @@
 		)
 		(uuid "ab4b856d-964a-5f95-864c-d1dc61045aa4")
 	)
-	(text "VDD rail ->\n(power symbol)"
+	(text "Power path (red arrows; the rails BAT, VIN, VDD are power symbols on the sheets): cell BT1 or pouch J2 -> BAT -> Q1 reverse-polarity P-FET -> VIN -> U2 TPS63900 -> VDD -> U1 nRF54L10."
 		(exclude_from_sim no)
-		(at 93.98 43.18 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-			)
-			(justify left top)
-		)
-		(uuid "ad70e9a0-3765-51f3-8365-8c87558c2263")
-	)
-	(text "Nordic network L3-L5, C6, C9, C11\npi slot C50 / R50 / C51\nchip antenna ANT1"
-		(exclude_from_sim no)
-		(at 292.1 40.64 0)
+		(at 15.24 19.05 0)
 		(effects
 			(font
 				(size 1.5 1.5)
@@ -133,30 +163,59 @@
 		)
 		(uuid "c04bc8b0-8945-5edc-a22f-0fae7ab57063")
 	)
-	(text "and the LED lines (GPIO -> R1-R8 -> J3 -> board B). Rails BAT, VDD, GND are power symbols on the sheets."
-		(exclude_from_sim no)
-		(at 25.4 24.13 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-			)
-			(justify left top)
-		)
-		(uuid "e1737845-f05e-5c02-a230-bb3c065fb0cd")
-	)
 	(wire
 		(pts
-			(xy 91.44 60.96) (xy 152.4 60.96)
+			(xy 259.08 139.7) (xy 304.8 139.7)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "4fc3c308-cb46-537f-a33c-ace2668742dd")
+		(uuid "1664d02c-e580-53f7-9735-7e0aa3e4798e")
 	)
 	(wire
 		(pts
-			(xy 228.6 132.08) (xy 289.56 132.08)
+			(xy 259.08 142.24) (xy 304.8 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1e294a33-3a54-51ab-86fb-be341fe47bde")
+	)
+	(wire
+		(pts
+			(xy 259.08 147.32) (xy 304.8 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1f379ba7-d7b0-5a2b-88f0-0ddd6d6ac187")
+	)
+	(wire
+		(pts
+			(xy 259.08 149.86) (xy 304.8 149.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3b80c16b-28c0-5180-9a3e-b6d34e0735f0")
+	)
+	(wire
+		(pts
+			(xy 259.08 134.62) (xy 304.8 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "50e7d5f5-03d8-5d5d-b75d-4aed6303bd4c")
+	)
+	(wire
+		(pts
+			(xy 162.56 60.96) (xy 187.96 60.96)
 		)
 		(stroke
 			(width 0)
@@ -166,17 +225,7 @@
 	)
 	(wire
 		(pts
-			(xy 91.44 55.88) (xy 152.4 55.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5856158c-6031-5743-a428-8c6389fc429c")
-	)
-	(wire
-		(pts
-			(xy 228.6 134.62) (xy 289.56 134.62)
+			(xy 45.72 76.2) (xy 45.72 132.08)
 		)
 		(stroke
 			(width 0)
@@ -186,17 +235,17 @@
 	)
 	(wire
 		(pts
-			(xy 228.6 55.88) (xy 289.56 55.88)
+			(xy 259.08 137.16) (xy 304.8 137.16)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "67ba69dd-19ab-5171-b4fd-7050edc32523")
+		(uuid "671ee38e-d482-5bc0-b635-12e2ec0bd06b")
 	)
 	(wire
 		(pts
-			(xy 228.6 147.32) (xy 289.56 147.32)
+			(xy 259.08 60.96) (xy 304.8 60.96)
 		)
 		(stroke
 			(width 0)
@@ -206,7 +255,7 @@
 	)
 	(wire
 		(pts
-			(xy 228.6 60.96) (xy 289.56 60.96)
+			(xy 162.56 55.88) (xy 187.96 55.88)
 		)
 		(stroke
 			(width 0)
@@ -216,7 +265,7 @@
 	)
 	(wire
 		(pts
-			(xy 228.6 139.7) (xy 289.56 139.7)
+			(xy 35.56 76.2) (xy 35.56 137.16)
 		)
 		(stroke
 			(width 0)
@@ -226,7 +275,17 @@
 	)
 	(wire
 		(pts
-			(xy 228.6 142.24) (xy 289.56 142.24)
+			(xy 259.08 144.78) (xy 304.8 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7c10d2cf-d21d-59fc-bc89-50c9ee1aa076")
+	)
+	(wire
+		(pts
+			(xy 35.56 137.16) (xy 187.96 137.16)
 		)
 		(stroke
 			(width 0)
@@ -236,17 +295,7 @@
 	)
 	(wire
 		(pts
-			(xy 91.44 132.08) (xy 152.4 132.08)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "986bf33e-b500-59dc-a369-70d9d67066f0")
-	)
-	(wire
-		(pts
-			(xy 228.6 137.16) (xy 289.56 137.16)
+			(xy 45.72 132.08) (xy 187.96 132.08)
 		)
 		(stroke
 			(width 0)
@@ -256,17 +305,7 @@
 	)
 	(wire
 		(pts
-			(xy 91.44 137.16) (xy 152.4 137.16)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bab18000-20ac-579d-8c66-1aef928b5b7c")
-	)
-	(wire
-		(pts
-			(xy 228.6 144.78) (xy 289.56 144.78)
+			(xy 259.08 55.88) (xy 304.8 55.88)
 		)
 		(stroke
 			(width 0)
@@ -274,9 +313,20 @@
 		)
 		(uuid "cd7f5c8e-5005-5cd0-9ba0-7c96cd8d19ed")
 	)
+	(polyline
+		(pts
+			(xy 162.56 48.26) (xy 186.44 48.26)
+		)
+		(stroke
+			(width 0.6)
+			(type solid)
+			(color 200 0 0 1)
+		)
+		(uuid "da3b61a7-a67d-52c9-8353-8297462e3fe5")
+	)
 	(wire
 		(pts
-			(xy 228.6 149.86) (xy 289.56 149.86)
+			(xy 259.08 132.08) (xy 304.8 132.08)
 		)
 		(stroke
 			(width 0)
@@ -284,9 +334,20 @@
 		)
 		(uuid "db342aab-d1e8-5d62-9fdb-5af5e3bf749f")
 	)
+	(polyline
+		(pts
+			(xy 76.2 48.26) (xy 95 48.26)
+		)
+		(stroke
+			(width 0.6)
+			(type solid)
+			(color 200 0 0 1)
+		)
+		(uuid "edd0a3d8-6be7-5138-9836-442600cc5fbc")
+	)
 	(sheet
-		(at 152.4 35.56)
-		(size 76.2 137.16)
+		(at 187.96 40.64)
+		(size 71.12 132.08)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -302,7 +363,7 @@
 		)
 		(uuid "1ca71cfc-4737-5aa7-9ff7-cae5ef87f307")
 		(property "Sheetname" "mcu"
-			(at 152.4 34.56 0)
+			(at 187.96 39.64 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -314,7 +375,7 @@
 			)
 		)
 		(property "Sheetfile" "mcu.kicad_sch"
-			(at 152.4 173.72 0)
+			(at 187.96 173.72 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -325,8 +386,8 @@
 			)
 		)
 		(pin "TPS_SEL" output
-			(at 152.4 55.88 180)
-			(uuid "7c10d2cf-d21d-59fc-bc89-50c9ee1aa076")
+			(at 187.96 55.88 180)
+			(uuid "be3bb119-d01f-58d3-9a8c-60c41c87685d")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -335,8 +396,8 @@
 			)
 		)
 		(pin "VBAT_SENSE" input
-			(at 152.4 60.96 180)
-			(uuid "1f379ba7-d7b0-5a2b-88f0-0ddd6d6ac187")
+			(at 187.96 60.96 180)
+			(uuid "de82d9eb-a6c2-5578-bf48-df9c7c004035")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -345,8 +406,8 @@
 			)
 		)
 		(pin "VBUS_DET" input
-			(at 152.4 132.08 180)
-			(uuid "3b80c16b-28c0-5180-9a3e-b6d34e0735f0")
+			(at 187.96 132.08 180)
+			(uuid "cc47f29a-3da9-5391-9bbd-7e218059b717")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -355,8 +416,8 @@
 			)
 		)
 		(pin "CHG_STAT" input
-			(at 152.4 137.16 180)
-			(uuid "8bfbbafb-0ca7-5c04-8eae-7f43ab1774f7")
+			(at 187.96 137.16 180)
+			(uuid "0d67f91d-333e-5042-b37c-69dd060ff796")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -365,77 +426,7 @@
 			)
 		)
 		(pin "ANT_PA" output
-			(at 228.6 55.88 0)
-			(uuid "bc90e138-9dc7-5ea6-aceb-63e4a98d3bd4")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "VSS_PA" bidirectional
-			(at 228.6 60.96 0)
-			(uuid "74ac4ece-7350-5ae9-8bab-b965efc951a8")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "LED_L1_MCU" output
-			(at 228.6 132.08 0)
-			(uuid "1d3f4132-7521-5fd7-a7bb-f0bbcdb61504")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "LED_L2_MCU" output
-			(at 228.6 134.62 0)
-			(uuid "be3bb119-d01f-58d3-9a8c-60c41c87685d")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "LED_L3_MCU" output
-			(at 228.6 137.16 0)
-			(uuid "de82d9eb-a6c2-5578-bf48-df9c7c004035")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "LED_L4_MCU" output
-			(at 228.6 139.7 0)
-			(uuid "cc47f29a-3da9-5391-9bbd-7e218059b717")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "LED_L5_MCU" output
-			(at 228.6 142.24 0)
-			(uuid "0d67f91d-333e-5042-b37c-69dd060ff796")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "LED_L6_MCU" output
-			(at 228.6 144.78 0)
+			(at 259.08 55.88 0)
 			(uuid "1ae191d1-ff3e-5e9b-9f10-8d2c28be9751")
 			(effects
 				(font
@@ -444,8 +435,8 @@
 				(justify right)
 			)
 		)
-		(pin "LED_L7_MCU" output
-			(at 228.6 147.32 0)
+		(pin "VSS_PA" bidirectional
+			(at 259.08 60.96 0)
 			(uuid "ccc2eafc-c8f0-5696-8e85-631c102b1191")
 			(effects
 				(font
@@ -454,9 +445,79 @@
 				(justify right)
 			)
 		)
-		(pin "LED_L8_MCU" output
-			(at 228.6 149.86 0)
+		(pin "LED_L1_MCU" output
+			(at 259.08 132.08 0)
 			(uuid "bb2c567e-e9b3-5043-a42e-7c7fcd4c6400")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L2_MCU" output
+			(at 259.08 134.62 0)
+			(uuid "e62dd836-d961-52c9-9d74-06cd471067cb")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L3_MCU" output
+			(at 259.08 137.16 0)
+			(uuid "d6668449-781e-501b-a0ca-f4a534388534")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L4_MCU" output
+			(at 259.08 139.7 0)
+			(uuid "02df2f9f-558f-5aeb-a198-fc1edf59f7db")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L5_MCU" output
+			(at 259.08 142.24 0)
+			(uuid "1b8fcccf-efcb-5fa2-b590-307ae62c5111")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L6_MCU" output
+			(at 259.08 144.78 0)
+			(uuid "084e1a94-5ed0-5bdd-89f9-0812c17496f6")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L7_MCU" output
+			(at 259.08 147.32 0)
+			(uuid "ced2f4c1-c067-5690-97e5-a10b82000c17")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "LED_L8_MCU" output
+			(at 259.08 149.86 0)
+			(uuid "9db21ea9-a51f-5289-8648-3bb96b6c19cf")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -473,8 +534,8 @@
 		)
 	)
 	(sheet
-		(at 289.56 35.56)
-		(size 66.04 40.64)
+		(at 304.8 40.64)
+		(size 66.04 35.56)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -490,7 +551,7 @@
 		)
 		(uuid "91a4f075-5aec-59cc-ad8b-0c99411cb599")
 		(property "Sheetname" "rf"
-			(at 289.56 34.56 0)
+			(at 304.8 39.64 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -502,7 +563,7 @@
 			)
 		)
 		(property "Sheetfile" "rf.kicad_sch"
-			(at 289.56 77.2 0)
+			(at 304.8 77.2 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -513,8 +574,8 @@
 			)
 		)
 		(pin "ANT_PA" input
-			(at 289.56 55.88 180)
-			(uuid "e62dd836-d961-52c9-9d74-06cd471067cb")
+			(at 304.8 55.88 180)
+			(uuid "836a676b-ad37-5279-ad2b-178fffe70b5a")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -523,8 +584,8 @@
 			)
 		)
 		(pin "VSS_PA" bidirectional
-			(at 289.56 60.96 180)
-			(uuid "d6668449-781e-501b-a0ca-f4a534388534")
+			(at 304.8 60.96 180)
+			(uuid "ad7e7c6d-db1d-591b-95ed-44f7842745bd")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -541,7 +602,7 @@
 		)
 	)
 	(sheet
-		(at 289.56 111.76)
+		(at 304.8 111.76)
 		(size 66.04 60.96)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -558,7 +619,7 @@
 		)
 		(uuid "b12f6ccb-7240-5740-8dd8-247adff56dcd")
 		(property "Sheetname" "leds"
-			(at 289.56 110.76 0)
+			(at 304.8 110.76 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -570,7 +631,7 @@
 			)
 		)
 		(property "Sheetfile" "leds.kicad_sch"
-			(at 289.56 173.72 0)
+			(at 304.8 173.72 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -581,8 +642,8 @@
 			)
 		)
 		(pin "LED_L1_MCU" input
-			(at 289.56 132.08 180)
-			(uuid "02df2f9f-558f-5aeb-a198-fc1edf59f7db")
+			(at 304.8 132.08 180)
+			(uuid "8e6a0878-e5a2-5aa5-9ea6-ec22c3401983")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -591,8 +652,8 @@
 			)
 		)
 		(pin "LED_L2_MCU" input
-			(at 289.56 134.62 180)
-			(uuid "1b8fcccf-efcb-5fa2-b590-307ae62c5111")
+			(at 304.8 134.62 180)
+			(uuid "5e083068-817e-5899-a4b0-b0b1abe7a2d6")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -601,8 +662,8 @@
 			)
 		)
 		(pin "LED_L3_MCU" input
-			(at 289.56 137.16 180)
-			(uuid "084e1a94-5ed0-5bdd-89f9-0812c17496f6")
+			(at 304.8 137.16 180)
+			(uuid "05f9aef9-f908-53a1-b24c-880cb1cd2bd5")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -611,8 +672,8 @@
 			)
 		)
 		(pin "LED_L4_MCU" input
-			(at 289.56 139.7 180)
-			(uuid "ced2f4c1-c067-5690-97e5-a10b82000c17")
+			(at 304.8 139.7 180)
+			(uuid "e1737845-f05e-5c02-a230-bb3c065fb0cd")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -621,8 +682,8 @@
 			)
 		)
 		(pin "LED_L5_MCU" input
-			(at 289.56 142.24 180)
-			(uuid "9db21ea9-a51f-5289-8648-3bb96b6c19cf")
+			(at 304.8 142.24 180)
+			(uuid "9493562c-6174-5e3c-b6c3-7a295a9ae9e3")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -631,8 +692,8 @@
 			)
 		)
 		(pin "LED_L6_MCU" input
-			(at 289.56 144.78 180)
-			(uuid "836a676b-ad37-5279-ad2b-178fffe70b5a")
+			(at 304.8 144.78 180)
+			(uuid "0901e72e-e9f1-5cfe-afc3-4319f7d716fb")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -641,8 +702,8 @@
 			)
 		)
 		(pin "LED_L7_MCU" input
-			(at 289.56 147.32 180)
-			(uuid "ad7e7c6d-db1d-591b-95ed-44f7842745bd")
+			(at 304.8 147.32 180)
+			(uuid "40e46bf3-45d8-5fb2-85cf-40e97302b03d")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -651,8 +712,8 @@
 			)
 		)
 		(pin "LED_L8_MCU" input
-			(at 289.56 149.86 180)
-			(uuid "8e6a0878-e5a2-5aa5-9ea6-ec22c3401983")
+			(at 304.8 149.86 180)
+			(uuid "ad70e9a0-3765-51f3-8365-8c87558c2263")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -669,8 +730,8 @@
 		)
 	)
 	(sheet
-		(at 25.4 111.76)
-		(size 66.04 40.64)
+		(at 15.24 40.64)
+		(size 60.96 35.56)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -686,7 +747,7 @@
 		)
 		(uuid "d8fc861a-16eb-5772-a15f-5071f4d73cfe")
 		(property "Sheetname" "charger"
-			(at 25.4 110.76 0)
+			(at 15.24 39.64 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -698,7 +759,7 @@
 			)
 		)
 		(property "Sheetfile" "charger.kicad_sch"
-			(at 25.4 153.4 0)
+			(at 15.24 77.2 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -709,23 +770,23 @@
 			)
 		)
 		(pin "VBUS_DET" output
-			(at 91.44 132.08 0)
-			(uuid "1664d02c-e580-53f7-9735-7e0aa3e4798e")
+			(at 45.72 76.2 270)
+			(uuid "8bfbbafb-0ca7-5c04-8eae-7f43ab1774f7")
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 		(pin "CHG_STAT" output
-			(at 91.44 137.16 0)
-			(uuid "1e294a33-3a54-51ab-86fb-be341fe47bde")
+			(at 35.56 76.2 270)
+			(uuid "bc90e138-9dc7-5ea6-aceb-63e4a98d3bd4")
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 		(instances
@@ -737,8 +798,8 @@
 		)
 	)
 	(sheet
-		(at 25.4 35.56)
-		(size 66.04 40.64)
+		(at 96.52 40.64)
+		(size 66.04 35.56)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -754,7 +815,7 @@
 		)
 		(uuid "db2face8-5f02-5dd0-9606-0c67c6962ef4")
 		(property "Sheetname" "power"
-			(at 25.4 34.56 0)
+			(at 96.52 39.64 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -766,7 +827,7 @@
 			)
 		)
 		(property "Sheetfile" "power.kicad_sch"
-			(at 25.4 77.2 0)
+			(at 96.52 77.2 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -777,8 +838,8 @@
 			)
 		)
 		(pin "TPS_SEL" input
-			(at 91.44 55.88 0)
-			(uuid "50e7d5f5-03d8-5d5d-b75d-4aed6303bd4c")
+			(at 162.56 55.88 0)
+			(uuid "74ac4ece-7350-5ae9-8bab-b965efc951a8")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -787,8 +848,8 @@
 			)
 		)
 		(pin "VBAT_SENSE" output
-			(at 91.44 60.96 0)
-			(uuid "671ee38e-d482-5bc0-b635-12e2ec0bd06b")
+			(at 162.56 60.96 0)
+			(uuid "1d3f4132-7521-5fd7-a7bb-f0bbcdb61504")
 			(effects
 				(font
 					(size 1.27 1.27)

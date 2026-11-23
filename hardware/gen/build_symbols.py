@@ -66,7 +66,8 @@ NRF_RIGHT = {0: ("31", "ANT", "bidirectional"), 2: ("5", "P1.04/AIN0", "bidirect
              27: ("27", "P0.02", "bidirectional"), 28: ("28", "P0.03", "bidirectional"), 29: ("29", "P0.04", "bidirectional"),
              31: ("3", "P1.02/NFC1", "bidirectional"), 32: ("4", "P1.03/NFC2", "bidirectional")}
 NRF_TOP = [("48", "VDD"), ("47", "VDD"), ("36", "VDD"), ("22", "VDD"), ("10", "VDD")]      # x = -10.16 .. 10.16 step 5.08
-NRF_BOTTOM = [("44", "VSS", "power_in"), ("49", "EP", "power_in"), ("32", "VSS_PA", "passive")]   # x = -5.08, 0, 5.08
+# bottom pins at x = -10.16, -5.08, 0: VSS_PA's vertical name clears the NFC1/NFC2 names of the right column (review RR-B)
+NRF_BOTTOM = [("44", "VSS", "power_in"), ("49", "EP", "power_in"), ("32", "VSS_PA", "passive")]
 NRF_TOP_Y, NRF_SLOT0_Y, NRF_X = 48.26, 40.64, 17.78
 
 
@@ -79,7 +80,7 @@ def nrf54l15():
     for i, (num, name) in enumerate(NRF_TOP):
         pins.append(_pin("power_in", round(-10.16 + 5.08 * i, 2), NRF_TOP_Y, 270, name, num))
     for i, (num, name, kind) in enumerate(NRF_BOTTOM):
-        pins.append(_pin(kind, round(-5.08 + 5.08 * i, 2), -NRF_TOP_Y, 90, name, num))
+        pins.append(_pin(kind, round(-10.16 + 5.08 * i, 2), -NRF_TOP_Y, 90, name, num))
     body = [rect(-15.24, 45.72, 15.24, -45.72)]
     descr = ("BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin "
              "assignment table (HTML) confirmed against the nRF54L15-QFAA reference schematic v0.8 (04.02.2025); nRF54L10 same "

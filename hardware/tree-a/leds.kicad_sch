@@ -832,20 +832,6 @@
 		)
 	)
 	(rectangle
-		(start 233.68 30.48)
-		(end 330.2 116.84)
-		(stroke
-			(width 0.3)
-			(type dash)
-			(color 0 0 0 1)
-		)
-		(fill
-			(type color)
-			(color 255 255 255 0.35)
-		)
-		(uuid "191332de-2dc0-5073-b294-06fe85583c74")
-	)
-	(rectangle
 		(start 81.28 30.48)
 		(end 218.44 127)
 		(stroke
@@ -857,7 +843,7 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "726fe66a-e1fe-58ed-a0f8-b4a6bcab35e8")
+		(uuid "28575f11-9ad4-52e5-8f1e-3a8f443ab515")
 	)
 	(rectangle
 		(start 10.16 30.48)
@@ -871,19 +857,21 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "d3230123-a3ee-5e43-8aed-3373b8f091dd")
+		(uuid "96a05c5e-32cc-548f-9267-5ae3cb2d37ea")
 	)
-	(text "RGB LEDs D9-D16 (XL-1010RGB, common anode)"
-		(exclude_from_sim no)
-		(at 82.55 31.5 0)
-		(effects
-			(font
-				(size 1.5 1.5)
-				(bold yes)
-			)
-			(justify left top)
+	(rectangle
+		(start 233.68 30.48)
+		(end 330.2 116.84)
+		(stroke
+			(width 0.3)
+			(type dash)
+			(color 0 0 0 1)
 		)
-		(uuid "28575f11-9ad4-52e5-8f1e-3a8f443ab515")
+		(fill
+			(type color)
+			(color 255 255 255 0.35)
+		)
+		(uuid "e920e102-9a0e-51b6-a5eb-bbf8dea4415f")
 	)
 	(text "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board A: R on a+6, G on a+5, B on a+1 (tree_common.LED_MATRIX)."
 		(exclude_from_sim no)
@@ -894,7 +882,7 @@
 			)
 			(justify left top)
 		)
-		(uuid "83a5b586-635f-5d81-aec2-009aeba0a815")
+		(uuid "191332de-2dc0-5073-b294-06fe85583c74")
 	)
 	(text "One 22R per line, GPIO side\n(LED_Ln_MCU) to line (LED_Ln)."
 		(exclude_from_sim no)
@@ -905,7 +893,19 @@
 			)
 			(justify left top)
 		)
-		(uuid "88e424bb-243c-512e-8d65-2c99189bdcf5")
+		(uuid "726fe66a-e1fe-58ed-a0f8-b4a6bcab35e8")
+	)
+	(text "RGB LEDs D9-D16 (XL-1010RGB-YG, common anode)"
+		(exclude_from_sim no)
+		(at 82.55 31.5 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(bold yes)
+			)
+			(justify left top)
+		)
+		(uuid "83a5b586-635f-5d81-aec2-009aeba0a815")
 	)
 	(text "Line resistors (D13)"
 		(exclude_from_sim no)
@@ -917,18 +917,7 @@
 			)
 			(justify left top)
 		)
-		(uuid "96a05c5e-32cc-548f-9267-5ae3cb2d37ea")
-	)
-	(text "J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: 1=L1, 2=L8, 3=L2, 4=L7\n5=L3, 6=L6, 7=L4, 8=L5\nMates J4 on B by position\n(tree_common.mate_table).\nNo supply, no ground."
-		(exclude_from_sim no)
-		(at 256.54 71.12 0)
-		(effects
-			(font
-				(size 1 1)
-			)
-			(justify left top)
-		)
-		(uuid "b23daee3-a6cd-55b2-9f07-dcd23a730b16")
+		(uuid "88e424bb-243c-512e-8d65-2c99189bdcf5")
 	)
 	(text "J3 to board B (D3, D14)"
 		(exclude_from_sim no)
@@ -940,7 +929,29 @@
 			)
 			(justify left top)
 		)
-		(uuid "e920e102-9a0e-51b6-a5eb-bbf8dea4415f")
+		(uuid "b23daee3-a6cd-55b2-9f07-dcd23a730b16")
+	)
+	(text "pin 1 v"
+		(exclude_from_sim no)
+		(at 274.07 43.56 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "d3230123-a3ee-5e43-8aed-3373b8f091dd")
+	)
+	(text "J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: 1=L1, 2=L8, 3=L2, 4=L7\n5=L3, 6=L6, 7=L4, 8=L5\nMirrored (J4 on B.Cu of board B): J3 pin n mates\nJ4 pin n+1 (n odd) / n-1 (n even): J3.1-J4.2, J3.2-J4.1, J3.3-J4.4, J3.4-J4.3, ...\n(tree_common.mate_table). No supply, no ground."
+		(exclude_from_sim no)
+		(at 238.76 71.12 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "d7f5c92b-c7e9-5a31-a0fe-d789d99bb42b")
 	)
 	(wire
 		(pts
@@ -2349,7 +2360,7 @@
 		(dnp no)
 		(uuid "2e26061f-580b-5522-8bd8-ea48fef98707")
 		(property "Reference" "J3"
-			(at 285.75 43.8 0)
+			(at 285.75 38.4 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2359,7 +2370,7 @@
 			)
 		)
 		(property "Value" "2x4 F 8.5mm"
-			(at 285.75 45.8 0)
+			(at 285.75 40.6 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2466,7 +2477,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 107.95 100.33 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2563,7 +2574,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 173.99 80.01 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2660,7 +2671,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 107.95 80.01 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2935,7 +2946,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 173.99 59.69 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3121,7 +3132,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 173.99 39.37 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3307,7 +3318,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 107.95 39.37 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3404,7 +3415,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 107.95 59.69 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3501,7 +3512,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "XL-1010RGB"
+		(property "Value" "XL-1010RGB-YG"
 			(at 173.99 100.33 0)
 			(show_name no)
 			(do_not_autoplace no)

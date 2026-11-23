@@ -4095,7 +4095,7 @@
 		(dnp yes)
 		(uuid "69ab449f-303f-563c-9e7e-a95684613ceb")
 		(property "Reference" "J2"
-			(at 68.54 75.2 0)
+			(at 66.54 84.6 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4106,7 +4106,7 @@
 			)
 		)
 		(property "Value" "JST PH DNP:C295747"
-			(at 68.54 77.7 0)
+			(at 66.54 86.8 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4596,14 +4596,14 @@
 			)
 		)
 		(property "Value" "PWR_FLAG"
-			(at 35.56 81.28 0)
-			(hide yes)
+			(at 26.48 80.68 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Footprint" ""
@@ -5251,14 +5251,14 @@
 			)
 		)
 		(property "Value" "PWR_FLAG"
-			(at 50.8 50.8 0)
-			(hide yes)
+			(at 52.4 47.12 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Footprint" ""

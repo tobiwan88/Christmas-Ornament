@@ -2,115 +2,2481 @@
 	(version 20260306)
 	(generator "eeschema")
 	(generator_version "10.0")
-	(uuid "85cf2753-6181-5f74-b525-c66aecc4c100")
+	(uuid "4d862e8f-2d0a-54a8-ae07-a37981405204")
 	(paper "A3")
 	(title_block
-		(title "tree-b: block diagram")
+		(title "tree-b: LEDs D1-D8 and header J4 (whole board)")
 		(date "2026-11-23")
 		(rev "generated")
 		(company "TREE-01 ornament")
-		(comment 1 "Sheet: root (block diagram)")
+		(comment 1 "Sheet: leds")
+		(comment 2 "RGB LEDs D1-D8 (outer face) and header J4 to board A")
 	)
-	(lib_symbols)
-	(text "Mounting holes and the outline are board-only (layout generator). Same LED part as board A (one unique\nExtended part per order). J4 plastic height 3.2 mm: UNVERIFIED reading of the drawing (PARTS-REVIEW B1)."
-		(exclude_from_sim no)
-		(at 25.4 116.84 0)
-		(effects
-			(font
-				(size 1.5 1.5)
+	(lib_symbols
+		(symbol "Connector_Generic:Conn_02x04_Odd_Even"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
 			)
-			(justify left top)
-		)
-		(uuid "8c681c44-4d33-5dc3-b72e-3faa9db0b030")
-	)
-	(text "TREE-01 board B (tree-b): LED board, 4 layers, outer face (F.Cu) = LEDs D1-D8, inner face (B.Cu) = J4"
-		(exclude_from_sim no)
-		(at 25.4 10.16 0)
-		(effects
-			(font
-				(size 2 2)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "J"
+				(at 1.27 5.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
 			)
-			(justify left top)
-		)
-		(uuid "9a0b2fda-e3af-5c00-a5ba-e46de861c916")
-	)
-	(text "them (GPIO -> 22R -> J3); one die at a time (tree_common.slot_table)."
-		(exclude_from_sim no)
-		(at 25.4 24.13 0)
-		(effects
-			(font
-				(size 1.5 1.5)
+			(property "Value" "Conn_02x04_Odd_Even"
+				(at 1.27 -7.62 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
 			)
-			(justify left top)
-		)
-		(uuid "a1435e3f-5665-5d3b-a7a9-8c112f7c0f08")
-	)
-	(text "D1-D8 XL-1010RGB-YG\nJ4 2x4 male SMD header\n(C192300, Boom PZ254)"
-		(exclude_from_sim no)
-		(at 27.94 45.72 0)
-		(effects
-			(font
-				(size 1.5 1.5)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
 			)
-			(justify left top)
-		)
-		(uuid "db5ce841-1e8e-5a3f-9e64-63da5308b030")
-	)
-	(text "No power circuit: the 8 lines LED_L1..LED_L8 come from board A through J4 (mates J3, D3/D14). Board A drives"
-		(exclude_from_sim no)
-		(at 25.4 19.05 0)
-		(effects
-			(font
-				(size 1.5 1.5)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
 			)
-			(justify left top)
+			(property "Description" "Generic connector, double row, 02x04, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_2x??_*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "Conn_02x04_Odd_Even_1_1"
+				(rectangle
+					(start -1.27 3.81)
+					(end 3.81 -6.35)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(rectangle
+					(start -1.27 2.667)
+					(end 0 2.413)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 0.127)
+					(end 0 -0.127)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -2.413)
+					(end 0 -2.667)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -4.953)
+					(end 0 -5.207)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 3.81 2.667)
+					(end 2.54 2.413)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 3.81 0.127)
+					(end 2.54 -0.127)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 3.81 -2.413)
+					(end 2.54 -2.667)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 3.81 -4.953)
+					(end 2.54 -5.207)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 2.54 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 7.62 2.54 180)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 7.62 0 180)
+					(length 3.81)
+					(name "Pin_4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 7.62 -2.54 180)
+					(length 3.81)
+					(name "Pin_6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -5.08 0)
+					(length 3.81)
+					(name "Pin_7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 7.62 -5.08 180)
+					(length 3.81)
+					(name "Pin_8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
 		)
-		(uuid "f9b20841-cf75-5c37-ac7d-00d620b81893")
+		(symbol "tree:LED_RGB_CA_XL1010"
+			(pin_names
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "D"
+				(at -3.81 6.35 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "XL-1010RGB-YG"
+				(at -3.81 -6.35 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" "tree:LED_XL-1010RGB-YG"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "RGB LED common anode, XINGLIGHT XL-1010RGB-YG. Pins from the maker data sheet page 8 (LCSC copy, no revision): 1 R cathode, 2 G cathode, 3 common anode, 4 B cathode; card hardware/tree-a/parts/XL-1010RGB-YG.yaml"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "LED_RGB_CA_XL1010_0_1"
+				(rectangle
+					(start -3.81 4.445)
+					(end 3.81 -4.445)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(polyline
+					(pts
+						(xy -3.81 0) (xy -2.54 0)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 2.54) (xy -2.54 -2.54)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 2.54) (xy -0.635 2.54)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 0) (xy -0.635 0)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 -2.54) (xy -0.635 -2.54)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.635 3.175) (xy -0.635 1.905) (xy 0.635 2.54) (xy -0.635 3.175)
+					)
+					(stroke
+						(width 0.2)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.635 0.635) (xy -0.635 -0.635) (xy 0.635 0) (xy -0.635 0.635)
+					)
+					(stroke
+						(width 0.2)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.635 -1.905) (xy -0.635 -3.175) (xy 0.635 -2.54) (xy -0.635 -1.905)
+					)
+					(stroke
+						(width 0.2)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 3.175) (xy 0.635 1.905)
+					)
+					(stroke
+						(width 0.2)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 2.54) (xy 3.81 2.54)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 0.635) (xy 0.635 -0.635)
+					)
+					(stroke
+						(width 0.2)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 0) (xy 3.81 0)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 -1.905) (xy 0.635 -3.175)
+					)
+					(stroke
+						(width 0.2)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 -2.54) (xy 3.81 -2.54)
+					)
+					(stroke
+						(width 0.15)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(text "R"
+					(at 2.159 3.302 0)
+					(effects
+						(font
+							(size 0.9 0.9)
+						)
+					)
+				)
+				(text "G"
+					(at 2.159 0.762 0)
+					(effects
+						(font
+							(size 0.9 0.9)
+						)
+					)
+				)
+				(text "B"
+					(at 2.159 -1.778 0)
+					(effects
+						(font
+							(size 0.9 0.9)
+						)
+					)
+				)
+			)
+			(symbol "LED_RGB_CA_XL1010_1_1"
+				(pin passive line
+					(at 6.35 2.54 180)
+					(length 2.54)
+					(name "RK"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 6.35 0 180)
+					(length 2.54)
+					(name "GK"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -6.35 0 0)
+					(length 2.54)
+					(name "A"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 6.35 -2.54 180)
+					(length 2.54)
+					(name "BK"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 	)
-	(sheet
-		(at 25.4 40.64)
-		(size 101.6 60.96)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
+	(rectangle
+		(start 15.24 30.48)
+		(end 152.4 127)
 		(stroke
-			(width 0.4)
-			(type solid)
+			(width 0.3)
+			(type dash)
 			(color 0 0 0 1)
 		)
 		(fill
-			(color 255 255 200 0.6)
+			(type color)
+			(color 255 255 255 0.35)
 		)
-		(uuid "a5d6cb8c-e4c1-5a44-ba01-07622832b3cc")
-		(property "Sheetname" "leds"
-			(at 25.4 39.64 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 2 2)
-					(bold yes)
-				)
-				(justify left bottom)
+		(uuid "27920797-75dd-5efd-a363-de2bf2fae53e")
+	)
+	(rectangle
+		(start 167.64 30.48)
+		(end 269.24 116.84)
+		(stroke
+			(width 0.3)
+			(type dash)
+			(color 0 0 0 1)
+		)
+		(fill
+			(type color)
+			(color 255 255 255 0.35)
+		)
+		(uuid "6195c154-b8eb-5bda-8b44-9308e8e3f0cb")
+	)
+	(text "RGB LEDs D1-D8 (XL-1010RGB-YG, common anode)"
+		(exclude_from_sim no)
+		(at 16.51 31.5 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(bold yes)
 			)
+			(justify left top)
 		)
-		(property "Sheetfile" "leds.kicad_sch"
-			(at 25.4 102.6 0)
+		(uuid "444a1db8-940c-5968-996a-5fbdeb1ea341")
+	)
+	(text "TREE-01 board B (tree-b): LED board, 4 layers, outer face (F.Cu) = LEDs D1-D8, inner face (B.Cu) = J4. No power circuit:\nthe 8 lines LED_L1..LED_L8 come from board A through J4 (mates J3 on A, D3/D14); board A drives them (GPIO -> 22R -> J3)."
+		(exclude_from_sim no)
+		(at 15.24 10.16 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "9e5f0937-12f0-5468-821e-28b049ce0306")
+	)
+	(text "J4 male 2x4 SMD (Boom PZ254, C192300), inner face = B.Cu.\nPin=line: 1=L8, 2=L1, 3=L7, 4=L2\n5=L6, 6=L3, 7=L5, 8=L4\nMirrored by B.Cu: J4 pin n mates J3 pin n+1 (n odd) / n-1\n(n even): J3.1-J4.2, J3.2-J4.1, J3.3-J4.4, J3.4-J4.3, ...\nNet of each pin = net of the J3 pad it touches\n(tree_common.j4_pin_net / mate_table).\nNo supply, no ground: the lines are the only nets.\nJ4 plastic height 3.2 mm: UNVERIFIED (PARTS-REVIEW B1)."
+		(exclude_from_sim no)
+		(at 170.18 71.12 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "b0f2fc89-da25-5fa2-b3dc-4e3e3f50dec5")
+	)
+	(text "J4 to board A (D3, D14)"
+		(exclude_from_sim no)
+		(at 168.91 31.5 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(bold yes)
+			)
+			(justify left top)
+		)
+		(uuid "ba41b906-c1f8-5eda-86e7-e2c2acc81ec9")
+	)
+	(text "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board B: R on a+2, G on a+3, B on a+7 (tree_common.LED_MATRIX)."
+		(exclude_from_sim no)
+		(at 17.78 119.38 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "c685caef-1bf9-5679-8ee1-2dc97a00bb8b")
+	)
+	(text "pin 1 v"
+		(exclude_from_sim no)
+		(at 209.3 43.56 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "e59b4050-dfd5-57b7-bf33-644efa12fa68")
+	)
+	(text "Mounting holes and the outline are board-only (layout generator). Same LED part as board A (one unique Extended part per order)."
+		(exclude_from_sim no)
+		(at 15.24 132.08 0)
+		(effects
+			(font
+				(size 1.1 1.1)
+			)
+			(justify left top)
+		)
+		(uuid "e6cc929d-7870-5196-9901-16201355c28f")
+	)
+	(wire
+		(pts
+			(xy 52.07 66.04) (xy 57.15 66.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "02ab6652-074c-5400-b550-1517ccc7defe")
+	)
+	(wire
+		(pts
+			(xy 118.11 66.04) (xy 123.19 66.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "05c7e006-2ab2-55e0-87b9-c38b3dfb4e21")
+	)
+	(wire
+		(pts
+			(xy 34.29 66.04) (xy 39.37 66.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "08b432b8-f2d9-552f-8099-bede6002435b")
+	)
+	(wire
+		(pts
+			(xy 226.06 48.26) (xy 233.68 48.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1a03d495-71a0-52c1-bd1a-a79279b01c85")
+	)
+	(wire
+		(pts
+			(xy 118.11 63.5) (xy 123.19 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "24950ff6-0d89-5281-a2c6-5f74a46dab10")
+	)
+	(wire
+		(pts
+			(xy 52.07 86.36) (xy 57.15 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "263eff70-b432-5cf5-a0a6-560a8e40d390")
+	)
+	(wire
+		(pts
+			(xy 118.11 68.58) (xy 123.19 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "26b6e803-57a8-58ae-9a21-1bdda33af22a")
+	)
+	(wire
+		(pts
+			(xy 100.33 86.36) (xy 105.41 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "349423cb-b696-5f4d-91c7-ac9f3274001a")
+	)
+	(wire
+		(pts
+			(xy 205.74 55.88) (xy 213.36 55.88)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3766d908-13b1-5c5c-9729-4062424d6dfd")
+	)
+	(wire
+		(pts
+			(xy 226.06 55.88) (xy 233.68 55.88)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "46e1223c-1baf-5ec8-a9d8-3b32563fb7dc")
+	)
+	(wire
+		(pts
+			(xy 52.07 48.26) (xy 57.15 48.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "47cba2cf-5ece-5132-8ee0-ff7d24f7fd71")
+	)
+	(wire
+		(pts
+			(xy 118.11 48.26) (xy 123.19 48.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4eb6f4d8-1567-532f-9fbc-10f9fb4bbf02")
+	)
+	(wire
+		(pts
+			(xy 52.07 104.14) (xy 57.15 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4ee229b0-5745-5258-98b0-f8f6a983e265")
+	)
+	(wire
+		(pts
+			(xy 52.07 83.82) (xy 57.15 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "634bf88f-455e-5815-b104-12c57ceddf23")
+	)
+	(wire
+		(pts
+			(xy 52.07 106.68) (xy 57.15 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6f0211cb-df5c-583b-9ced-88970ff668fb")
+	)
+	(wire
+		(pts
+			(xy 100.33 66.04) (xy 105.41 66.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "79c2c6ea-7225-5f08-8cf8-a31bdd31bf9b")
+	)
+	(wire
+		(pts
+			(xy 100.33 106.68) (xy 105.41 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9c887c68-5464-5c36-9ea4-0eabb5de05b7")
+	)
+	(wire
+		(pts
+			(xy 52.07 68.58) (xy 57.15 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a298a8a6-2d24-54cb-9d5c-6695629976e2")
+	)
+	(wire
+		(pts
+			(xy 52.07 88.9) (xy 57.15 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a56b57a9-a6b7-54a1-ad17-2d711e39b7e0")
+	)
+	(wire
+		(pts
+			(xy 34.29 45.72) (xy 39.37 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ad15110e-bed0-5c24-b795-eadfd8d4aaea")
+	)
+	(wire
+		(pts
+			(xy 100.33 45.72) (xy 105.41 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae74f055-5053-52c0-85e3-6076796029e1")
+	)
+	(wire
+		(pts
+			(xy 205.74 53.34) (xy 213.36 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "aef6fa23-d694-524f-b26e-c86a7788cc7d")
+	)
+	(wire
+		(pts
+			(xy 118.11 109.22) (xy 123.19 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b103c18d-e7b1-57db-8976-d305d1b48099")
+	)
+	(wire
+		(pts
+			(xy 52.07 45.72) (xy 57.15 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b7656a3f-dbe3-58da-85a0-4f172b3728bd")
+	)
+	(wire
+		(pts
+			(xy 34.29 106.68) (xy 39.37 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9a302e2-6340-512b-a8fc-1b4d8585a5f1")
+	)
+	(wire
+		(pts
+			(xy 118.11 86.36) (xy 123.19 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ba35eda9-6bfd-5705-ad92-2fe7daf7db64")
+	)
+	(wire
+		(pts
+			(xy 226.06 50.8) (xy 233.68 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bd3f19c9-ee01-5c2f-953b-423c7c951d55")
+	)
+	(wire
+		(pts
+			(xy 34.29 86.36) (xy 39.37 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "be8de3f9-d9ec-5b1f-a7e8-1d927e54813d")
+	)
+	(wire
+		(pts
+			(xy 205.74 48.26) (xy 213.36 48.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bf4da67d-6bd7-5c69-9274-7ab50718ec86")
+	)
+	(wire
+		(pts
+			(xy 205.74 50.8) (xy 213.36 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c4e919b1-11ca-5c12-b296-72fd4d2c6aea")
+	)
+	(wire
+		(pts
+			(xy 118.11 104.14) (xy 123.19 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c748e828-fe10-5c58-9a79-202c831d92c0")
+	)
+	(wire
+		(pts
+			(xy 118.11 43.18) (xy 123.19 43.18)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d53e4d38-7196-527f-8e0d-2f772c23f933")
+	)
+	(wire
+		(pts
+			(xy 52.07 43.18) (xy 57.15 43.18)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "da03aea8-c10d-5bd5-bf1a-31467c8d6b83")
+	)
+	(wire
+		(pts
+			(xy 118.11 88.9) (xy 123.19 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dc7c5aa2-6f57-5a62-8e46-d8ee511f3915")
+	)
+	(wire
+		(pts
+			(xy 52.07 63.5) (xy 57.15 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "de6f76ed-9c41-5a47-ab31-eca681cf9014")
+	)
+	(wire
+		(pts
+			(xy 118.11 45.72) (xy 123.19 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e25e9abf-85a2-58b9-9d00-596a7048dcab")
+	)
+	(wire
+		(pts
+			(xy 52.07 109.22) (xy 57.15 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ee4ea740-3e4d-53f3-bba4-84bf93da5130")
+	)
+	(wire
+		(pts
+			(xy 226.06 53.34) (xy 233.68 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "eed58866-ef2d-5312-af10-47dd63bf5f08")
+	)
+	(wire
+		(pts
+			(xy 118.11 83.82) (xy 123.19 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f0bf778f-37fa-5f06-b9f6-3920e5048520")
+	)
+	(wire
+		(pts
+			(xy 118.11 106.68) (xy 123.19 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f59ee9e5-ccc8-5cb4-a72a-c805a431b992")
+	)
+	(label "LED_L8"
+		(at 57.15 48.26 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "047b8d29-2caa-5473-95ee-e9178733be11")
+	)
+	(label "LED_L3"
+		(at 123.19 68.58 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0493eaf2-0d7f-5413-b943-21a9819d9143")
+	)
+	(label "LED_L2"
+		(at 123.19 104.14 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0e72f3a7-689a-5616-93d7-ae12b1278909")
+	)
+	(label "LED_L7"
+		(at 123.19 66.04 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "1190b821-dd67-54d7-989c-f4c6f89ad817")
+	)
+	(label "LED_L2"
+		(at 233.68 50.8 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "15a2ab6d-f34d-5d54-8b46-e4f5c4c32f95")
+	)
+	(label "LED_L8"
+		(at 205.74 48.26 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "23bb82ae-650a-567b-ab53-383764051b7f")
+	)
+	(label "LED_L7"
+		(at 123.19 109.22 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "25b6f77d-1849-50b9-94a8-1ef0e9159104")
+	)
+	(label "LED_L6"
+		(at 123.19 63.5 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2b31f0fa-b0d7-58d5-994e-b0bb6ff8ed78")
+	)
+	(label "LED_L2"
+		(at 100.33 45.72 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "2b4c65a2-cb4f-5798-81bb-77c7b5c79742")
+	)
+	(label "LED_L4"
+		(at 123.19 43.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2f542f78-7d99-5fb4-a733-b874e7188dad")
+	)
+	(label "LED_L2"
+		(at 57.15 106.68 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "4032b0d1-f237-5310-bc72-fd87807548db")
+	)
+	(label "LED_L5"
+		(at 123.19 45.72 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "4334e1d7-3895-5016-b557-aac8d9f09f33")
+	)
+	(label "LED_L5"
+		(at 123.19 88.9 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "453c9a6c-fac7-5719-8fe4-7a86dbed5489")
+	)
+	(label "LED_L5"
+		(at 34.29 86.36 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "45b9340e-2bfc-5e08-b6a7-3fbd52cf75bb")
+	)
+	(label "LED_L8"
+		(at 100.33 106.68 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "58352693-c9ff-51f7-b3cd-fb7e31ee00fa")
+	)
+	(label "LED_L1"
+		(at 34.29 45.72 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "627215ae-31f0-594e-942b-86e9a3684acf")
+	)
+	(label "LED_L6"
+		(at 100.33 86.36 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "6dfb773f-9c8d-5c14-9dda-5854284b6fa7")
+	)
+	(label "LED_L7"
+		(at 57.15 83.82 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "71b21b8a-265a-514d-800f-2d6d6f804d40")
+	)
+	(label "LED_L1"
+		(at 123.19 48.26 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "81d9a9b1-cddb-5536-b1df-10b723ea6a72")
+	)
+	(label "LED_L7"
+		(at 34.29 106.68 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "86b1395a-4e91-54c1-8cdf-5d01189b9fe0")
+	)
+	(label "LED_L3"
+		(at 123.19 106.68 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "8b69f64a-532b-581b-ac0c-8e4689c156af")
+	)
+	(label "LED_L6"
+		(at 57.15 109.22 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "8b8dd823-0b2d-5aa2-9b05-f8d9812f80cf")
+	)
+	(label "LED_L6"
+		(at 205.74 53.34 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "94d53e0d-a229-59e5-a678-587de8e4de3b")
+	)
+	(label "LED_L3"
+		(at 34.29 66.04 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "9a782547-df5c-5c50-9df8-cec0cb774fdd")
+	)
+	(label "LED_L1"
+		(at 123.19 86.36 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "9b4a10c2-7857-502a-9b34-123c161ca6fb")
+	)
+	(label "LED_L5"
+		(at 205.74 55.88 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "a991eae3-42b2-53c1-a843-ad2058d95812")
+	)
+	(label "LED_L1"
+		(at 57.15 104.14 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ad3ce5cf-10a0-5c45-8bef-fb396b795f11")
+	)
+	(label "LED_L4"
+		(at 100.33 66.04 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "b1f17fe2-af06-583f-984e-64e65ce8960a")
+	)
+	(label "LED_L8"
+		(at 123.19 83.82 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b25ee109-816a-507a-8b70-f62e580a4890")
+	)
+	(label "LED_L1"
+		(at 233.68 48.26 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b3307f35-57f9-59a4-af89-36fbe77a4019")
+	)
+	(label "LED_L7"
+		(at 205.74 50.8 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ce5247cf-1849-57f1-894f-4bcddaa5e151")
+	)
+	(label "LED_L3"
+		(at 57.15 43.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "d1b43e73-ae51-5a8e-a916-d7a265fecbce")
+	)
+	(label "LED_L4"
+		(at 233.68 55.88 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e65b8502-9b3c-5c43-bb39-d6e55cf2e236")
+	)
+	(label "LED_L2"
+		(at 57.15 68.58 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e795ac37-080f-527c-9e93-98815455e2c8")
+	)
+	(label "LED_L4"
+		(at 57.15 88.9 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ea56eaf8-f91b-5cac-a3ac-147d3c301819")
+	)
+	(label "LED_L3"
+		(at 233.68 53.34 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "eac0d371-4486-597c-8cc9-3a8ccdafc907")
+	)
+	(label "LED_L6"
+		(at 57.15 66.04 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "eb468119-af3a-5dcb-840f-a5b929afcf5c")
+	)
+	(label "LED_L5"
+		(at 57.15 63.5 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f0974495-98cf-5e69-8411-c45bc651bb42")
+	)
+	(label "LED_L8"
+		(at 57.15 86.36 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f5652536-c12f-567f-be8c-0cc69ea1fd8f")
+	)
+	(label "LED_L4"
+		(at 57.15 45.72 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "fc694d9f-a24f-52f4-aec0-dd6cfb3e79ee")
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 45.72 45.72 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "4cbd5942-2252-5c72-8745-961277d21ec5")
+		(property "Reference" "D1"
+			(at 41.91 52.07 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left top)
+				(justify left)
 			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 41.91 39.37 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 45.72 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 45.72 45.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 45.72 45.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 48.26 50.7999 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "cc06365b-74ed-5443-bf0d-16e55cd5dc9d")
+		)
+		(pin "1"
+			(uuid "233c5133-d9b4-5242-b4e1-828edbdfe3f1")
+		)
+		(pin "2"
+			(uuid "f5f31a03-f6a9-5a04-8714-c65b111a3425")
+		)
+		(pin "4"
+			(uuid "3013e902-a272-53c6-ab61-ffceb258f813")
 		)
 		(instances
 			(project "tree-b"
-				(path "/85cf2753-6181-5f74-b525-c66aecc4c100"
-					(page "2")
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 111.76 86.36 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "4e0706e7-1e66-5130-b5e1-cd289fc5764a")
+		(property "Reference" "D6"
+			(at 107.95 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 107.95 80.01 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 111.76 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 111.76 86.36 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 111.76 86.36 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 114.3 91.4399 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "d8888896-26a7-5b7d-a5e8-9b0256734adf")
+		)
+		(pin "1"
+			(uuid "cf355970-ac7b-52f5-90c8-d923afd3225c")
+		)
+		(pin "2"
+			(uuid "1f10dec9-7795-5929-af2f-92de0e3dd468")
+		)
+		(pin "4"
+			(uuid "7e1e9f40-d5c9-55c1-8f60-681969384e51")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 111.76 106.68 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "53cb501e-c286-5fd3-8b66-67357959dafe")
+		(property "Reference" "D8"
+			(at 107.95 113.03 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 107.95 100.33 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 111.76 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 111.76 106.68 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 111.76 106.68 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 114.3 111.7599 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "add705b2-b147-50c8-bf30-aee6e0970f89")
+		)
+		(pin "1"
+			(uuid "9670c30e-3185-5148-ba06-67bbdc375dbb")
+		)
+		(pin "2"
+			(uuid "ae284d1c-d39d-5a4d-b470-ef7710b015c4")
+		)
+		(pin "4"
+			(uuid "09cb1bd1-5d3e-56bb-bd82-99e9128b3879")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 111.76 66.04 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "70dd3dfb-273b-5fa0-a65f-ab5f729ad3b4")
+		(property "Reference" "D4"
+			(at 107.95 72.39 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 107.95 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 111.76 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 111.76 66.04 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 111.76 66.04 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 114.3 71.1199 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "33144c0c-eb88-5dd2-83d5-3e4815940351")
+		)
+		(pin "1"
+			(uuid "7abcbec8-4577-5475-a370-020d6f3b9801")
+		)
+		(pin "2"
+			(uuid "54efa49a-ab65-54a7-9727-8abd558aa533")
+		)
+		(pin "4"
+			(uuid "58a8010b-e5a5-56c3-9c24-3965e2801e2e")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 45.72 66.04 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "863db86e-0adf-5d62-8674-70293562d209")
+		(property "Reference" "D3"
+			(at 41.91 72.39 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 41.91 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 45.72 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 45.72 66.04 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 45.72 66.04 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 48.26 71.1199 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "70ea44ed-3b19-52b0-82f4-6f897b3bb753")
+		)
+		(pin "1"
+			(uuid "d0bfb8c9-4d2c-5979-9bf5-29c75a7fa95a")
+		)
+		(pin "2"
+			(uuid "3dafc457-4498-573b-877a-361d048c358b")
+		)
+		(pin "4"
+			(uuid "3e6629df-7b87-5904-9252-5e760a5af2ed")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 111.76 45.72 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "9f3991b1-f242-50b2-8752-5eb7b608eb69")
+		(property "Reference" "D2"
+			(at 107.95 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 107.95 39.37 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 111.76 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 111.76 45.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 111.76 45.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 114.3 50.7999 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "1cc6b20d-a0c7-5fcb-88dc-95f3e74f700f")
+		)
+		(pin "1"
+			(uuid "6ffefb21-bd9c-53a5-9c2d-49b73f0772fa")
+		)
+		(pin "2"
+			(uuid "5d5179ea-0253-5819-b6e6-49dde79103c5")
+		)
+		(pin "4"
+			(uuid "26f76924-d1f8-53c8-bee9-741e82513d5c")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_02x04_Odd_Even")
+		(at 218.44 50.8 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "b4753b70-0e2c-5ac9-ac1b-14be7fa3c697")
+		(property "Reference" "J4"
+			(at 219.71 40.6 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "2x4 M"
+			(at 219.71 42.8 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "tree:PinHeader_2x04_SMD_Boom_PZ254"
+			(at 218.44 50.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 218.44 50.8 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 218.44 50.8 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C192300"
+			(at 220.98 55.8799 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "1"
+			(uuid "e03d4265-5a91-51d1-ac9f-b73fcd74e657")
+		)
+		(pin "2"
+			(uuid "35fcba2d-1483-5cca-ae2d-e7bb240549d7")
+		)
+		(pin "3"
+			(uuid "993e4114-f33c-52be-89fb-4d8dacac804b")
+		)
+		(pin "4"
+			(uuid "6dcd336c-7eaa-5377-be36-f4386f28f8ec")
+		)
+		(pin "5"
+			(uuid "4ab0178b-a0ed-5144-80bf-2e4cda3bc55b")
+		)
+		(pin "6"
+			(uuid "32a26637-d1ee-59fa-bb16-d7ae86d86c7f")
+		)
+		(pin "7"
+			(uuid "8db72d3a-6a8a-5206-8613-b854013f9d7c")
+		)
+		(pin "8"
+			(uuid "784d2fe3-38fc-5d72-bcdd-9433afd88ec2")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "J4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 45.72 86.36 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d57cab17-8875-5544-b93e-2ad7e8f92a05")
+		(property "Reference" "D5"
+			(at 41.91 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 41.91 80.01 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 45.72 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 45.72 86.36 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 45.72 86.36 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 48.26 91.4399 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "5385da50-333a-5391-a155-9f387597240c")
+		)
+		(pin "1"
+			(uuid "4524692d-300e-59fe-b43c-87bc993d6d2b")
+		)
+		(pin "2"
+			(uuid "36b0dbab-525e-5e10-8502-dae125785156")
+		)
+		(pin "4"
+			(uuid "7252f8e2-9ac3-5e43-94d5-64f10f1d066f")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "tree:LED_RGB_CA_XL1010")
+		(at 45.72 106.68 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "eab0042c-b137-5d04-8290-4de71beda627")
+		(property "Reference" "D7"
+			(at 41.91 113.03 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "XL-1010RGB-YG"
+			(at 41.91 100.33 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "tree:LED_XL-1010RGB-YG"
+			(at 45.72 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 45.72 106.68 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 45.72 106.68 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C965834"
+			(at 48.26 111.7599 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "3"
+			(uuid "1baab42c-02ec-5c64-89e8-f4b78aaa2524")
+		)
+		(pin "1"
+			(uuid "3734c723-0be1-5dd1-81fa-081ebf39edf9")
+		)
+		(pin "2"
+			(uuid "e9062582-963b-5ae9-9ffd-015ed1ac2856")
+		)
+		(pin "4"
+			(uuid "fc8a96e6-14dc-573d-a28f-e7c52d677fd0")
+		)
+		(instances
+			(project "tree-b"
+				(path "/4d862e8f-2d0a-54a8-ae07-a37981405204"
+					(reference "D7")
+					(unit 1)
 				)
 			)
 		)
