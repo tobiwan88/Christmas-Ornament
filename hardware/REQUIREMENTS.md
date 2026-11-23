@@ -4,7 +4,7 @@ Each requirement: number, statement, source, check. Evidence level for researche
 Sources: `notes` = docs/notes.csv, `parts` = docs/parts.csv, `mock` = design/V3 *.png, `eng` = engineer's message 2026-11-23.
 
 ## 1 Purpose and environment
-R1.1 Battery-powered Christmas tree ornament: a tree-shaped PCB sandwich, 70 x 105 mm, about 17 mm thick, about 40 g with AAA cells, hangs from a hole at the tip.  source: notes, mock   check: (review)
+R1.1 Battery-powered Christmas tree ornament: a tree-shaped PCB sandwich, 70 x 105 mm, about 15 mm thick (14.0 mm boards plus gap, 14.8 mm with LEDs; D18), about 40 g with AAA cells, hangs from a hole at the tip.  source: notes, mock   check: (review)
 R1.2 Indoor use, 0-40 C, a few weeks per year, lifetime of several seasons. Final housing: 3D-printed transparent shell around the sandwich.  source: eng, A   check: (review)
 R1.3 Hanging hole is 1.4 mm through BOTH boards at the tip.  source: notes   check: DRC / board outline drawing
 R1.4 BLE (nRF54L15): time sync and effect selection from a phone; later firmware update over BLE (MCUboot DFU).  source: notes   check: (review, firmware hand-off)
@@ -36,7 +36,7 @@ R4.5 Which GPIO lines: 8 lines on port P1 (GPIOTE + timer scanning), final assig
 R5.1 Two boards stacked, INNER faces towards each other, joined by one 2 x 4 2.54 mm header (8 LED lines, no power, no ground) and two M2 nylon screws with standoffs of the gap length. A third support point is the header itself.  source: notes, eng   check: stack check (outline, holes, header pads, nets)
 R5.2 Board A (main, 4 layers): inner face = nRF54L15, crystals, chip antenna, TPS63900, charger, USB-C, cell; outer face = 8 RGB LEDs, SW1, Tag-Connect TC2030-NL. Board B (LEDs): 8 RGB LEDs on its OUTER face only; header male part on the inner face.  source: notes, mock   check: board.yaml, BOARD.md
 R5.3 Antenna at the tree tip with a no-copper keep-out on both boards (top about 17 mm; exact size from the Johanson datasheet), pi-match pads for tuning. Because LEDs have copper, the star LEDs D1 and D9 sit just below the keep-out, not at the very tip. [conflict in notes: star LED at the tip vs no LEDs under the top 17 mm; engineer to confirm, default = keep-out wins]  source: notes, mock, A   check: DRC rule area, calc/critical.py
-R5.4 Mounting holes: two M2 at the ends of tier 3 (x = 8 and 62 mm, y = 72 mm); gap about 14 mm; 2 x AAA holder (11.2 mm tall) or pouch inside the gap; USB-C opens at the bottom edge of board A; SW1 and Tag-Connect on A's outer face are reachable.  source: notes, mock   check: stack check, 3D review
+R5.4 Mounting holes: two M2 at the ends of tier 3 ((10.7, 71.0) and (59.3, 71.0) mm, D17); gap 12.0 mm (D3, D18); 2 x AAA holder (62.2 x 22.4 x 11.3 mm, D15) or pouch inside the gap; USB-C opens at the bottom edge of board A; SW1 and Tag-Connect on A's outer face are reachable.  source: notes, mock   check: stack check, 3D review
 R5.5 For the printed transparent housing the repo carries the STEP of the assembled stack, the outline DXF and a MECHANICAL.md (hole positions, component heights, keep-outs, USB-C and button openings).  source: eng   check: files exist, fab_package
 R5.6 Wrong-mating protection: the header is keyed by the asymmetric hole/outline pattern and a stack check; a reversed header cannot damage anything (signals only, series resistor on every line).  source: hw-review checklist   check: scripts/hw-check.d stack check
 
@@ -57,5 +57,7 @@ Rules the hardware depends on go to FIRMWARE-RULES.md: SEL high before lighting,
 | 3 | Star LED at the tip vs antenna keep-out (R5.3) | eng | gate 4 |
 | 4 | Which battery variant is assembled in the first order (default: variant A, AAA, charger/USB-C/JST unpopulated) | eng | gate 6 |
 | 5 | Header mated height vs standoff length (research running) | agent | gate 2 |
-| 6 | Quantity and cost cap are assumptions (5 panels, 150 USD) | eng | gate 6 |
+| 6 | Quantity and cost cap are assumptions (5 panels, 250 USD, D20) | eng | gate 6 |
+| 8 | Autonomy restated (D19): 22 days at 2 mA LED average vs the notes' 40 days; firmware default 1.0 mA gives 36 days | eng | gate 3 |
+| 9 | Battery layout L1, pouch overhang, antenna 2450AT42A100E, nRF54L10 as the assembled part (D2, D12, D15, D16) | eng | gate 3 |
 | 7 | Windows configurable from the phone (notes open point): firmware, no hardware impact | eng | later |
