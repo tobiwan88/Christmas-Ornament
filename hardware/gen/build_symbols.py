@@ -49,10 +49,10 @@ def text(s, x, y, size=1.27):
 # ------------------------------------------------------------------ nRF54L15-QFAA (QFN48 6 x 6, pin 49 = exposed pad)
 # Pin table: card parts/nRF54L15-QFAA.yaml `pins` (PS HTML summary; supply/RF/debug pins confirmed on the Nordic
 # reference schematic v0.8). Same table for nRF54L10/L05 (decision D2; UNVERIFIED: PS HTML summary).
-NRF_LEFT = {0: ("46", "DCC", "passive"), 3: ("45", "DECD", "passive"), 6: ("43", "DECA", "passive"),
-            7: ("33", "DECRF", "passive"), 12: ("34", "XC1", "passive"), 15: ("35", "XC2", "passive"),
-            18: ("1", "P1.00/XL1", "passive"), 21: ("2", "P1.01/XL2", "passive"), 25: ("30", "~{RESET}", "bidirectional"),
-            27: ("25", "SWDIO", "bidirectional"), 28: ("26", "SWDCLK", "input"), 30: ("18", "P2.07/SWO", "bidirectional")}
+NRF_LEFT = {0: ("46", "DCC", "passive"), 3: ("45", "DECD", "passive"), 8: ("43", "DECA", "passive"),
+            9: ("33", "DECRF", "passive"), 15: ("34", "XC1", "passive"), 18: ("35", "XC2", "passive"),
+            20: ("1", "P1.00/XL1", "passive"), 23: ("2", "P1.01/XL2", "passive"), 26: ("26", "SWDCLK", "input"),
+            27: ("25", "SWDIO", "bidirectional"), 28: ("18", "P2.07/SWO", "bidirectional"), 31: ("30", "~{RESET}", "bidirectional")}
 NRF_RIGHT = {0: ("31", "ANT", "bidirectional"), 2: ("5", "P1.04/AIN0", "bidirectional"),
              3: ("6", "P1.05/AIN1", "bidirectional"), 4: ("7", "P1.06/AIN2", "bidirectional"),
              5: ("8", "P1.07/AIN3", "bidirectional"), 6: ("9", "P1.08/EXTREF", "bidirectional"),
@@ -67,7 +67,7 @@ NRF_RIGHT = {0: ("31", "ANT", "bidirectional"), 2: ("5", "P1.04/AIN0", "bidirect
              31: ("3", "P1.02/NFC1", "bidirectional"), 32: ("4", "P1.03/NFC2", "bidirectional")}
 NRF_TOP = [("48", "VDD"), ("47", "VDD"), ("36", "VDD"), ("22", "VDD"), ("10", "VDD")]      # x = -10.16 .. 10.16 step 5.08
 NRF_BOTTOM = [("44", "VSS", "power_in"), ("49", "EP", "power_in"), ("32", "VSS_PA", "passive")]   # x = -5.08, 0, 5.08
-NRF_TOP_Y, NRF_SLOT0_Y, NRF_X = 45.72, 40.64, 17.78
+NRF_TOP_Y, NRF_SLOT0_Y, NRF_X = 48.26, 40.64, 17.78
 
 
 def nrf54l15():
@@ -80,12 +80,12 @@ def nrf54l15():
         pins.append(_pin("power_in", round(-10.16 + 5.08 * i, 2), NRF_TOP_Y, 270, name, num))
     for i, (num, name, kind) in enumerate(NRF_BOTTOM):
         pins.append(_pin(kind, round(-5.08 + 5.08 * i, 2), -NRF_TOP_Y, 90, name, num))
-    body = [rect(-15.24, 43.18, 15.24, -43.18), text("nRF54L15-QFAA", 0, 2.54, 1.8), text("(nRF54L10 / L05 same pins)", 0, -1.27)]
+    body = [rect(-15.24, 45.72, 15.24, -45.72)]
     descr = ("BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin "
              "assignment table (HTML; UNVERIFIED against the PDF) and nRF54L15-QFAA reference schematic v0.8 (04.02.2025) for "
              "supply, RF and debug pins; card hardware/tree-a/parts/nRF54L15-QFAA.yaml")
     return _sym("nRF54L15-QFAA", "U", "nRF54L15-QFAA", "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias",
-                "https://docs.nordicsemi.com/bundle/ps_nrf54l15/", descr, body, pins, (-15.24, 49.53), (-15.24, -49.53))
+                "https://docs.nordicsemi.com/bundle/ps_nrf54l15/", descr, body, pins, (-15.24, 52.07), (-15.24, -52.07))
 
 
 # ------------------------------------------------------------------ XL-1010RGB-YG (common anode RGB, 1.0 x 1.0 mm)
@@ -114,7 +114,7 @@ def holder():
             poly([(0, 3.048), (0, 1.27), (2.54, 1.27)]),
             poly([(2.54, -1.27), (0, -1.27), (0, -3.048)]), poly([(-2.032, -3.048), (2.032, -3.048)], w=0.4),
             poly([(-1.016, -3.81), (1.016, -3.81)], w=0.4), poly([(0, -3.81), (0, -5.08)]),
-            text("+", -2.794, 4.318, 1.0), text("+", -2.794, -2.54, 1.0), text("2xAAA", -4.064, 0, 1.0)]
+            text("+", -2.794, 4.318, 1.0), text("+", -2.794, -2.54, 1.0)]
     pins = [_pin("passive", 0, 7.62, 270, "+", "1"), _pin("passive", 0, -7.62, 90, "-", "2"),
             _pin("passive", 5.08, 1.27, 180, "C1-", "3"), _pin("passive", 5.08, -1.27, 180, "C2+", "4")]
     descr = ("2 x AAA SMT holder MYOUNG BH-AAA-B5AA001 (drawing MY-CP-0144 REV A/0, 2018-09-09). Pads 3 and 4 are the far-end "
