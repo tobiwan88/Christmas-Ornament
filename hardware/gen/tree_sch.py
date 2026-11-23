@@ -1,9 +1,9 @@
 """Shared helpers for the tree-a / tree-b schematic generators (on top of schkit.py).
 
-- setup(): title-block defaults from the run (date, revision), uuid seed per board, project symbol library.
+- setup(): title-block defaults (date of the run, rev 'generated': no git hash, so a rebuild does not churn the files), uuid seed per board, project symbol library.
 - Draw: schkit.Sheet with stub helpers (pin -> short wire -> label / power symbol), PWR_FLAG, DNP marking.
 - write_project(): <board>.kicad_pro (ERC settings + net classes from board.yaml) and the library tables.
-- check(): ERC (all severities), net-intent check, review_checks.py, one PNG per sheet in hardware/out/review/<board>/.
+- check(): ERC (all severities), net-intent check, netlist.csv (KiCad's netlist for tree_split_check.py), review_checks.py, one PNG per sheet in hardware/out/review/<board>/.
 - write_bom(): bom.csv in the hw-kit column format (bom_check.py) from the generator's PARTS table.
 Run by the board generators (tree_a.py, tree_b.py), not on its own.
 """
@@ -37,18 +37,9 @@ GND_ROT = {270: 0, 0: 90, 180: 270, 90: 180}
 POWER_LIB = {"GND": "power:GND", "VDD": "power:VDD", "VBUS": "power:VBUS"}   # other rails: power:VCC with the net as value
 
 
-def git_rev() -> str:
-    try:
-        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=HW, capture_output=True, text=True).stdout.strip()
-        dirty = subprocess.run(["git", "status", "--porcelain", "--", "gen"], cwd=HW, capture_output=True, text=True).stdout.strip()
-        return f"{sha}{'-dirty' if dirty else ''}"
-    except OSError:
-        return "unknown"
-
-
 def setup(project: str, title: str) -> None:
     schkit.DEFAULTS.update({"project": project, "title": title, "company": "TREE-01 ornament",
-                            "date": datetime.date.today().isoformat(), "rev": f"gen {git_rev()}", "uid_seed": project})
+                            "date": datetime.date.today().isoformat(), "rev": "generated", "uid_seed": project})
     schkit._uid[0] = 0
     Sheet.pwr_count = 0
     get_symbol_cache().add_library_path(str(LIB_SYM))
@@ -95,6 +86,7 @@ class Draw(Sheet):
     def save_dnp(self, directory: Path, parent_uuid: str, sheet_uuid: str, dnp: set) -> Path:
         path = self.save(directory, parent_uuid, sheet_uuid)
         mark_dnp(path, dnp)
+        stable_uuids(path, keep={parent_uuid, sheet_uuid}, seed=f"{schkit.DEFAULTS['uid_seed']}/{self.filename}")
         return path
 
 
@@ -112,6 +104,21 @@ def mark_dnp(path: Path, dnp: set) -> None:
                 re.sub(r"(\(on_board yes\))", r"\1\n\t\t(dnp yes)", blk, count=1)
             blocks[i] = blk
     path.write_text("\t(symbol\n\t\t(lib_id".join(blocks))
+
+
+UUID_RE = re.compile(r'"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"')
+
+
+def stable_uuids(path: Path, keep: set, seed: str) -> None:
+    """kicad-sch-api draws random uuid4s: replace each by uuid5(seed, n-th distinct uuid in the file) so a rebuild of an
+    unchanged generator gives the same file (clean diffs, and stable symbol paths for the PCB). keep: cross-file uuids."""
+    import uuid as _uuid
+    txt = path.read_text()
+    table: dict = {}
+    for u in UUID_RE.findall(txt):
+        if u not in keep and u not in table:
+            table[u] = str(_uuid.uuid5(_uuid.NAMESPACE_URL, f"{seed}/{len(table)}"))
+    path.write_text(UUID_RE.sub(lambda m: f'"{table.get(m.group(1), m.group(1))}"', txt))
 
 
 # --------------------------------------------------------------------------- project files
@@ -184,6 +191,7 @@ def check(board: Path, root: Path, nets: dict, sheets: list[Path]) -> int:
     print(f"{'OK' if errs == warns == 0 else 'FAIL':5} ERC {root.name}: {errs} errors, {warns} warnings (all severities)")
     rc |= bool(errs or warns)
     bad = schkit.check_nets(root, nets)
+    write_netlist(board / "netlist.csv", schkit.netlist(root))
     root.with_suffix(".net").unlink(missing_ok=True)
     for b in bad:
         print("NET", b)
@@ -196,6 +204,17 @@ def check(board: Path, root: Path, nets: dict, sheets: list[Path]) -> int:
     for p in pngs(root, outdir):
         print(f"PNG   {p.relative_to(HW.parent)}")
     return rc
+
+
+def write_netlist(path: Path, actual: dict) -> None:
+    """KiCad's own netlist (kicad-cli export) as net,ref,pin rows, power symbols and unconnected pins left out.
+    Read by tree_split_check.py, which then runs without KiCad."""
+    rows = sorted((net, ref, pin) for net, pins in actual.items() if not net.startswith("unconnected-")
+                  for ref, pin in pins if not ref.startswith("#"))
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["net", "ref", "pin"])
+        w.writerows(rows)
 
 
 # --------------------------------------------------------------------------- BOM (hw-kit column format, calc/bom_check.py)
