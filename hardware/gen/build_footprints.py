@@ -298,6 +298,40 @@ def nettie_gap():
            "(layout gate decision, DS-C1)"))
 
 
+# ------------------------------------------------------------------ NT1 bridge net tie (D25): VSS_PA pad 32 to the exposed pad
+# KiCad's NetTie-2_SMD_Pad0.5mm (1.5 x 0.5 mm) does not fit the 0.20 mm gap between the QFN-48 pad 32 inner end and the
+# exposed pad (nettie_gap() above). This bridge spans the gap: pad 1 (VSS_PA) 0.20 x 0.20 sits inside the end of pad 32,
+# pad 2 (GND) 0.20 x 0.20 inside the exposed pad edge, joined by a 0.20 mm wide copper strip. Copper only (no paste, no
+# mask: both pads lie inside the QFN's own mask openings). Width 0.20 = the pad 32 width (KiCad QFN library land), so the
+# strip keeps the same 0.20 mm gap to pads 31 and 33 as the package land itself. Pad centres 0.40 mm apart: inner edges
+# 0.20 apart (= the gap). The layout generator places it on the pad-32 axis (gen/tree_a_pcb.py).
+NT_BRIDGE_W, NT_BRIDGE_GAP = 0.20, 0.20
+
+
+def nettie_bridge():
+    name = "NetTie-2_SMD_Bridge0.2mm"
+    half = NT_BRIDGE_GAP / 2 + NT_BRIDGE_W / 2          # pad centres at +-0.2: each pad reaches 0.1 mm into its land
+    w2 = NT_BRIDGE_W / 2
+    lines = [f'(footprint "{name}" (version 20241229) (generator "build_footprints") (generator_version "10.0") (layer "F.Cu")',
+             '\t(descr "Net tie bridge 0.2 mm wide across a 0.2 mm gap (QFN pad end to exposed pad), copper only; D25 NT1 '
+             'VSS_PA to GND for the nRF54L QFN-48 pad 32 (Nordic reference: VSS_PA tied to the die pad on the top layer)")',
+             '\t(tags "net tie bridge")',
+             '\t(property "Reference" "REF**" (at 0 -0.6 0) (layer "F.Fab") (hide yes) (effects (font (size 0.4 0.4) (thickness 0.06))))',
+             f'\t(property "Value" "{name}" (at 0 0.6 0) (layer "F.Fab") (hide yes) (effects (font (size 0.4 0.4) (thickness 0.06))))',
+             '\t(property "Datasheet" "" (at 0 0 0) (layer "F.Fab") (hide yes) (effects (font (size 1 1))))',
+             '\t(attr exclude_from_pos_files exclude_from_bom allow_missing_courtyard)',
+             '\t(net_tie_pad_groups "1, 2")',
+             f'\t(fp_poly (pts (xy {-half} {-w2}) (xy {half} {-w2}) (xy {half} {w2}) (xy {-half} {w2})) (stroke (width 0) (type solid)) '
+             '(fill yes) (layer "F.Cu"))',
+             f'\t(pad "1" smd rect (at {half} 0) (size {NT_BRIDGE_W} {NT_BRIDGE_W}) (layers "F.Cu"))',
+             f'\t(pad "2" smd rect (at {-half} 0) (size {NT_BRIDGE_W} {NT_BRIDGE_W}) (layers "F.Cu"))']
+    (OUT / f"{name}.kicad_mod").write_text("\n".join(lines) + "\n)\n")
+    inner = 2 * (half - NT_BRIDGE_W / 2)                # pad inner edges: must equal the gap (pads wholly inside the lands)
+    row("OK" if near(inner, NT_BRIDGE_GAP) else "FAIL", name,
+        f"bridge {NT_BRIDGE_W} wide; pad inner edges {inner:.2f} mm apart = gap {NT_BRIDGE_GAP}, each pad {NT_BRIDGE_W} into its "
+        "land (pad 32 end / exposed pad edge); copper only")
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     led()
@@ -315,6 +349,7 @@ def main() -> int:
     holder()
     usbc()
     nettie_gap()
+    nettie_bridge()
     for st, what, detail in ROWS:
         print(f"{st:5} {what}: {detail}")
     bad = any(r[0] == "FAIL" for r in ROWS)
