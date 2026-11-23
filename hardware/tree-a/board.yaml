@@ -4,7 +4,7 @@ name: tree-a
 pcb: tree-a.kicad_pcb
 sch: tree-a.kicad_sch
 bom: bom.csv
-generators: {schematic: ../gen/tree_a.py, layout: ../gen/tree-a_pcb.py}
+generators: {schematic: ../gen/tree_a.py, layout: ../gen/tree_a_pcb.py}
 notes: BOARD.md
 requirements: ../REQUIREMENTS.md
 
@@ -50,13 +50,13 @@ net_classes:                           # full KiCad net names; widths checked by
     via_mm: 0.6
     drill_mm: 0.3
     current_a: 0.5                      # TPS63900 peak switch current limit 0.51 A max in the 100 mA setting (card 6.5); average input 0.1 A
-    nets: [VBAT, VIN, VDD, LX1, LX2, VBUS]
+    nets: [BAT, VIN, VDD, /power/LX1, /power/LX2, VBUS]   # netlist names (gate 3 schematic): BAT was VBAT, LX1/LX2 are sheet-local
   RF:                                   # 50 ohm single-ended feed to ANT1 (microstrip over In1 GND)
     track_mm: 0.40                      # calc/impedance.py --try 0.40/6.0 on this stackup: Zdiff 99.2 ohm with mask at S 6 mm => Z0 about 49.6 ohm; 0.38 gives 51.0 ohm. Microstrip model only: the Johanson feed is GCPW (coplanar ground): re-check the width/gap pair with the fab impedance calculator before layout release (EST)
-    clearance_mm: 0.30
+    clearance_mm: 0.15                  # pad-level floor (0402 pads of the matching network are 0.5 mm apart); RF TRACK clearance 0.30 is a rule in rules/tree-a.kicad_dru
     via_mm: 0.6
     drill_mm: 0.3
-    nets: [ANT_FEED, ANT_PA]
+    nets: [/rf/ANT_FEED, /mcu/ANT_PA, /rf/RF_50]   # netlist names (sheet-local); RF_50 = L5/C11 to the pi slot
 
 layout:
   stitch_pitch_mm: [2, 3]

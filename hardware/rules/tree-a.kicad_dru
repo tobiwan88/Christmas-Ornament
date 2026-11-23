@@ -1,0 +1,24 @@
+(version 1)
+# Custom DRC rules of tree-a (board.yaml fab.custom_drc). gen/tree_a_pcb.py copies this file next to the board as
+# hardware/tree-a/tree-a.kicad_dru; edit this source, never the copy. Each rule names its reason.
+
+# D15 (DECISIONS.md): the battery holder BT1 (variant A) and the variant B parts J1 (USB-C), J2 (JST PH pouch) and U3
+# (MCP73831) are never fitted together, so their COURTYARDS may overlap. Only the courtyard check is relaxed and only for
+# these pairs: copper clearance, hole clearance and every other rule still apply between them (their pads must not touch).
+(rule "D15 holder vs variant B courtyards"
+  (severity ignore)
+  (constraint courtyard_clearance (min 0mm))
+  (condition "(A.Reference == 'BT1' && (B.Reference == 'J1' || B.Reference == 'J2' || B.Reference == 'U3')) || (B.Reference == 'BT1' && (A.Reference == 'J1' || A.Reference == 'J2' || A.Reference == 'U3'))"))
+
+# RF feed (net class RF, 50 ohm microstrip over In1, board.yaml net_classes.RF): 0.30 mm to any other copper for TRACKS of
+# the feed. Pads keep the net-class clearance, because the nRF54L ANT pin sits at 0.40 mm pitch (0.20 mm to its
+# neighbours by the package land) and the 0201 network parts have 0.18 mm pad gaps; a pad-level 0.30 mm cannot be met.
+(rule "RF feed track clearance"
+  (constraint clearance (min 0.3mm))
+  (condition "A.NetClass == 'RF' && A.Type == 'Track' && B.Net != A.Net"))
+
+# kicad-layout skill: no via in an SMD pad; a same-net via keeps a copper gap to SMD pads (router guard; no vias exist at
+# gate 4 except the footprints' own thermal-via pads).
+(rule "via to SMD pad"
+  (constraint physical_clearance (min 0.15mm))
+  (condition "A.Type == 'Via' && B.Type == 'Pad' && B.Pad_Type == 'SMD'"))

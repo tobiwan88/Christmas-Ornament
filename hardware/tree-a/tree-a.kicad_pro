@@ -110,7 +110,7 @@
         "diff_pair_via_gap": 0.25,
         "name": "RF",
         "track_width": 0.4,
-        "clearance": 0.3,
+        "clearance": 0.15,
         "via_diameter": 0.6,
         "via_drill": 0.3,
         "diff_pair_width": 0.15,
@@ -124,7 +124,7 @@
     "netclass_patterns": [
       {
         "netclass": "Power",
-        "pattern": "VBAT"
+        "pattern": "BAT"
       },
       {
         "netclass": "Power",
@@ -136,11 +136,11 @@
       },
       {
         "netclass": "Power",
-        "pattern": "LX1"
+        "pattern": "/power/LX1"
       },
       {
         "netclass": "Power",
-        "pattern": "LX2"
+        "pattern": "/power/LX2"
       },
       {
         "netclass": "Power",
@@ -148,11 +148,15 @@
       },
       {
         "netclass": "RF",
-        "pattern": "ANT_FEED"
+        "pattern": "/rf/ANT_FEED"
       },
       {
         "netclass": "RF",
-        "pattern": "ANT_PA"
+        "pattern": "/mcu/ANT_PA"
+      },
+      {
+        "netclass": "RF",
+        "pattern": "/rf/RF_50"
       }
     ]
   },
