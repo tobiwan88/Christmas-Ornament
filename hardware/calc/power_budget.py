@@ -7,12 +7,15 @@ A check group runs only when its section is in the profile (charger, buckboost, 
 board + main board) checks each group on the board that owns the part; a present section with a null value is MISSING.
 Formulas: C-rate = ICHG / capacity; cell voltage at the regulator input = cut-off - (path resistance x peak current);
 the TPS63802 minimum input is the datasheet recommended value (section 8.3).
-Sleep current (section `sleep`): a sum of named loads, each at the cell or on +3V3; a +3V3 load reaches the cell as
-I x 3.3 V / (Vcell x eff) (power conservation through the buck-boost, light-load efficiency from the profile); the sum
+Sleep current (section `sleep`): a sum of named loads, each at the cell or on a regulated rail; a rail load reaches the cell as
+I x Vrail / (Vcell x eff) (power conservation through the buck-boost, light-load efficiency from the profile); Vrail is the
+load's `rail_v` (optional, default 3.3 V: backwards compatible); a load with `rail: cell` (or none) is taken as is. The sum
 replaces the bare target in the average current and FAILs above the target `cycle.sleep_ua`.
 Rail-on loads (`cycle.rail_on_loads`, optional): loads that draw only while the sensor rail is on (a bleed resistor:
-I = v / ohm, or ua), converted to the cell like a +3V3 sleep load and added for `sensor_on_s` per cycle (not in sleep).
+I = v / ohm, or ua), converted to the cell like a rail sleep load (own `rail_v`, default 3.3 V) and added for `sensor_on_s` per cycle (not in sleep).
 Autonomy = 80 % of the capacity / (average current x 24 h); FAIL below `cycle.autonomy_days_min`.
+Wh/day uses `cell.nominal_v` (optional, default 3.2 V = one LFP cell). The solar yield rows run only when the design has a
+`solar` section (a board without solar prints no solar rows, MISSING or otherwise).
 Usage: python3 hardware/calc/power_budget.py hardware/<board> [--selftest]
 """
 
@@ -32,6 +35,14 @@ def val(d: dict, key: str, rows: list, label: str | None = None):
     if not item.get("source"):
         rows.append(("WARN", name, f"{item['value']} has no source"))
     return item["value"]
+
+
+def rail_k(load: dict, vcell: float, eff: float) -> float:
+    """Cell current per unit of load current: 1 for a load at the cell, Vrail / (Vcell x eff) for a regulated rail
+    (`rail_v` of the load, default 3.3 V)."""
+    if load.get("rail", "cell") == "cell":
+        return 1.0
+    return load.get("rail_v", 3.3) / (vcell * eff)
 
 
 def run(design: dict) -> list:
@@ -95,7 +106,7 @@ def run(design: dict) -> list:
             for name, ld in loads.items():
                 if not ld.get("source"):
                     rows.append(("WARN", f"sleep load {name}", "no source"))
-                k = 1.0 if ld.get("rail", "cell") == "cell" else 3.3 / (vcell * eff)
+                k = rail_k(ld, vcell, eff)
                 t = ld["ua"] * k
                 m = ld.get("ua_max", ld["ua"]) * k
                 typ, mx = typ + t, mx + m
@@ -128,7 +139,7 @@ def run(design: dict) -> list:
                 if not ld.get("source"):
                     rows.append(("WARN", f"rail-on load {name}", "no source"))
                 ua = ld["v"] / ld["ohm"] * 1e6 if "ohm" in ld else ld["ua"]
-                k = 1.0 if ld.get("rail", "cell") == "cell" else 3.3 / (vcell * eff)
+                k = rail_k(ld, vcell, eff)
                 rail_ma += ua * k / 1000
                 parts.append(f"{name} {ua:.0f} uA on {ld.get('rail', 'cell')} = {ua * k:.0f} uA at the cell")
             rows.append(("OK", "rail-on loads (sensor window only)", ", ".join(parts) +
@@ -138,7 +149,8 @@ def run(design: dict) -> list:
             return (cyv["esp_active_s"] * cyv["esp_active_ma"] + cyv["sensor_on_s"] * (cyv["sensor_ma"] + rail_ma)) / period \
                 + sleep_ma + o3_ma
         q = average(cyv["period_s"])
-        wh = q * 3.2 * 24 / 1000  # LFP nominal 3.2 V (all currents are at the cell)
+        vnom = (ce.get("nominal_v") or {}).get("value") or 3.2  # default LFP nominal 3.2 V (all currents are at the cell)
+        wh = q * vnom * 24 / 1000
         rows.append(("OK", "average current", f"{q:.1f} mA at a {cyv['period_s']} s cycle, {wh:.2f} Wh/day "
                      f"(sleep {sleep_ma * 1000:.0f} uA {'sum' if sleep_sum is not None else 'target'})"))
         cell = val(ce, "cell_mah", rows)
@@ -152,8 +164,10 @@ def run(design: dict) -> list:
             if fast:  # firmware mode with USB or strong sun: reported, not judged against the autonomy minimum
                 qf = average(fast)
                 rows.append(("OK", "fast cycle (USB or strong sun only)", f"{qf:.1f} mA at {fast} s, "
-                             f"{qf * 3.2 * 24 / 1000:.2f} Wh/day, {cell * 0.8 / (qf * 24):.1f} days if it ran without sun"))
-        pw, psh, eff = (val(so, n, rows, f"solar.{n}") for n in ("panel_w", "psh_worst_h", "system_eff"))
+                             f"{qf * vnom * 24 / 1000:.2f} Wh/day, {cell * 0.8 / (qf * 24):.1f} days if it ran without sun"))
+        pw = psh = eff = None
+        if "solar" in has:
+            pw, psh, eff = (val(so, n, rows, f"solar.{n}") for n in ("panel_w", "psh_worst_h", "system_eff"))
         if None not in (pw, psh, eff):
             y = pw * psh * eff
             rows.append(("OK" if y >= wh * 1.5 else "WARN", "worst-month solar yield",
@@ -185,7 +199,15 @@ def selftest() -> bool:
     ok_aut = r["battery autonomy"][0] == "OK" and "12.5 days" in r["battery autonomy"][2]
     e["cycle"]["autonomy_days_min"]["value"] = 13
     ok_fail = {x[1]: x for x in run(e)}["battery autonomy"][0] == "FAIL"
-    return ok_vreg and ok_rate and ok_bb and ok_sleep and ok_aut and ok_fail
+    # no solar section: no solar rows at all (MISSING included)
+    ok_nosolar = not any("solar" in x[1] for x in run(e))
+    # per-load rail voltage: 27.2 uA on a 1.8 V rail at 3.2 V x 0.85 -> 18.0 uA at the cell (default 3.3 V gave 33.0 uA)
+    e["sleep"]["loads"]["b"]["rail_v"] = 1.8
+    ok_rail = "28.0 uA typ" in {x[1]: x for x in run(e)}["sleep current sum"][2]
+    # a design with a solar section and a null value is still MISSING
+    e["solar"] = {"panel_w": {"value": None}}
+    ok_solar = any(x[0] == "MISSING" and x[1] == "solar.panel_w" for x in run(e))
+    return ok_vreg and ok_rate and ok_bb and ok_sleep and ok_aut and ok_fail and ok_nosolar and ok_rail and ok_solar
 
 
 if __name__ == "__main__":

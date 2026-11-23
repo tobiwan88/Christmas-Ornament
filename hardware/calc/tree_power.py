@@ -15,7 +15,10 @@ Rows:
   6  SEL step: DVS time up, passive discharge time down (TPS63900 has no active discharge, 7.3.5 Equation 3)
   7  inductor saturation margins (TPS63900 L, nRF DC/DC L1)
   8  cell-side current conversion (effects window and sleep) and the cross-check against `design`
-  9  autonomy and break-even LED average for the required days
+  9  autonomy and break-even LED average for the required days (FAIL below design.cycle.autonomy_days_min, R3.2: 20 days at
+     the LED average of `effects.led_avg_ma`), and the firmware-default LED average (`effects.led_default_ma`, optional) against its
+     own threshold `cell.autonomy_default_days_min` (R3.2 restated: about 36 days at 1.0 mA, gate 30 days)
+Gate: scripts/hw-check.d/20-tree-power.sh runs this script (buck.py does not apply to the CFG-resistor TPS63900).
 Usage: python3 hardware/calc/tree_power.py hardware/<board> [--selftest]
 """
 
@@ -202,6 +205,18 @@ def run(prof: dict) -> list:
             rows.append(("OK" if days >= dmin else "FAIL", "autonomy break-even", txt))
         else:
             rows.append(("OK", "autonomy break-even", txt))
+        led_def = (t.get("effects", {}).get("led_default_ma") or {}).get("value")
+        dmin_def = (t.get("cell", {}).get("autonomy_default_days_min") or {}).get("value")
+        if led_def is not None:
+            i_def = cell_current_ma((led_def + nrf_e) * vlit, vcell, eff)
+            d_def, avg_def = autonomy_days(cell_mah, usable, i_def, hrs, i_sleep_ma)
+            if dmin_def is None:
+                rows.append(("WARN", "autonomy at firmware default LED", f"{d_def:.1f} days at LED {led_def} mA; no threshold "
+                             f"(tree_power.cell.autonomy_default_days_min) in the profile"))
+            else:
+                rows.append(("OK" if d_def >= dmin_def else "FAIL", "autonomy at firmware default LED",
+                             f"INFO {d_def:.1f} days at LED average {led_def} mA (+ nRF {nrf_e} mA, {avg_def:.3f} mA average from the cell); "
+                             f"threshold {dmin_def} days"))
         for vc in (2.4, 2.8):
             d2, _ = autonomy_days(cell_mah, usable, cell_current_ma((led + nrf_e) * vlit, vc, eff), hrs, i_sleep_ma)
             rows.append(("OK", f"autonomy sensitivity Vcell {vc} V", f"{d2:.1f} days"))
@@ -227,6 +242,23 @@ def selftest() -> bool:
     ok &= r["VDD lit worst case"][0] == "OK" and "3.5525" in r["VDD lit worst case"][2] and "47.5 mV" in r["VDD lit worst case"][2]
     p["tree_power"]["supply"]["vdd_lit_v"]["value"] = 3.6
     ok &= {x[1]: x for x in run(p)}["VDD lit worst case"][0] == "FAIL"
+    # firmware-default row: full profile at 1.0 mA LED gives 36.3 days (hand calc: (1.0 + 0.58) x 3.5 / (2.6 x 0.85) = 2.502 mA lit,
+    # average (11 x 2.5023 + 13 x 0.00372) / 24 = 1.1489 mA, 1250 x 0.8 / (1.1489 x 24) = 36.27 days) against threshold 30 / 37
+    full = {k: {"value": v, "source": "x"} for k, v in dict(vdd_lit_v=3.5).items()}
+    pf = {"tree_power": {"supply": full,
+                         "effects": {"led_avg_ma": {"value": 2.0, "source": "x"}, "nrf_ma": {"value": 0.58, "source": "x"},
+                                     "led_default_ma": {"value": 1.0, "source": "x"}},
+                         "cell": {"vcell_avg_v": {"value": 2.6, "source": "x"}, "eff_lit": {"value": 0.85, "source": "x"},
+                                  "hours_lit": {"value": 11, "source": "x"}, "cell_mah": {"value": 1250, "source": "x"},
+                                  "usable_frac": {"value": 0.8, "source": "x"}, "autonomy_default_days_min": {"value": 30, "source": "x"}},
+                         "sleep": {"vcell_v": {"value": 3.0, "source": "x"}, "eff": {"value": 0.7, "source": "x"},
+                                   "nrf_ua": {"value": 1.5, "source": "x"}, "tps_iq_ua": {"value": 0.075, "source": "x"},
+                                   "tps_iq_max_ua": {"value": 1.0, "source": "x"}, "divider_ohm": {"value": 2000000, "source": "x"}}}}
+    pf["tree_power"]["supply"]["vdd_idle_v"] = {"value": 3.0, "source": "x"}
+    r = {x[1]: x for x in run(pf)}.get("autonomy at firmware default LED")
+    ok &= r is not None and r[0] == "OK" and "36.3 days" in r[2]
+    pf["tree_power"]["cell"]["autonomy_default_days_min"]["value"] = 37
+    ok &= {x[1]: x for x in run(pf)}["autonomy at firmware default LED"][0] == "FAIL"
     return bool(ok)
 
 
