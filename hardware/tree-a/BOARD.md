@@ -110,9 +110,17 @@ Open decisions (engineer), default first:
    recommended) / left wing.
 4. NT1 footprint field in `tree_a.py`: set `tree:NetTie-2_SMD_Bridge0.2mm` (removes the parity waiver) [default].
 5. LFXO X1 5.6 mm from XL1: accept [default] / move LED D10 (tree_geometry, shared with B) to let U1 sit lower-left.
-6. LED fab-footprint fit (XL-1010RGB-YG, C965834): EasyEDA numbers the pads 1 TL, 2 BL, 3 BR, 4 TR, the datasheet top view
-   1 TL, 2 TR, 3 BL, 4 BR: `fab_package --fit-only` FAILs on both boards (no rotation matches by number); needs a hand
-   check of pin 1 / the mark and a GEOMETRY_OK entry in tools/fab_package.py (shared tool), see the gate 4 report.
+6. Fab-footprint fit (`fab_package.py --fit-only`, the only failing section of `scripts/hw-check.sh` after gate 4): pad
+   NUMBERS differ from the EasyEDA footprints, placement geometry is not the problem. Needs a hand check against both
+   drawings and GEOMETRY_OK entries in tools/fab_package.py (shared tool, not edited here):
+   - D9-D16 XL-1010RGB-YG (C965834; D1-D8 on B too): EasyEDA 1 TL, 2 BL, 3 BR, 4 TR; datasheet top view 1 TL, 2 TR,
+     3 BL, 4 BR (parts card, DS-A1). Pin 1 coincides; confirm pin 1 / the mark for the CPL rotation.
+   - BT1 (C964881): EasyEDA puts pads 1 and 2 at the two ENDS of one row (55.75 mm apart), 3 / 4 on the other row;
+     ours has 1 (BAT) and 2 (GND) at the same end, 3 / 4 linked at the other (build_footprints WARN: pad-to-cell mapping
+     UNVERIFIED). The geometry is the same; the polarity question is the engineer's (continuity test, ORDER.md).
+   - ANT1 (C2917719): EasyEDA has two equal 0.8 x 2.3 pads 5.0 mm apart, ours is the Johanson land (1.0 feed + 4.0
+     stub, 8.9 mm); pad 1 = feed in both, fit offset 0.75 mm = our footprint origin to the EasyEDA body centre: the CPL
+     position must be the body centre.
 
 ## Routing
 What is hand-drawn, what the router did, frozen routes, build and reproduce commands.
