@@ -31,7 +31,7 @@ nRF54L10-QFAA-R7 (QFN-48 6x6),U1,QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVi
 TPS63900DSKR (WSON-10 2.5x2.5),U2,WSON-10-1EP_2.5x2.5mm_P0.5mm_EP1.2x2mm_ThermalVias,1,C1518762,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",buck-boost 3.0 / 3.5 V
 32.768kHz ABS06-32.768KHZ-9-1-T (SMD2012-2P),X1,Crystal_SMD_2012-2Pin_2.0x1.2mm,1,C510776,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","LFXO, CL 9 pF, no external load caps"
 32MHz XL7EL89CKI-111YLC-32M (SMD2016-4P),X2,Crystal_SMD_2016-4Pin_2.0x1.6mm,1,C2965582,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","HFXO, CL 8 pF, no external load caps"
-4.7uF 16V X5R (0603),"C30,C31",C_0603_1608Metric,2,,n/a,DNP (C19666),charger Cin (variant B); charger Cout (variant B)
+4.7uF 16V X5R (0603),"C30,C31",C_0603_1608Metric,2,,n/a,DNP (C19666),"charger Cin (variant B); charger Cout on VIN (variant B, D21)"
 tuning slot (0402),"C50,C51",C_0402_1005Metric,2,,n/a,DNP (no part),"pi shunt, antenna side of R50: bench-tune with a VNA; pi shunt, antenna pad side: bench-tune with a VNA"
 HC-TYPE-C-6P-01A (SMD),J1,USB_C_HCTL_HC-TYPE-C-6P-01A,1,,n/a,DNP (C2894893),USB-C power input (variant B)
 S2B-PH-SM4-TB (SMD PH),J2,JST_PH_S2B-PH-SM4-TB_1x02-1MP_P2.00mm_Horizontal,1,,n/a,DNP (C295747),Li-ion pouch (variant B); pin 1 = cell + (UNVERIFIED)

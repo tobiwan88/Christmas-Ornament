@@ -64,7 +64,7 @@ P("R30", "Device:R", "5.1k", R0402, "C25905", "Basic", "5.1k 1% (0402)", "CC1 pu
 P("R31", "Device:R", "5.1k", R0402, "C25905", "Basic", "5.1k 1% (0402)", "CC2 pull-down (variant B)", "B")
 P("R32", "Device:R", "10k", R0402, "C25744", "Basic", "10k 1% (0402)", "PROG 100 mA (variant B)", "B")
 P("C30", "Device:C", "4.7uF", "Capacitor_SMD:C_0603_1608Metric", "C19666", "Basic", "4.7uF 16V X5R (0603)", "charger Cin (variant B)", "B")
-P("C31", "Device:C", "4.7uF", "Capacitor_SMD:C_0603_1608Metric", "C19666", "Basic", "4.7uF 16V X5R (0603)", "charger Cout (variant B)", "B")
+P("C31", "Device:C", "4.7uF", "Capacitor_SMD:C_0603_1608Metric", "C19666", "Basic", "4.7uF 16V X5R (0603)", "charger Cout on VIN (variant B, D21)", "B")
 _RT, _RB = f"{pdiv.RTOP / 1e3:.0f}k", f"{pdiv.RBOT / 1e3:.0f}k"
 P("R42", "Device:R", _RT, R0402, "C25741", "Basic", "100k 1% (0402)", "VBUS_DET divider top (tree_pin_divider.py)", "B")
 P("R43", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)", "VBUS_DET divider bottom (tree_pin_divider.py)", "B")
@@ -116,7 +116,17 @@ for _ref, _d in tc.LED_MATRIX.items():
 P("J3", "Connector_Generic:Conn_02x04_Odd_Even", "2x4 F 8.5mm", "tree:PinSocket_2x04_SMD_HC-PM254-8.5H", "C22373945", "Extended",
   "HC-PM254-8.5H-2x4PS (SMD 2x4 2.54)", "female header to board B (D3)")
 
+PARTS["BT1"]["role"] = "2xAAA holder"
+PARTS["J2"]["role"] = "pouch"
 VARB = {r for r, p in PARTS.items() if p["var"] == "B"}
+
+
+def variant_text(ref: str) -> str:
+    """'J2 pouch: fitted in B, DNP in A' style note from the variant table (never typed by hand)."""
+    v = PARTS[ref]["var"]
+    fit = {"AB": "fitted in A and B", "A": "fitted in A, not placed in B", "B": "fitted in B, DNP in A",
+           "DNP": "DNP in A and B", "DNL": "footprint only", "NONE": "net tie"}[v]
+    return f"{ref} {PARTS[ref].get('role', PARTS[ref]['val'])}: {fit}"
 DNP_ORDER1 = VARB | {r for r, p in PARTS.items() if p["var"] == "DNP"}
 
 
@@ -141,9 +151,9 @@ GND_PINS = [("BT1", "2"), ("J2", "2"), ("Q1", "1"), ("C20", "2"), ("R41", "2"), 
             ("C30", "2"), ("R32", "2"), ("R43", "2"), ("R45", "2"), ("C31", "2")]
 NETS: dict[str, list] = {
     "GND": GND_PINS,
-    "BAT": [("BT1", "1"), ("J2", "1"), ("Q1", "3"), ("U3", "3"), ("C31", "1")],
+    "BAT": [("BT1", "1"), ("J2", "1"), ("Q1", "3")],
     "BT_LINK": [("BT1", "3"), ("BT1", "4")],
-    "VIN": [("Q1", "2"), ("U2", "10"), ("U2", "1"), ("C20", "1"), ("R40", "1")],
+    "VIN": [("Q1", "2"), ("U2", "10"), ("U2", "1"), ("C20", "1"), ("R40", "1"), ("U3", "3"), ("C31", "1")],
     "VBAT_SENSE": [("R40", "2"), ("R41", "1"), ("U1", "5")],
     "LX1": [("U2", "9"), ("L2", "1")], "LX2": [("U2", "7"), ("L2", "2")],
     "TPS_SEL": [("U2", "2"), ("R23", "1"), ("U1", "11")],
@@ -219,7 +229,9 @@ def power_sheet():
     s.rail("GND", 23, 33, 270)
     s.nc("J2", ["MP"])
     s.wire(("BT1", "1"), (12, 20), (20, 20), (22, 20), ("Q1", "3"))
-    s.rail("BAT", 20, 20, 90)
+    s.wire((20, 20), (20, 18))
+    s.rail("BAT", 20, 18, 90)
+    s.pflag(20, 18, rot=180)                 # the cell supplies BAT (ERC power-flag on the rail symbol)
     # reverse-polarity P-FET: drain to the cell, source to VIN, gate to GND (D7)
     s.part("Q1", 40, 21, rot=90)
     s.tag("Q1", reference=(3.0, 2.6), value=(3.0, 4.6))
@@ -235,9 +247,8 @@ def power_sheet():
     s.pwr("R41", "2", "GND")
     s.part("U2", 95, 24)
     s.wire(("Q1", "2"), (48, 20), (56, 20), (66, 20), (89, 20), ("U2", "10"))
-    above(s, "VIN", 70, 20)
     s.wire((66, 20), (66, 18))
-    s.pflag(66, 18)
+    s.rail("VIN", 66, 18, 90)               # driven by U3 VBAT (power output) in the netlist: no PWR_FLAG here
     s.wire(("U2", "1"), (89, 22), (89, 20))
     # SEL: pull-down and the GPIO
     s.part("R23", 82, 24.5)
@@ -270,11 +281,12 @@ def power_sheet():
     s.rail("VDD", 118, 20, 90)
     # frames and notes
     s.frame(4, 13, 36, 47, "Cell input: BT1 2xAAA (variant A) / J2 pouch (variant B)")
-    s.text(5, 37, "BT1 fitted in order 1 (D10); J2 DNP (variant B).\nBT1 pads 3/4 = far-end tabs, joined: series pack.\n"
+    s.text(5, 37, f"{variant_text('BT1')}; {variant_text('J2')}.\nBT1 pads 3/4 = far-end tabs, joined: series pack.\n"
+                  "A reversed BT1 cell or J2 pouch reaches Q1 only:\nVIN and U2, U3, C31, R40 stay at 0 V (D21).\n"
                   "Pad-to-cell mapping and J2 pin 1 = cell +:\nUNVERIFIED (continuity test). BT1 and J1/J2/U3\n"
                   "overlap on the board on purpose (D15).", 1.1)
     s.frame(36, 13, 46.5, 31, "Q1 (D7)")
-    s.text(36.5, 26.5, "P-FET: D to cell +,\nS to VIN, G to GND.\nBody diode D->S;\nreversed cell: off.", 1.0)
+    s.text(36.5, 26.5, "P-FET: D to cell +,\nS to VIN, G to GND.\nReversed cell: VGS 0,\nbody diode blocks.\nCharge (B): S->D,\non (tree_charge_path).", 1.0)
     s.frame(46.5, 13, 74, 47, "VIN: Cin, battery sense")
     s.text(47, 32, "C20 10uF: Cin (>= 5 uF effective, 6.3).\nR40/R41 1M/1M: VBAT_SENSE to P1.04 AIN0\n"
                    "(4.2 V -> 2.1 V). Unswitched: 1.5 uA\n(PARTS-REVIEW 17). No filter cap:\nthe cards do not ask for one.", 1.1)
@@ -323,7 +335,7 @@ def charger_sheet():
     s.pwr("R32", "2", "GND")
     s.part("C31", 82, 30.5)
     s.wire(("U3", "3"), (82, 29), (92, 29))
-    s.rail("BAT", 92, 29, 90)
+    s.rail("VIN", 92, 29, 90)
     s.pwr("C31", "2", "GND")
     s.part("R44", 79.5, 37, rot=90)
     s.part("R45", 81, 38.5)
@@ -337,7 +349,9 @@ def charger_sheet():
     s.frame(40, 13, 104, 47, "U3 MCP73831-2 charger, 100 mA (DS20001984H)")
     s.text(41, 42, f"PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers {_RT}/{_RB}: <= 3.0 V at VBUS 5.25 V "
                    "(D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\n"
-                   "SEL low (VDD 3.0 V). All parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15).", 1.1)
+                   "SEL low (VDD 3.0 V). U3 VBAT and C31 on VIN (D21): charge current flows through Q1\n"
+                   "(source to drain, tree_charge_path.py); without a cell U3 feeds VIN directly.\n"
+                   "All parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15).", 1.1)
     return s
 
 

@@ -1375,7 +1375,7 @@
 		)
 		(uuid "5df8a4cc-3daf-520b-af1b-0aac6f12ad4e")
 	)
-	(text "PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers 100k/120k: <= 3.0 V at VBUS 5.25 V (D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\nSEL low (VDD 3.0 V). All parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15)."
+	(text "PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers 100k/120k: <= 3.0 V at VBUS 5.25 V (D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\nSEL low (VDD 3.0 V). U3 VBAT and C31 on VIN (D21): charge current flows through Q1\n(source to drain, tree_charge_path.py); without a cell U3 feeds VIN directly.\nAll parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15)."
 		(exclude_from_sim no)
 		(at 104.14 106.68 0)
 		(effects
@@ -1865,7 +1865,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "2782b719-3338-5999-8328-2f1327d98c40")
-		(property "Reference" "#PWR16"
+		(property "Reference" "#PWR17"
 			(at 40.64 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -1923,7 +1923,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR16")
+					(reference "#PWR17")
 					(unit 1)
 				)
 			)
@@ -1940,7 +1940,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "34e8b75d-8687-58dd-89d0-1c181c66e820")
-		(property "Reference" "#PWR15"
+		(property "Reference" "#PWR16"
 			(at 68.58 85.09 0)
 			(hide yes)
 			(show_name no)
@@ -1998,7 +1998,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR15")
+					(reference "#PWR16")
 					(unit 1)
 				)
 			)
@@ -2015,7 +2015,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "42f3fcfb-5995-5f03-8499-c2284af5d597")
-		(property "Reference" "#PWR24"
+		(property "Reference" "#PWR25"
 			(at 205.74 95.25 0)
 			(hide yes)
 			(show_name no)
@@ -2073,7 +2073,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR24")
+					(reference "#PWR25")
 					(unit 1)
 				)
 			)
@@ -2090,7 +2090,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "44f26e3b-c98a-579c-bae8-a8050682bbc0")
-		(property "Reference" "#PWR22"
+		(property "Reference" "#PWR23"
 			(at 233.68 69.85 0)
 			(hide yes)
 			(show_name no)
@@ -2102,7 +2102,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "BAT"
+		(property "Value" "VIN"
 			(at 233.68 68.58 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2148,7 +2148,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR22")
+					(reference "#PWR23")
 					(unit 1)
 				)
 			)
@@ -2476,7 +2476,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "849eed3c-a093-575c-88b8-6b397944f888")
-		(property "Reference" "#PWR21"
+		(property "Reference" "#PWR22"
 			(at 160.02 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -2534,7 +2534,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR21")
+					(reference "#PWR22")
 					(unit 1)
 				)
 			)
@@ -2551,7 +2551,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "87f9901e-11da-5e8a-8ba7-2f331cd3b170")
-		(property "Reference" "#PWR18"
+		(property "Reference" "#PWR19"
 			(at 111.76 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -2609,7 +2609,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR18")
+					(reference "#PWR19")
 					(unit 1)
 				)
 			)
@@ -2863,7 +2863,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "a17a7f28-c4f7-5c79-963f-f3bbc83a48d3")
-		(property "Reference" "#PWR19"
+		(property "Reference" "#PWR20"
 			(at 137.16 69.85 0)
 			(hide yes)
 			(show_name no)
@@ -2921,7 +2921,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR19")
+					(reference "#PWR20")
 					(unit 1)
 				)
 			)
@@ -2938,7 +2938,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "a9a81abe-1642-5068-a29c-00b45ad0060c")
-		(property "Reference" "#PWR17"
+		(property "Reference" "#PWR18"
 			(at 33.02 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -2996,7 +2996,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR17")
+					(reference "#PWR18")
 					(unit 1)
 				)
 			)
@@ -3013,7 +3013,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "aa4ab3cb-876f-57b7-817c-d387682509b9")
-		(property "Reference" "#PWR23"
+		(property "Reference" "#PWR24"
 			(at 208.28 74.93 0)
 			(hide yes)
 			(show_name no)
@@ -3071,7 +3071,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR23")
+					(reference "#PWR24")
 					(unit 1)
 				)
 			)
@@ -3088,7 +3088,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "ddb18efa-5034-5d1e-8489-f46e79498a5b")
-		(property "Reference" "#PWR14"
+		(property "Reference" "#PWR15"
 			(at 86.36 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -3146,7 +3146,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR14")
+					(reference "#PWR15")
 					(unit 1)
 				)
 			)
@@ -3251,7 +3251,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e4db7956-e4fd-5c76-85ba-3034be262c72")
-		(property "Reference" "#PWR20"
+		(property "Reference" "#PWR21"
 			(at 177.8 77.47 0)
 			(hide yes)
 			(show_name no)
@@ -3309,7 +3309,7 @@
 		(instances
 			(project "tree-a"
 				(path "/d16cec81-7581-500b-bb16-ade149ca4db8/d8fc861a-16eb-5772-a15f-5071f4d73cfe"
-					(reference "#PWR20")
+					(reference "#PWR21")
 					(unit 1)
 				)
 			)

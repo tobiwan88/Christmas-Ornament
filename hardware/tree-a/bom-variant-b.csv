@@ -10,7 +10,7 @@ Comment,Designator,Footprint,Quantity,LCSC Part #,Class,Status,Function / notes
 10nF 50V X7R (0402),C12,C_0402_1005Metric,1,C15195,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECA/DECRF (ref C12)
 3.9pF C0G (0402),C13,C_0402_1005Metric,1,C313081,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",nRESET filter (ref C13)
 22uF 25V X5R (0805),C21,C_0805_2012Metric,1,C45783,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",TPS63900 Cout
-4.7uF 16V X5R (0603),"C30,C31",C_0603_1608Metric,2,C19666,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",charger Cin (variant B); charger Cout (variant B)
+4.7uF 16V X5R (0603),"C30,C31",C_0603_1608Metric,2,C19666,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","charger Cin (variant B); charger Cout on VIN (variant B, D21)"
 XL-1010RGB-YG (1010),"D9,D10,D11,D12,D13,D14,D15,D16",LED_XL-1010RGB-YG,8,C965834,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RGB LED, outer face (B.Cu)"
 120R/0.2A GZ1005D121TF (0402),FB1,L_0402_1005Metric,1,C38480,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECD to DECA/DECRF (ref FB1)
 HC-TYPE-C-6P-01A (SMD),J1,USB_C_HCTL_HC-TYPE-C-6P-01A,1,C2894893,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",USB-C power input (variant B)
