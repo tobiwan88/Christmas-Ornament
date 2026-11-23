@@ -6,6 +6,12 @@ Fee model: JLCPCB Economic PCBA charges a loading fee per unique Extended part (
 the fee comes from board.yaml `fab.extended_fee_usd`, never hard-coded here. With `--stock`, the parts cost is the fab's
 first (smallest) price tier x quantity x qty (no attrition parts), and the order row adds the Extended fees plus
 `fab.setup_fee_usd` and `fab.stencil_fee_usd`; FAIL above `fab.order_limit_usd` (bare PCB, SMT joints, shipping not included).
+Panel-level accounting (optional; without these keys every board is its own order, as before): setup, stencil and the loading fee
+of a part are charged once per ORDER, and a panel of several boards is one order.
+  fab.order_includes: [<board dir relative to this one>, ...]  this board owns the order: its `order at qty` row sums the parts of
+      every listed board (their bom.csv, same --stock lookup) and counts setup, stencil and each unique Extended part once over the union
+  fab.fees_paid_by: <board dir>  this board belongs to that board's order: no setup/stencil here, an Extended part that the owner's
+      BOM already carries is not counted again, the order row shows this board's parts only and carries no limit (the owner's row has it)
 Usage: python3 hardware/calc/bom_check.py hardware/<board> [--strict] [--stock] [--qty N]
 """
 
@@ -28,9 +34,8 @@ def load_rows(board: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-def check(rows: list[dict], profile: dict, qty: int, stock: dict | None = None):
-    fab = profile.get("fab") or {}
-    fee = fab.get("extended_fee_usd")
+def scan(rows: list[dict], qty: int, stock: dict | None = None):
+    """Per-line rows of one BOM: (rows, unique Extended part numbers, parts cost in USD, unpriced part numbers)."""
     out, extended = [], set()
     parts_usd, unpriced = 0.0, []
     for r in rows:
@@ -70,19 +75,56 @@ def check(rows: list[dict], profile: dict, qty: int, stock: dict | None = None):
             elif lcsc in extended:
                 extended.discard(lcsc)
         out.append((status, name, f"{lcsc}{note}"))
+    return out, extended, parts_usd, unpriced
+
+
+def check(rows: list[dict], profile: dict, qty: int, stock: dict | None = None, included: list | None = None,
+          owner_lcsc: set | None = None, owner_name: str = ""):
+    """included: [(name, rows, stock)] of the other boards in this board's order (this board owns the order);
+    owner_lcsc: fab part numbers in the BOM of the board that pays the fees (this board's Extended parts among them are not counted)."""
+    fab = profile.get("fab") or {}
+    fee = fab.get("extended_fee_usd")
+    out, extended, parts_usd, unpriced = scan(rows, qty, stock)
+    if not rows:   # a header-only bom.csv would otherwise pass every row below vacuously
+        out.append(("MISSING", "bom.csv", "no parts listed: the schematic generator writes it (fails with --strict)"))
+    if owner_lcsc is not None:
+        shared = extended & owner_lcsc
+        extended -= shared
+    else:
+        shared = set()
+    own_extended = set(extended)
+    group = []   # (name, Extended set) of the other boards in this order
+    for name, orows, ostock in included or []:
+        _, o_ext, o_usd, o_unpriced = scan(orows, qty, ostock)
+        group.append((name, o_ext))
+        extended |= o_ext
+        parts_usd += o_usd
+        unpriced += [f"{name}:{u}" for u in o_unpriced]
     if fee is None:
         out.append(("MISSING", "extended-part fee", "board.yaml fab.extended_fee_usd is null"))
+    elif owner_lcsc is not None:
+        out.append(("OK", "extended-part fee", f"{len(extended)} unique Extended parts not already counted on {owner_name} x ${fee} = "
+                    f"${len(extended) * fee:.2f} ({len(shared)} shared with {owner_name}: counted once, there)"))
+    elif group:
+        out.append(("OK", "extended-part fee", f"{len(extended)} unique Extended parts over the order ({len(own_extended)} here, "
+                    + ", ".join(f"{len(g[1])} on {g[0]}" for g in group) + f") x ${fee} = ${len(extended) * fee:.2f} (Economic PCBA, once per order)"))
     else:
         out.append(("OK", "extended-part fee", f"{len(extended)} unique Extended parts x ${fee} = ${len(extended) * fee:.2f} (Economic PCBA)"))
     if stock and fee is not None:
-        fixed = (fab.get("setup_fee_usd") or 0) + (fab.get("stencil_fee_usd") or 0)
-        fees = len(extended) * fee + fixed
-        total = parts_usd + fees
         limit = fab.get("order_limit_usd")
-        st = "OK" if limit is None or total <= limit else "FAIL"
-        out.append((st, f"order at qty {qty}", f"parts ${parts_usd:.2f} (${parts_usd / qty:.2f} per board, first price tier"
-                    f"{', unpriced: ' + ' '.join(unpriced) if unpriced else ''}) + fees ${fees:.2f} ({len(extended)} Extended, "
-                    f"setup + stencil ${fixed:.2f}) = ${total:.2f} (limit ${limit}; bare PCB, joints and shipping not included)"))
+        if owner_lcsc is not None:
+            out.append(("OK", f"order at qty {qty}", f"parts ${parts_usd:.2f} (${parts_usd / qty:.2f} per board, first price tier"
+                        f"{', unpriced: ' + ' '.join(unpriced) if unpriced else ''}), Extended fees ${len(extended) * fee:.2f}; setup, stencil and "
+                        f"shared Extended parts are counted once on {owner_name}, whose order row carries the limit"))
+        else:
+            fixed = (fab.get("setup_fee_usd") or 0) + (fab.get("stencil_fee_usd") or 0)
+            fees = len(extended) * fee + fixed
+            total = parts_usd + fees
+            st = "OK" if limit is None or total <= limit else "FAIL"
+            scope = f" for {' + '.join([profile.get('name', 'this board')] + [g[0] for g in group])}" if group else ""
+            out.append((st, f"order at qty {qty}{scope}", f"parts ${parts_usd:.2f} (${parts_usd / qty:.2f} per board, first price tier"
+                        f"{', unpriced: ' + ' '.join(unpriced) if unpriced else ''}) + fees ${fees:.2f} ({len(extended)} Extended, "
+                        f"setup + stencil ${fixed:.2f}) = ${total:.2f} (limit ${limit}; bare PCB, joints and shipping not included)"))
     return out
 
 
@@ -96,7 +138,23 @@ def selftest() -> bool:
     ]
     res = check(rows, {"fab": {"extended_fee_usd": 3.0}}, 5)
     kinds = [r[0] for r in res]
-    return kinds == ["OK", "OK", "OK", "MISSING", "OK", "OK"] and "2 unique Extended parts x $3.0 = $6.00" in res[-1][2]
+    ok = kinds == ["OK", "OK", "OK", "MISSING", "OK", "OK"] and "2 unique Extended parts x $3.0 = $6.00" in res[-1][2]
+    # panel-level accounting: board 2 repeats U1 (Extended, shared with board 1) and adds U9 (Extended): fees once per order
+    st = lambda lcsc, price: {"stock": 1000, "library": "Extended", "price": price}
+    stock1 = {"C2913198": st(0, 1.0), "C16581": st(0, 2.0)}
+    rows2 = [rows[1], {"Comment": "f", "Designator": "U9", "LCSC Part #": "C7777", "Quantity": "1", "Class": "Extended", "Status": "VERIFIED"}]
+    stock2 = {"C2913198": st(0, 1.0), "C7777": st(0, 4.0)}
+    prof = {"name": "b1", "fab": {"extended_fee_usd": 3.0, "setup_fee_usd": 50, "stencil_fee_usd": 10, "order_limit_usd": 100}}
+    own = check(rows[:3], prof, 1, stock1, [("b2", rows2, stock2)])
+    # union of Extended parts: C2913198, C16581, C7777 = 3 x 3.0 = 9; fixed 60; parts 1 + 2 + 1 + 4 = 8 -> 77
+    ok &= "3 unique Extended parts over the order" in own[-2][2] and own[-1][0] == "OK" and "= $77.00" in own[-1][2]
+    prof["fab"]["order_limit_usd"] = 70
+    ok &= check(rows[:3], prof, 1, stock1, [("b2", rows2, stock2)])[-1][0] == "FAIL"
+    other = check(rows2, {"name": "b2", "fab": {"extended_fee_usd": 3.0, "setup_fee_usd": 50, "stencil_fee_usd": 10, "order_limit_usd": 1}}, 1, stock2,
+                  owner_lcsc={"C2913198", "C16581"}, owner_name="b1")
+    ok &= check([], prof, 1)[0][0] == "MISSING"
+    ok &= "1 unique Extended parts not already counted on b1" in other[-2][2] and other[-1][0] == "OK" and "counted once on b1" in other[-1][2]
+    return ok
 
 
 def main() -> int:
@@ -113,16 +171,31 @@ def main() -> int:
     board = Path(a.board)
     profile = yaml.safe_load((board / "board.yaml").read_text())
     rows = load_rows(board)
-    stock = None
-    if a.stock:
+    fab = profile.get("fab") or {}
+
+    def stock_of(brows):
+        if not a.stock:
+            return None
         import jlcparts
-        codes = sorted({r["LCSC Part #"].strip() for r in rows if LCSC.match(r["LCSC Part #"].strip())})
-        stock = {}
+        codes = sorted({r["LCSC Part #"].strip() for r in brows if LCSC.match(r["LCSC Part #"].strip())})
+        found = {}
         for c in codes:
             hit = [p for p in jlcparts.query(c, 3) if p["lcsc"] == c]
             if hit:
-                stock[c] = hit[0]
-    res = check(rows, profile, a.qty, stock)
+                found[c] = hit[0]
+        return found
+
+    included = []
+    for rel in fab.get("order_includes") or []:   # panel-level accounting: this board owns the order
+        other = (board / rel).resolve()
+        orows = load_rows(other)
+        included.append((other.name, orows, stock_of(orows)))
+    owner_lcsc, owner_name = None, ""
+    if fab.get("fees_paid_by"):                   # this board's fees are counted on the owner's order row
+        owner = (board / fab["fees_paid_by"]).resolve()
+        owner_name = owner.name
+        owner_lcsc = {r["LCSC Part #"].strip() for r in load_rows(owner) if LCSC.match(r["LCSC Part #"].strip())}
+    res = check(rows, profile, a.qty, stock_of(rows), included, owner_lcsc, owner_name)
     bad = False
     for st, name, detail in res:
         if st == "MISSING" and a.strict:
