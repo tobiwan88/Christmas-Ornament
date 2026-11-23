@@ -89,7 +89,7 @@ Tables come from `bom.csv` (variant A) and `bom-variant-b.csv` (variant B) writt
 | L4, L5 | 2 | 3.5nH LQP03HQ3N5B02D (0201) | L_0201_0603Metric | C3911055 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RF series (ref L3); RF series (ref L4) |
 | Q1 | 1 | SI2301CDS-T1-GE3 (SOT-23) | SOT-23 | C10487 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | reverse-polarity P-FET, drain to cell + (D7) |
 | R1, R2, R3, R4, R5, R6, R7, R8 | 8 | 22R 1% (0402) | R_0402_1005Metric | C25092 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | line resistor LED_L1 (D13); line resistor LED_L2 (D13); line resistor LED_L3 (D13); line resistor LED_L4 (D13); line resistor LED_L5 (D13); line resistor LED_L6 (D13); line resistor LED_L7 (D13); line resistor LED_L8 (D13) |
-| R9 | 1 | 1k 1% (0402) | R_0402_1005Metric | C11702 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | nRESET series (ref R1) |
+| R9, R10 | 2 | 1k 1% (0402) | R_0402_1005Metric | C11702 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | nRESET series (ref R1); BTN_SW1 series, ESD current limit (D21, DS-C5) |
 | R20 | 1 | 511R 1% 100ppm (0402) | R_0402_1005Metric | C25124 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RCFG1: VO(2) 3.5 V (Table 7-2) |
 | R21 | 1 | 10.5k 1% 100ppm (0402) | R_0402_1005Metric | C25850 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RCFG2: 100 mA input limit (Table 7-2) |
 | R22 | 1 | 13.3k 1% 100ppm (0402) | R_0402_1005Metric | C122547 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RCFG3: VO(1) 3.0 V (Table 7-3) |
