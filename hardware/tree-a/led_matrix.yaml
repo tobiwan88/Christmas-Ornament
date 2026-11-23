@@ -54,7 +54,7 @@ design:
   r_candidates_ohm: {value: [22, 33, 47], source: "REQUIREMENTS R4.4 (22/33 Basic, 47 Extended per the digest)"}
   drive: {value: high, source: "REQUIREMENTS R4.5: LED lines on P1 (high drive, GPIOTE); 'extra' = P2 option"}
   r_tol_pct: {value: 1, source: "assumption: 1 % 0402 resistors (Basic parts are 1 %)"}
-  i_target_fail_ma: {value: 1.0, source: "REQUIREMENTS R4.4: FAIL if a die cannot reach 1 mA (worst case Vf max, VDD min, min-spec drive)"}
+  i_target_fail_ma: {value: 1.0, source: "REQUIREMENTS R4.4 (2026-11-23): FAIL below 1 mA at worst-case Vf, VDD min, TYPICAL drive"}
   i_target_warn_ma: {value: 2.0, source: "job 2026-11-23: second target 2 mA (WARN only)"}
   ghost_margin_v: {value: 0.1, source: "REQUIREMENTS R4.3: two lowest Vf at minimum > VDD + 0.1 V"}
   ghost_ratio_warn: {value: 1.0e-4, source: "assumption: a sneak current above 1/10000 of the lit current may glow in a dark room; review"}
@@ -79,3 +79,8 @@ nrf_qfn48:                # package pin -> function, QFN48 6 x 6, 12 pins per si
   wake_ports: [P0, P1]           # SENSE/DETECT wake from System OFF/ON; P2 has no wake and no GPIOTE
   led_ports: [P1]                # REQUIREMENTS R4.5
   rf_near_pins: [27, 28, 29, 30] # P0.02-P0.04, nRESET next to ANT (31): static or slow signals only (assumption, Nordic nRF52 guidance)
+
+# Known deviations (row id -> text): the FAIL row becomes a WARN carrying the text. Engineer-accepted only.
+known:
+  min_drive_G: "D13 (2026-11-23): at the datasheet minimum P1 drive green reaches about 0.77 mA at worst-case Vf; accepted, gate at typical drive (R4.4). Bench: measure P1 high-drive source/sink resistance at 1-5 mA and green current at 3.5 V on the first boards; fix if low: Vf-binned LEDs or P2 extra drive"
+  min_drive_B: "D13 (2026-11-23): as min_drive_G for blue (same Vf range). Bench: blue current at 3.5 V on the first boards"

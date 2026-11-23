@@ -13,13 +13,21 @@ Same outline for A and B (tree, 70 x 105 mm), same hole pattern (hanging hole at
 Eight LED lines, no supply, no ground. Single source: `hardware/gen/tree_common.py` (both generators import it); checked by
 `python3 hardware/calc/led_matrix.py hardware/tree-a` (inputs with sources in `hardware/tree-a/led_matrix.yaml`).
 
-View conventions. Each board is drawn in its own top (F.Cu) view; header positions are (column, row), column 0 left, row 0
-top. A's F.Cu is its inner face and B's F.Cu is its outer face, so in the stack both F.Cu point the same way
-(shield-style): the two top views coincide, B is NOT mirrored relative to A, and a J4 pad mates with the J3 pad at the same
-(column, row) (`B_MIRRORED_IN_STACK = False`). J3 numbering in A's top view: odd pins in column 0, pin 1 top-left. J4 sits on
-B.Cu, where the footprint is flipped (mirrored in x), so with the same numbering pattern its odd pins land in column 1:
-J3 pin 2m-1 mates with J4 pin 2m. The stack check compares nets by pad position, never by pin number; re-derive
-`J4_PIN_AT` from the real footprint of the chosen part (D3). Escape: tracks leave along the columns (outer pins around the
+View conventions (D14, 2026-11-23). Each board is drawn in its own top (F.Cu) view; header positions are (column, row),
+column 0 left, row 0 top. A's F.Cu is its inner face and B's F.Cu is its outer face, so in the stack both F.Cu point the
+same way: the two top views coincide, there is no mirror between A and B, and a J4 pad mates with the J3 pad at the same
+(x, y) (`B_MIRRORED_IN_STACK = False`). The header footprints sit on opposite layers: J3 on A F.Cu, J4 on B B.Cu, where KiCad
+flips the footprint (x mirrored about its origin). `J3_PIN2_DX` / `J4_PIN2_DX` give the side of pin 2 in each footprint's own
+view (+1 = KiCad PinHeader style, -1 = KiCad PinSocket style); `J3_PIN_AT` / `J4_PIN_AT` are derived from them. With +1 on
+both: J3 odd pins in column 0, J4 odd pins in column 1, so J3 pin 2m-1 mates with J4 pin 2m (table). Set both from the real
+footprints of the D3 parts at gate 3; the mating test follows automatically.
+Mating test (pure Python, no KiCad: `tree_common.mate_table()`, `mate_selftest()`, run by `led_matrix.py`): the designed
+stack gives J3 net = J4 net on all 8 pads. With B turned 180 degrees in its own plane, all 8 lines swap as Lk <-> L(k+4).
+Those are exactly the pairs that are never a die, the lines are signals only, and every line has its series R on A, so
+nothing is damaged; the wrong LEDs light. That stack cannot be assembled: the tree outline is not symmetric under a
+180 degree turn (tip and hanging hole at the top, trunk at the bottom), and the two M2 holes sit only at y = 72 mm, so B's
+holes and outline do not line up with A's.
+Escape: tracks leave along the columns (outer pins around the
 inner ones), giving the left-to-right bus order L1..L8 with no crossing (J3 pins 1,3,5,7,8,6,4,2).
 
 | J3 pin | Net | GPIO | QFN pin | Anode of | Series R (A) | J4 pin (same position) |
@@ -72,9 +80,10 @@ line pair that firmware drives. Pads: 1 R cathode, 2 G cathode, 3 common anode, 
 | L7 | D7, D15 | D4-G, D5-R, D8-B, D9-R, D10-G, D14-B | L3 |
 | L8 | D8, D16 | D1-B, D5-G, D6-R, D10-R, D11-G, D15-B | L4 |
 
-Firmware (for FIRMWARE-RULES.md): a slot drives exactly one die pair (`tree_common.slot_table()`): anode line high, cathode
-line low, all other lines Hi-Z. Never drive a pair that is not a die (line a with line a+4); the ghost safety of R4.3 relies
-on it.
+Firmware slot rule (R4.3; `tree_common.FIRMWARE_SLOT_RULE`, for FIRMWARE-RULES.md): each slot drives exactly one die pair
+from `tree_common.slot_table()`: anode line high, cathode line low, all other lines Hi-Z (also in sleep). Never drive any
+other pair, in particular never line a with line a+4 (mod 8; there is no die there). The ghost safety of R4.3 relies on it,
+because the red+red chains (3.6 V minimum, below VDD max + 0.1 V) span exactly those pairs.
 
 ## Pin plan: nRF54L15 QFN48 (board A; pin numbers unverified: PS HTML summary)
 Package sides (standard QFN numbering, check the PS drawing): pins 1-12 left (pin 1 top), 13-24 bottom, 25-36 right,
@@ -96,22 +105,30 @@ pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 are fre
 | led | LED_L2_MCU | P1.07 | 8 | via R2 to LED_L2 |
 | led | LED_L1_MCU | P1.08 | 9 | via R1 to LED_L1 (P1.08 = EXTREF, not used) |
 | out | TPS_SEL | P2.00 | 11 | TPS63900 SEL: high = VO(2) lit, low = VO(1) 3.0 V; external pull-down (never float, 3.0 V at start) |
-| out | TPS_EN | P2.01 | 12 | optional; default EN pulled to VIN and this GPIO not connected (EN can see 4.2 V > VDD + 0.3 V); off-switch only via an open-drain N-FET (decision) |
+| spare | SPARE_P2_01 | P2.01 | 12 | spare; D13: TPS63900 EN tied to VIN, no GPIO (EN can see 4.2 V > VDD + 0.3 V) |
 | spare | VBAT_DIV_EN | P2.02 | 13 | reserved: low-side switch of the battery divider if R3.3 picks a switched divider |
 | spare | SPARE_P2_03..05 | P2.03-P2.05 | 14-16 | spare |
 | swo | SWO | P2.07 | 18 | optional to TC2030 pin 6 (TRACE pin) |
-| in | CHG_STAT | P0.00 | 23 | Li-ion variant; MCP73831 STAT drives its VDD (VBUS, up to 5.25 V) when high: needs a series diode + pull-up to VDD, or a divider (gate 3) |
+| in | CHG_STAT | P0.00 | 23 | Li-ion variant; pin-voltage rule below |
 | spare | SPARE_P0_01 | P0.01 | 24 | spare (wake capable) |
 | swd | SWDIO | SWDIO | 25 | TC2030 pin 2 |
 | swd | SWDCLK | SWDCLK | 26 | TC2030 pin 4 |
 | spare | SPARE_P0_02..04 | P0.02-P0.04 | 27-29 | spare, next to ANT: static use only |
 | swd | nRESET | nRESET | 30 | TC2030 pin 3 via 1 k (Nordic reference R1/C13) |
 | in (wake) | BTN_SW1 | P1.09 | 37 | SW1 to GND, internal pull-up; wake from System OFF (P1 SENSE) |
-| in (wake) | VBUS_DET | P1.10 | 38 | Li-ion variant; wakes on USB plug-in; needs a divider so 5.25 V gives <= 3.0 V (gate 3) |
+| in (wake) | VBUS_DET | P1.10 | 38 | Li-ion variant; wakes on USB plug-in; pin-voltage rule below |
 | led | LED_L8_MCU | P1.11 | 39 | via R8 to LED_L8 (AIN4 unused) |
 | led | LED_L7_MCU | P1.12 | 40 | via R7 to LED_L7 |
 | led | LED_L6_MCU | P1.13 | 41 | via R6 to LED_L6 |
 | led | LED_L5_MCU | P1.14 | 42 | via R5 to LED_L5 |
+
+Pin-voltage rules (D13; `tree_common.PIN_VOLTAGE_RULES`, checked by `led_matrix.py`). The nRF pin limit is VDD + 0.3 V,
+which is 3.3 V at VDD idle 3.0 V (unverified: PS HTML summary).
+- CHG_STAT: MCP73831 STAT is push-pull to its own VDD = VBUS, up to 5.25 V. Use a series diode (cathode to STAT) with the
+  nRF pull-up to VDD, or a divider giving at most 3.0 V at 5.25 V. Schematic, gate 3.
+- VBUS_DET: VBUS can reach 5.25 V. Use a divider giving at most 3.0 V at 5.25 V (values from a calc script), or a diode clamp.
+  Schematic, gate 3.
+- TPS63900 EN: tied to VIN, not connected to a GPIO (EN can see 4.2 V with a Li-ion cell).
 
 Unused: P2.06, P2.08-P2.10 (TRACE). Power and decoupling pins (10, 22, 36, 47, 48 VDD; 33, 43, 45, 46 DECRF/DECA/DECD/DCC;
 31, 32 ANT/VSS_PA; 34, 35 XC1/XC2): Nordic reference circuit, config 1.

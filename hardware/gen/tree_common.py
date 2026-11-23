@@ -49,7 +49,7 @@ def led_pad_nets(ref: str) -> dict:
 
 
 def slot_table() -> list:
-    """Firmware scan order: [(ref, colour, high net, low net)], one die per slot (FIRMWARE-RULES: only these pairs)."""
+    """Firmware scan order: [(ref, colour, high net, low net)], one die per slot. FIRMWARE_SLOT_RULE: only these pairs."""
     return [(r, c, LINE_NETS[d["anode"] - 1], LINE_NETS[d[c] - 1]) for r, d in LED_MATRIX.items() for c in "RGB"]
 
 
@@ -75,9 +75,8 @@ PIN_PLAN = [
     {"net": "LED_L1_MCU", "gpio": "P1.08", "pin": 9, "kind": "led", "note": "via R1 to LED_L1 (P1.08 = EXTREF, not used)"},
     {"net": "TPS_SEL", "gpio": "P2.00", "pin": 11, "kind": "out",
      "note": "TPS63900 SEL: high = VO(2) lit, low = VO(1) 3.0 V; external pull-down (never float, 3.0 V at start)"},
-    {"net": "TPS_EN", "gpio": "P2.01", "pin": 12, "kind": "out", "v_source_max": 4.2,
-     "conditioning": "default EN pulled to VIN, this GPIO not connected; off-switch only via an open-drain N-FET (decision)",
-     "note": "optional TPS63900 EN control; EN must never float"},
+    {"net": "SPARE_P2_01", "gpio": "P2.01", "pin": 12, "kind": "spare",
+     "note": "spare; D13: TPS63900 EN tied to VIN, no GPIO (EN can see 4.2 V > VDD + 0.3 V)"},
     {"net": "VBAT_DIV_EN", "gpio": "P2.02", "pin": 13, "kind": "spare",
      "note": "reserved: low-side switch of the battery divider if R3.3 picks a switched divider"},
     {"net": "SPARE_P2_03", "gpio": "P2.03", "pin": 14, "kind": "spare", "note": "spare"},
@@ -85,8 +84,7 @@ PIN_PLAN = [
     {"net": "SPARE_P2_05", "gpio": "P2.05", "pin": 16, "kind": "spare", "note": "spare"},
     {"net": "SWO", "gpio": "P2.07", "pin": 18, "kind": "swo", "note": "optional to TC2030 pin 6 (TRACE pin)"},
     {"net": "CHG_STAT", "gpio": "P0.00", "pin": 23, "kind": "in", "v_source_max": 5.25,
-     "conditioning": "required: MCP73831 STAT drives its VDD (VBUS) when high: series diode + pull-up to VDD, or divider "
-                     "(schematic, gate 3)",
+     "conditioning": "D13: series diode + pull-up to VDD, or divider (PIN_VOLTAGE_RULES)",
      "note": "Li-ion variant; MCP73831 STAT low = charging, high = done, Hi-Z = shutdown/no battery"},
     {"net": "SPARE_P0_01", "gpio": "P0.01", "pin": 24, "kind": "spare", "note": "spare (wake capable)"},
     {"net": "SWDIO", "gpio": "SWDIO", "pin": 25, "kind": "swd", "note": "TC2030 pin 2"},
@@ -98,7 +96,7 @@ PIN_PLAN = [
     {"net": "BTN_SW1", "gpio": "P1.09", "pin": 37, "kind": "in", "wake": True,
      "note": "SW1 to GND, internal pull-up; wake from System OFF (P1 SENSE)"},
     {"net": "VBUS_DET", "gpio": "P1.10", "pin": 38, "kind": "in", "wake": True, "v_source_max": 5.25,
-     "conditioning": "required: divider so 5.25 V VBUS gives <= 3.0 V (values by a calc script at gate 3)",
+     "conditioning": "D13: divider to <= 3.0 V at 5.25 V, or diode clamp (PIN_VOLTAGE_RULES)",
      "note": "Li-ion variant; wakes on USB plug-in"},
     {"net": "LED_L8_MCU", "gpio": "P1.11", "pin": 39, "kind": "led", "note": "via R8 to LED_L8 (AIN4 unused)"},
     {"net": "LED_L7_MCU", "gpio": "P1.12", "pin": 40, "kind": "led", "note": "via R7 to LED_L7"},
@@ -109,26 +107,77 @@ LINE_GPIO = {e["net"][:-4]: e["gpio"] for e in PIN_PLAN if e["kind"] == "led"}  
 PIN_BY_NET = {e["net"]: e for e in PIN_PLAN if e["net"] != "NC"}
 
 # ---------------------------------------------------------------- header J3 (A, female) / J4 (B, male), 2 x 4, 2.54 mm
-# Positions (col, row) in each board's own top (F.Cu) view: col 0 left, col 1 right (+x), row 0..3 from the top (+y down).
-# Stack (ARCHITECTURE: A F.Cu = inner face, B F.Cu = outer face): A's F.Cu faces B's B.Cu, so both boards' F.Cu point the
-# same way and their top views coincide (shield-style stack): B_MIRRORED_IN_STACK = False, the pad at (col, row) on J4
-# mates with the pad at the same (col, row) on J3. If the faces change so the two F.Cu face each other, set True.
-B_MIRRORED_IN_STACK = False
-# J3 numbering (A top view): odd pins in col 0, even pins in col 1, pin 1 top-left.
-J3_PIN_AT = {(col, row): 2 * row + 1 + col for row in range(4) for col in (0, 1)}
-# J4 = the same numbering pattern on a footprint flipped to B.Cu: the flip mirrors x, so in B's top view odd pins sit in
-# col 1. Check against the real footprint of the chosen part (D3) and re-derive if its pin 2 is at -x.
-J4_PIN_AT = {(1 - col, row): 2 * row + 1 + col for row in range(4) for col in (0, 1)}
-# Column escape (tracks leave along the columns, outer pins around the inner ones): left-to-right order 1,3,5,7,8,6,4,2.
+# D14 (2026-11-23): no mirror between A and B. A's F.Cu = inner face, B's F.Cu = outer face, so both F.Cu point the same
+# way and the two top views coincide: a pad at (x, y) on B lies over the pad at the same (x, y) on A. The header
+# footprints sit on opposite layers: J3 on A F.Cu, J4 on B B.Cu (flipped by KiCad: x mirrored about the footprint origin).
+# Positions (col, row) in each board's top (F.Cu) view: col 0 left, col 1 right (+x), row 0..3 from the top (+y down).
+B_MIRRORED_IN_STACK = False      # D14
+# Sign of x of pin 2 relative to pin 1 in each footprint's OWN (unflipped) view. KiCad PinHeader_2xNN: +1; KiCad
+# PinSocket_2xNN: -1. Set from the real footprints of the D3 parts (gate 3); the mating test below follows.
+J3_PIN2_DX = +1
+J4_PIN2_DX = +1
+
+
+def _pins_at(pin2_dx: int, on_back: bool) -> dict:
+    """{(col, row): pin} in the board's top view for a 2 x 4 footprint (pin 1 in row 0, pin 2k-1 and 2k in row k-1)."""
+    dx = -pin2_dx if on_back else pin2_dx          # placing on B.Cu mirrors x
+    odd_col = 0 if dx > 0 else 1
+    return {(odd_col if p % 2 else 1 - odd_col, (p - 1) // 2): p for p in range(1, 9)}
+
+
+J3_PIN_AT = _pins_at(J3_PIN2_DX, on_back=False)
+J4_PIN_AT = _pins_at(J4_PIN2_DX, on_back=True)
+# Column escape (tracks leave along the columns, outer pins around the inner ones): left-to-right J3 pins 1,3,5,7,8,6,4,2.
 ESCAPE_COLUMN = [1, 3, 5, 7, 8, 6, 4, 2]
 ESCAPE_SIDE = [7, 5, 3, 1, 2, 4, 6, 8]      # walk around the header perimeter (tracks leaving sideways)
 HEADER_J3 = {p: LINE_NETS[i] for i, p in enumerate(ESCAPE_COLUMN)}      # pin -> net: bus order L1..L8 left to right
 
 
+def _contact(pos_b: tuple, rotate180: bool) -> tuple:
+    """Position on A (A top view) that touches B's pad at pos_b (B top view)."""
+    col, row = pos_b
+    if B_MIRRORED_IN_STACK:
+        col = 1 - col
+    if rotate180:                                  # B turned 180 deg in its own plane about the header centre
+        col, row = 1 - col, 3 - row
+    return col, row
+
+
 def j4_pin_net() -> dict:
-    """{J4 pin: net}: the net of the J3 pad at the same physical position."""
-    out = {}
-    for (col, row), pin in J4_PIN_AT.items():
-        pos_a = (1 - col, row) if B_MIRRORED_IN_STACK else (col, row)
-        out[pin] = HEADER_J3[J3_PIN_AT[pos_a]]
-    return out
+    """{J4 pin: net} as designed: the net of the J3 pad at the same physical position."""
+    return {pin: HEADER_J3[J3_PIN_AT[_contact(pos, False)]] for pos, pin in J4_PIN_AT.items()}
+
+
+def mate_table(rotate180: bool = False) -> list:
+    """[(J3 pin, J4 pin, J3 net, J4 net)] for each mated pad pair; rotate180 = B assembled turned 180 deg in-plane.
+    Designed stack: every row has J3 net == J4 net. Rotated: the lines are permuted (signals only, every line has its
+    series R on A: no damage, wrong LEDs light). The rotated stack cannot be assembled: the tree outline is not symmetric
+    under a 180 deg turn (tip and hanging hole at the top, trunk at the bottom) and the two M2 holes sit only at
+    y = 72 mm, so B's holes and outline do not line up with A's."""
+    j4net = j4_pin_net()
+    out = []
+    for pos_b, j4 in sorted(J4_PIN_AT.items(), key=lambda kv: kv[1]):
+        j3 = J3_PIN_AT[_contact(pos_b, rotate180)]
+        out.append((j3, j4, HEADER_J3[j3], j4net[j4]))
+    return sorted(out)
+
+
+def mate_selftest() -> bool:
+    """Pure-Python mating test (no KiCad): designed stack all nets equal; rotated stack all 8 lines swapped."""
+    ok = all(a == b for _, _, a, b in mate_table(False))
+    bad = [r for r in mate_table(True) if r[2] != r[3]]
+    return ok and len(bad) == 8
+
+
+# ---------------------------------------------------------------- rules for firmware and schematic (written once here)
+FIRMWARE_SLOT_RULE = ("Each slot drives exactly one die pair from slot_table(): the anode line high, the cathode line low, "
+                      "all other lines Hi-Z (also in sleep). Never drive any other pair, in particular never line a with "
+                      "line a+4 (mod 8, no die there): the ghost safety of R4.3 relies on it (red+red chains, 3.6 V, span "
+                      "exactly those pairs).")
+PIN_VOLTAGE_RULES = {
+    "CHG_STAT": "MCP73831 STAT is push-pull to its VDD = VBUS (up to 5.25 V), above the nRF pin limit VDD + 0.3 V "
+                "(3.3 V at VDD idle 3.0 V): a series diode (cathode to STAT) with the nRF pull-up to VDD, or a divider "
+                "(max <= 3.0 V at 5.25 V). Schematic, gate 3 (D13).",
+    "VBUS_DET": "VBUS up to 5.25 V, above VDD + 0.3 V: a divider giving <= 3.0 V at 5.25 V (values from a calc script), or "
+                "a diode clamp. Schematic, gate 3 (D13).",
+}

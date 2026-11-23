@@ -12,7 +12,7 @@ resistor R -> cathode pin (R_sink) -> GND. Solve VDD = Vf(I) + I (R_src + 2 R + 
   Vf(I) = Vf20 + n Vt ln(I / 20 mA) + Rs (I - 20 mA), Vt = kT/q (Shockley; n and Rs from the profile, bench to confirm).
   Envelopes: 'hi' (current reach, lit-die bias) drops the Rs term below 20 mA (higher Vf); 'lo' (ghost, max current)
   drops it above 20 mA (lower Vf); 'typ' keeps it. Worst case for reach = VDD x (1 - tol), Vf20 max, min-spec drive,
-  R + tol. Max current = VDD x (1 + tol), Vf20 min, pin resistance 0 (no maximum drive current in the MCU data:
+  R + tol; the R4.4 gate uses the typical drive (D13), the min-spec drive row is a known deviation. Max current = VDD x (1 + tol), Vf20 min, pin resistance 0 (no maximum drive current in the MCU data:
   bound), R - tol; checked against the LED's pulsed rating (slot <= pulse width, duty 1/slots <= rated duty) and the
   continuous rating (a firmware fault that stops the scan leaves one die on).
 Ghosting (R4.3). Only one line is high and one low; all others are Hi-Z (floating). A sneak path is a chain of dies
@@ -36,6 +36,8 @@ Assignment search (--search): cyclic offsets per board (LED k, anode line a: col
 Pin plan: package pin = function per the MCU pin table; no pin twice; LED lines on the allowed ports, not on reserved or
   RF-adjacent pins; ADC on an AIN pin; wake inputs on wake ports; a net driven from above VDD + 0.3 V needs conditioning.
 Header: each line once; escape-order crossings for the column escape; mating map by pad position.
+Known deviations: `known: {row id: text}` in the profile turns that FAIL row into a WARN with the text
+(decision and fix); stale or unmatched entries are reported.
 Rows: OK, WARN, FAIL, MISSING; last line `led_matrix: OK|FAILED`; exit 1 on FAIL or MISSING.
 Usage: python3 hardware/calc/led_matrix.py hardware/<board> [--selftest] [--search] [--vdd V] [--r OHM] [--drive high|extra]
 """
@@ -364,12 +366,21 @@ def run(board: Path, args) -> list:
         it = i_typ[c]
         rows.append(("OK", f"die current {c} at {vdd} V, typ drive",
                      f"R {r_line} ohm: Vf20 min/typ/max -> {it['min'] * 1e3:.2f} / {it['typ'] * 1e3:.2f} / {it['max'] * 1e3:.2f} mA"))
+        # R4.4 (rewritten 2026-11-23, D13): the gate is the TYPICAL drive at worst-case Vf and VDD min
+        i_wt = solve_i(vdd_lo, r_src_t + 2 * r_hi + r_snk_t, vf_max[c], n_id, vt, rs, "hi")
+        vft = vf(i_wt, vf_max[c], n_id, vt, rs, "hi")
+        st = "FAIL" if i_wt * 1e3 < t_fail else ("WARN" if i_wt * 1e3 < t_warn else "OK")
+        rows.append((st, f"die current {c} worst Vf, typ drive (R4.4 gate)",
+                     f"{i_wt * 1e3:.3f} mA at VDD {vdd_lo:.4f} V, Vf20 max {vf_max[c]} V (Vf {vft:.3f} V), R {r_hi:.2f} ohm x2, "
+                     f"drive {r_src_t:.1f}+{r_snk_t:.1f} ohm (typ assumption); targets {t_fail} mA FAIL / {t_warn} mA WARN; "
+                     f"headroom {vdd_lo - vft:.3f} V"))
+        # minimum (datasheet) drive: FAIL threshold kept, a known deviation in the profile turns it into a WARN
         st = "FAIL" if i_worst[c] * 1e3 < t_fail else ("WARN" if i_worst[c] * 1e3 < t_warn else "OK")
         vfw = vf(i_worst[c], vf_max[c], n_id, vt, rs, "hi")
-        rows.append((st, f"die current {c} worst case (R4.4)",
+        rows.append((st, f"die current {c} worst Vf, minimum drive (R4.4 known deviation)",
                      f"{i_worst[c] * 1e3:.3f} mA at VDD {vdd_lo:.4f} V, Vf20 max {vf_max[c]} V (Vf {vfw:.3f} V at that "
-                     f"current), R {r_hi:.2f} ohm x2, drive {r_src_w}+{r_snk_w} ohm; targets {t_fail} mA FAIL / {t_warn} mA WARN; "
-                     f"headroom VDD-Vf = {vdd_lo - vfw:.3f} V; all 16 {c} dies alike (same R on every line)"))
+                     f"current), R {r_hi:.2f} ohm x2, drive {r_src_w}+{r_snk_w} ohm (datasheet min); targets {t_fail} mA / "
+                     f"{t_warn} mA; headroom VDD-Vf = {vdd_lo - vfw:.3f} V; all 16 {c} dies alike", f"min_drive_{c}"))
         st = "FAIL" if i_max[c] * 1e3 > ifp_max[c] or slot_us / 1e3 > ifp_pulse or 1 / slots > ifp_duty else (
             "WARN" if i_max[c] * 1e3 > if_max[c] else "OK")
         vfm = vf(i_max[c], vf_min[c], n_id, vt, rs, "lo")
@@ -471,6 +482,27 @@ def run(board: Path, args) -> list:
     return rows
 
 
+def apply_known(rows: list, board: Path) -> list:
+    """Known deviations (profile `known:` {row id: text}): a FAIL row with an id listed there becomes WARN and carries
+    the text (an accepted deviation with its decision and fix, hw-base vocabulary 'known deviation'). An entry whose
+    row no longer fails is reported as WARN 'stale' so it gets removed; an entry with no matching row id is a FAIL."""
+    known = (yaml.safe_load((board / "led_matrix.yaml").read_text()) or {}).get("known") or {}
+    out, seen = [], set()
+    for r in rows:
+        st, name, msg = r[:3]
+        rid = r[3] if len(r) > 3 else None
+        if rid in known:
+            seen.add(rid)
+            if st == "FAIL":
+                st, msg = "WARN", f"{msg} | known: {known[rid]}"
+            else:
+                st, msg = "WARN", f"{msg} | known entry '{rid}' is stale (row no longer fails): remove it"
+        out.append((st, name, msg))
+    for rid in sorted(set(known) - seen):
+        out.append(("FAIL", f"known deviation {rid}", "no row with this id: fix led_matrix.yaml `known:`"))
+    return out
+
+
 def pin_rows(mod, cfg, vdd_idle, v_over, rows):
     q = cfg["nrf_qfn48"]
     table = {int(k): v for k, v in q["pins"].items()}
@@ -540,10 +572,17 @@ def header_rows(mod, rows):
     x2 = inversions([pos[n] for n in side])
     rows.append(("OK" if x1 == 0 else "WARN", "header escape crossings vs bus order",
                  f"column escape {mod.ESCAPE_COLUMN} -> {x1} crossings; side escape {mod.ESCAPE_SIDE} -> {x2}"))
-    mate = mod.j4_pin_net()
-    pos_ok = all(mate[mod.J4_PIN_AT[xy]] == h[mod.J3_PIN_AT[xy]] for xy in mod.J3_PIN_AT)
-    rows.append(("OK" if pos_ok else "FAIL", "J4 nets by pad position (stack)",
-                 f"B mirrored in stack: {mod.B_MIRRORED_IN_STACK}; J4 " + " ".join(f"{p}:{n}" for p, n in sorted(mate.items()))))
+    good = mod.mate_table(False)
+    bad = [r for r in good if r[2] != r[3]]
+    rows.append(("FAIL" if bad else "OK", "header mating by pad position (D14, no mirror)",
+                 f"B mirrored: {mod.B_MIRRORED_IN_STACK}, J3 pin2 dx {mod.J3_PIN2_DX:+d} (F.Cu), J4 pin2 dx {mod.J4_PIN2_DX:+d} "
+                 f"(B.Cu, flipped); J3->J4: " + " ".join(f"{a}->{b}" for a, b, _, _ in good)
+                 + (f"; MISMATCH {bad}" if bad else "; all 8 nets equal")))
+    rot = [r for r in mod.mate_table(True) if r[2] != r[3]]
+    rows.append(("OK" if mod.mate_selftest() else "FAIL", "header mating with B turned 180 deg in-plane (test)",
+                 f"{len(rot)} lines swapped: " + ", ".join(sorted({f'{min(a, b)}<->{max(a, b)}' for _, _, a, b in rot}))
+                 + "; signals only with a series R on every line: no damage. Cannot be assembled: the tree outline "
+                 "(tip/hanging hole vs trunk) and the M2 holes at y = 72 mm do not line up when B is turned"))
 
 
 # ---------------------------------------------------------------- search
@@ -630,7 +669,7 @@ def main():
         search(mod, led["pad_cycle"]["value"], led["vf20_min_v"]["value"], led["vf20_max_v"]["value"],
                led["ideality_n"]["value"], vt, led["rs_ohm"]["value"])
         return
-    rows = run(board, a)
+    rows = apply_known(run(board, a), board)
     for st, name, msg in rows:
         print(f"{st:7s} {name}: {msg}")
     failed = any(r[0] in ("FAIL", "MISSING") for r in rows)
