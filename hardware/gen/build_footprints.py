@@ -266,6 +266,38 @@ def usbc():
     row("WARN", f.name, "pad row y vs slots and the edge distance read from the drawing scale: UNVERIFIED (DNP in order 1, D10)")
 
 
+# ------------------------------------------------------------------ net tie NT1 (VSS_PA pin 32 to the exposed pad) vs the QFN gap
+def nettie_gap():
+    """Review DS-C1: does the KiCad net tie footprint fit between U1 pad 32 and the exposed pad? Numbers from KiCad's own
+    library files (QFN-48 6x6 EP4.66 and NetTie-2_SMD_Pad0.5mm); WARN when it does not (layout gate decides the bridge)."""
+    import os
+    import re
+    lib = Path(os.environ.get("KICAD_FOOTPRINT_DIR", "/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints"))
+    qfn = lib / "Package_DFN_QFN.pretty" / "QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias.kicad_mod"
+    nt = lib / "NetTie.pretty" / "NetTie-2_SMD_Pad0.5mm.kicad_mod"
+    if not (qfn.exists() and nt.exists()):
+        row("WARN", "NetTie-2_SMD_Pad0.5mm", f"KiCad library not found ({lib}): gap check not run")
+        return
+
+    def pads(path):
+        txt = path.read_text()
+        return [(n, float(x), float(y), float(w), float(h)) for n, x, y, w, h in re.findall(
+            r'\(pad "([^"]*)" smd \w+\s*\(at ([-\d.]+) ([-\d.]+)\)\s*\(size ([\d.]+) ([\d.]+)\)', txt)]
+    q = pads(qfn)
+    p32 = next(p for p in q if p[0] == "32")
+    ep = max((p for p in q if p[0] == "49"), key=lambda p: p[3])
+    gap = (p32[1] - p32[3] / 2) - (ep[1] + ep[3] / 2)
+    n = pads(nt)
+    length = max(p[1] + p[3] / 2 for p in n) - min(p[1] - p[3] / 2 for p in n)
+    width = max(p[4] for p in n)
+    fits = length <= gap
+    row("OK" if fits else "WARN", "NetTie-2_SMD_Pad0.5mm",
+        f"U1 pad 32 inner end x {p32[1] - p32[3] / 2:.2f} mm, exposed pad edge x {ep[1] + ep[3] / 2:.2f} mm: gap {gap:.2f} mm "
+        f"(pad 32 is {p32[4]:.2f} mm wide); net tie {length:.2f} x {width:.2f} mm "
+        + ("fits" if fits else "does NOT fit in the gap: NT1 needs a custom bridge footprint or sits outside the pad row "
+           "(layout gate decision, DS-C1)"))
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     led()
@@ -282,6 +314,7 @@ def main() -> int:
     row("WARN", "PinHeader_2x04_SMD_Boom_PZ254", "pad width 1.0 mm is not dimensioned on the drawing (pin 0.64 square): UNVERIFIED")
     holder()
     usbc()
+    nettie_gap()
     for st, what, detail in ROWS:
         print(f"{st:5} {what}: {detail}")
     bad = any(r[0] == "FAIL" for r in ROWS)

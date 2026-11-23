@@ -103,6 +103,8 @@ P("TC1", "Connector:Conn_ARM_SWD_TagConnect_TC2030-NL", "TC2030-NL", "Connector:
 PARTS["TC1"]["dnp_note"] = "DNL: footprint only, Tag-Connect cable"
 P("SW1", "Switch:SW_Push", "SW_Push", "tree:SW_HX_3x4x2-2P-1.6N", "C49234124", "Extended", "HX 3x4x2-2P-1.6N (SMD 4x3)", "tact switch, outer face")
 P("NT1", "Device:NetTie_2", "NetTie", "NetTie:NetTie-2_SMD_Pad0.5mm", "", "n/a", "net tie", "VSS_PA to GND at the exposed pad", "NONE")
+P("NT2", "Device:NetTie_2", "NetTie", "NetTie:NetTie-2_SMD_Pad0.5mm", "", "n/a", "net tie",
+  "GND_C9 (C9 ground return) to GND on the bottom layer (D21, DS-C1)", "NONE")
 # RF (Nordic reference network; designators shifted: ref L2/L3/L4 = L3/L4/L5 here, ref R1 = R9)
 P("L3", "Device:L", "2.7nH", L0201, "C7216765", "Extended", "2.7nH LQP03HQ2N7B02D (0201)", "RF series (ref L2)")
 P("L4", "Device:L", "3.5nH", L0201, "C3911055", "Extended", "3.5nH LQP03HQ3N5B02D (0201)", "RF series (ref L3)")
@@ -155,7 +157,7 @@ def sheet_parts() -> dict:
 GND_PINS = [("BT1", "2"), ("J2", "2"), ("Q1", "1"), ("C20", "2"), ("R41", "2"), ("C14", "2"), ("R23", "2"), ("R20", "2"), ("R21", "2"),
             ("R22", "2"), ("U2", "8"), ("U2", "11"), ("C21", "2"), ("U1", "44"), ("U1", "49"), ("NT1", "2"),
             ("C3", "2"), ("C10", "2"), ("C7", "2"), ("C8", "2"), ("C4", "2"), ("C1", "2"), ("C2", "2"), ("C12", "2"),
-            ("C5", "2"), ("X2", "2"), ("X2", "4"), ("C13", "2"), ("TC1", "5"), ("SW1", "2"), ("C9", "2"), ("C11", "2"),
+            ("C5", "2"), ("X2", "2"), ("X2", "4"), ("C13", "2"), ("TC1", "5"), ("SW1", "2"), ("NT2", "2"), ("C11", "2"),
             ("C50", "2"), ("C51", "2"), ("J1", "A12"), ("J1", "B12"), ("J1", "SH"), ("R30", "2"), ("R31", "2"), ("U3", "2"),
             ("C30", "2"), ("R32", "2"), ("R43", "2"), ("R45", "2"), ("C31", "2")]
 NETS: dict[str, list] = {
@@ -181,7 +183,7 @@ NETS: dict[str, list] = {
     "CC1": [("J1", "A5"), ("R30", "1")], "CC2": [("J1", "B5"), ("R31", "1")], "PROG": [("U3", "5"), ("R32", "1")],
     "STAT": [("U3", "1"), ("R44", "1")],
     "ANT_PA": [("U1", "31"), ("L3", "1")], "VSS_PA": [("U1", "32"), ("C6", "2"), ("NT1", "1")],
-    "RF_N1": [("L3", "2"), ("C6", "1"), ("L4", "1")], "RF_N2": [("L4", "2"), ("C9", "1"), ("L5", "1")],
+    "RF_N1": [("L3", "2"), ("C6", "1"), ("L4", "1")], "RF_N2": [("L4", "2"), ("C9", "1"), ("L5", "1")], "GND_C9": [("C9", "2"), ("NT2", "1")],
     "RF_50": [("L5", "2"), ("C11", "1"), ("C50", "1"), ("R50", "1")], "ANT_FEED": [("R50", "2"), ("C51", "1"), ("ANT1", "1")],
 }
 for _e in tc.PIN_PLAN:
@@ -509,12 +511,21 @@ def rf_sheet():
     above(s, "ANT_FEED", 51.3, y)
     s.wire(("C6", "2"), (20, 35))
     s.label("VSS_PA", 20, 35, 270, kind="hier")
-    for r in ("C9", "C11", "C50", "C51"):
+    for r in ("C11", "C50", "C51"):
         s.pwr(r, "2", "GND")
+    # C9 ground return: own net GND_C9, tied to GND by NT2 (layout: bottom-layer return only, DS-C1)
+    s.part("NT2", 32, y + 4)
+    s.tags["NT2"] = {"Reference": (0, -1.8, "center"), "Value": "hide"}
+    s.wire(("C9", "2"), (29, y + 4), ("NT2", "1"))
+    s.wire((29, y + 4), (27, y + 4))
+    s.label("GND_C9", 27, y + 4, 180, kind="local")
+    (nx, ny), _ = s.end("NT2", "2", 1)
+    s.wire(("NT2", "2"), (nx, ny), (nx, ny + 2))
+    s.rail("GND", nx, ny + 2, 270)
     s.nc("ANT1", ["2"])
     s.frame(6, 22, 42, 48, "Nordic reference network (QFAA config 1, v0.8)")
     s.text(7, 39, "Ref L2/L3/L4 = L3/L4/L5 here. C6 ground only via\nVSS_PA (pin 32, NT1 at the exposed pad, top layer).\n"
-                  "C9 ground only on the bottom layer (layout rule).\nPlace the network next to ANT (pin 31).", 1.1)
+                  "C9 ground: net GND_C9 via NT2, bottom layer only (layout rule).\nPlace the network next to ANT (pin 31).", 1.1)
     s.frame(42, 22, 72, 48, "Pi tuning slot + ANT1 (D12)")
     s.text(43, 39, "R50 0R fitted, C50/C51 DNP:\nvalues by VNA on the built board.\nANT1 pin 1 = feed at the mark end\n"
                    "(UNVERIFIED, 90 %); pin 2 = stub\npad, soldered, no net.", 1.1)
