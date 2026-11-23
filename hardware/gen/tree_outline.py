@@ -8,17 +8,19 @@ CONVENTIONS
   Units mm.  Origin = top-left corner of the 70 x 105 mm bounding box, x to the right, y DOWN (the tip is at y = 0,
   the trunk bottom at y = 105).  KiCad's board coordinates are also y-down, so add one board origin offset and use
   the numbers as they are.  The DXF writer flips y (CAD convention y up, origin bottom-left).
+
   Views are "front view" = looking at the F.Cu side of the board (tree upright, tip up).
 
-MIRROR RULE (stack: A inner face = F.Cu, B inner face = B.Cu, the inner faces face each other)
-  Viewed from the B side (front of the sandwich) both boards are upright and unmirrored: a physical point has the
-  SAME (x, y) in A's and B's KiCad coordinates, so outline, holes and the header position are identical in both
-  files (no mirror).  What changes is only the layer: B's inner-face parts are on B.Cu.  If a drawing of B's INNER
-  face is compared with A's inner face (B turned about the vertical axis, as the engineer describes the assembly),
-  x_view = 70 - x (mirror_x).  All holes and the outline are left-right symmetric, so both views agree for them;
-  the rule only matters for asymmetric items (keyed header, LED positions, antenna feed side).
-  ARCHITECTURE.md says both "B is turned about the vertical axis" and "B inner = B.Cu": the first is the inner-face
-  view, the second is the KiCad assignment; see MECHANICAL.md, open item 1.
+STACK RULE (decision D14, hardware/DECISIONS.md; tree_common.B_MIRRORED_IN_STACK = False)
+  A's inner face is its F.Cu and B's outer face is its F.Cu: both point forward, so a point at (x, y) on one board is at
+  (x, y) on the other.  Outline, hanging hole, mount holes and the header position are identical in both files and no
+  mirrored-coordinate function exists in this module.  A's outer-face parts (D9-D16, SW1, Tag-Connect) sit on B.Cu and
+  only read mirrored when A is looked at from the back (as in the V3 Back mock-up); B's header is on B.Cu.
+
+COMMANDS (from the repository root)
+  python3 hardware/gen/tree_outline.py --selftest   checks, battery-fit rows, panel rows (about 12 s; needs numpy for the panel rows)
+  python3 hardware/gen/tree_outline.py --panel      table of the panel arrangements
+  python3 hardware/gen/tree_outline.py --all        writes hardware/panel/outline/ tree_outline.dxf, outline_preview.png, panel_arrangements.png (Pillow)
 
 MEASUREMENT (design/V3 * board A mock-ups, 10.19 px/mm, tip at y = 230 px, base at 1300 px, x centre 729 px)
   Left and right edges agree about x = 35 mm to +-0.1 mm.  Tier bases at 28 / 52 / 76 mm, half widths 12 / 22 / 35 mm,
@@ -296,20 +298,6 @@ USE_NOTES_MOUNT_HOLES = False             # engineer's switch: True = x 8 / 62, 
 MOUNT_HOLES = MOUNT_HOLES_NOTES if USE_NOTES_MOUNT_HOLES else MOUNT_HOLES_MOVED
 
 
-def mirror_x(x):
-    """x of the same point in the mirrored view (board turned about the vertical axis): 70 - x."""
-    return W - x
-
-
-def mirror_point(p):
-    return (mirror_x(p[0]), p[1])
-
-
-def b_view_from_inside(x, y):
-    """B's front-view (KiCad) coordinates -> coordinates in a drawing of B's INNER face (comparable with A's inner face)."""
-    return (mirror_x(x), y)
-
-
 def holes_for_board(board):
     """Hole list for a board's KiCad file: [(name, x, y, drill_mm, plated)].  Identical for A and B (see MIRROR RULE)."""
     assert board in ("A", "B")
@@ -331,6 +319,39 @@ ANT_KEEPOUT_H_MM = 17.0
 ANT_KEEPOUT_JOHANSON_EVAL_MM = (9.6, 18.0)        # no-ground end (length along the antenna axis, width), eval board only
 ANT_LAND_LENGTH_MM = 8.9                          # 2450AT42A100E land pattern, 1.0 feed pad + 3.9 gap + 4.0 stub pad
 ANT_LAND_STUB_MM = (4.0, 1.8)
+ANT_LAND_Y0 = HANG_HOLE[1] + HANG_HOLE_D / 2 + 0.5   # stub pad end nearest the tip, 0.5 mm below the hanging hole edge: 5.7 mm
+ANT_LAND_Y1 = ANT_LAND_Y0 + ANT_LAND_LENGTH_MM       # feed pad end: 14.6 mm; the feed line continues below, ground starts 1.0 mm after
+
+
+# Star LEDs D1 (B) and D9 (A), decision D8: just below the keep-out.  XL-1010RGB-YG land: pads 0.45 x 0.45 with 0.35 gaps =
+# 1.25 mm overall; the earliest centre keeps the pad edge 0.2 mm below the keep-out line.
+STAR_LED_PAD_OVERALL = 1.25
+STAR_LED_Y_MIN = ANT_KEEPOUT_H_MM + STAR_LED_PAD_OVERALL / 2 + 0.2         # 17.825 mm, round up to 17.85 when placing
+ANT_BODY_MM = (5.0, 2.0)                                                  # 2450AT42A100E L x W (Rev 2.0 p2)
+ANT_EDGE_CLEARANCE_MM = 0.5                                               # job: at least 0.5 mm of board beyond the land
+
+
+def ant_land_rects():
+    """Land pattern of the 2450AT42A100E along the tip axis (x = 35): stub pad 4.0 x 1.8 at the tip side, gap 3.9, feed pad
+    1.0 x 1.8; the body 5.0 x 2.0 sits on the two pads.  Returns {name: rect polygon}."""
+    sw = ANT_LAND_STUB_MM[1]
+    y0 = ANT_LAND_Y0
+    stub = rect_poly(CX, y0 + ANT_LAND_STUB_MM[0] / 2, sw, ANT_LAND_STUB_MM[0])
+    feed_y = y0 + ANT_LAND_STUB_MM[0] + 3.9
+    feed = rect_poly(CX, feed_y + 0.5, sw, 1.0)
+    cy = (y0 + ANT_LAND_Y1) / 2                       # body centred on the land: overlaps the pads by 0.5 mm
+    body = rect_poly(CX, cy, ANT_BODY_MM[1], ANT_BODY_MM[0])
+    return {"stub pad": stub, "feed pad": feed, "body": body}
+
+
+def ant_land_edge_clearance():
+    """Smallest distance from any land corner to the outline (mm) and the name of the part."""
+    best = None
+    for name, r in ant_land_rects().items():
+        d = min(dist_to_boundary(p, OUTLINE_POLY) for p in r)
+        if best is None or d < best[0]:
+            best = (d, name)
+    return best
 
 
 def ant_keepout_polygon(h=None):
@@ -921,6 +942,10 @@ def render_outline_preview(path, scale=10):
     poly(OUTLINE_POLY, fill=(30, 36, 34), outline=(200, 160, 40), width=2)
     # antenna keep-out
     poly(ant_keepout_polygon(), fill=(120, 50, 50), outline=(255, 120, 110), width=1)
+    # antenna land (stub pad, feed pad, body) and the earliest y of the star LEDs
+    for nm, r in ant_land_rects().items():
+        poly(r, outline=(255, 225, 160) if nm != "body" else (200, 200, 200), width=1)
+    d.line([P((CX - 7.5, STAR_LED_Y_MIN)), P((CX + 7.5, STAR_LED_Y_MIN))], fill=(120, 230, 120), width=1 * ss)
     # tab free zone etc: holder window
     rng = y_ranges_for_rect(CX, HOLDER_W, HOLDER_L, HOLDER_MARGIN_MM, y_step=0.1)
     ylo, yhi = rng[0]
@@ -949,7 +974,7 @@ def render_outline_preview(path, scale=10):
         d.line([P((-1.5, yy)), P((0, yy))], fill=(90, 90, 90), width=1 * ss)
     for xx in range(0, 71, 10):
         text((pad + xx * scale - 6, pad + H * scale + 10), "%d" % xx)
-    text((pad, 10), "tree outline  70 x 105 mm  (mm, origin top-left, y down; A inner face view, B front view identical)", fb)
+    text((pad, 10), "tree outline 70 x 105 mm, KiCad front-view coordinates (mm, origin top-left, y down); identical on A and B (D14)", fb)
     # legend
     lx = pad + W * scale + 50
     items = [((255, 120, 110), "antenna keep-out, top %.0f mm" % ANT_KEEPOUT_H_MM),
@@ -960,7 +985,9 @@ def render_outline_preview(path, scale=10):
              ((255, 150, 60), "pouch 29 x 36 at y 41: sticks out of the trunk"),
              ((200, 180, 80), "header 2 x 4 (tentative)"),
              ((150, 150, 160), "USB-C body at the bottom edge"),
-             ((180, 220, 255), "SW1 / Tag-Connect (A outer)")]
+             ((180, 220, 255), "SW1 / Tag-Connect (A outer, on B.Cu)"),
+             ((255, 225, 160), "antenna land: stub 4.0 x 1.8, gap 3.9, feed 1.0"),
+             ((120, 230, 120), "star LEDs D1/D9: centre y >= %.2f" % STAR_LED_Y_MIN)]
     for i, (col, label) in enumerate(items):
         yy = pad + 20 + i * 24
         d.rectangle([lx * ss, yy * ss, (lx + 22) * ss, (yy + 12) * ss], outline=col, width=2 * ss)
@@ -1079,6 +1106,14 @@ def selftest(verbose=True):
                "hole D%.1f at y %.1f: tip width there %.2f mm, board left round the hole %.2f mm (need %.1f)" % (HANG_HOLE_D, hy, tipw, ring, HANG_HOLE_MIN_RING))
     kt = ant_keepout_polygon()
     ok &= _row("OK" if point_in_poly(HANG_HOLE, kt) else "WARN", "hanging hole in antenna keep-out", "yes: hole must be NPTH (no copper in the keep-out)")
+    ecl, ename = ant_land_edge_clearance()
+    ok &= _row("OK" if ecl >= ANT_EDGE_CLEARANCE_MM and ANT_LAND_Y1 + 1.0 <= ANT_KEEPOUT_H_MM else "FAIL", "antenna footprint inside the tip",
+               "land y %.1f..%.1f (hole edge + 0.5 mm), tip %.2f mm wide at y %.1f, worst corner (%s) %.2f mm from the outline (need %.1f); ground from y %.1f, keep-out ends y %.1f" % (
+                   ANT_LAND_Y0, ANT_LAND_Y1, 2 * half_width(ANT_LAND_Y0), ANT_LAND_Y0, ename, ecl, ANT_EDGE_CLEARANCE_MM, ANT_LAND_Y1 + 1.0, ANT_KEEPOUT_H_MM))
+    led_c = (CX, STAR_LED_Y_MIN)
+    led_d = min(dist_to_boundary(p, OUTLINE_POLY) for p in rect_poly(led_c[0], led_c[1], STAR_LED_PAD_OVERALL, STAR_LED_PAD_OVERALL))
+    ok &= _row("OK" if led_d >= 0.3 and STAR_LED_Y_MIN - STAR_LED_PAD_OVERALL / 2 >= ANT_KEEPOUT_H_MM else "FAIL", "star LEDs D1/D9 earliest y (D8)",
+               "centre y >= %.2f (pad edge %.2f mm below the keep-out line y %.1f), %.2f mm to the outline there" % (STAR_LED_Y_MIN, STAR_LED_Y_MIN - STAR_LED_PAD_OVERALL / 2 - ANT_KEEPOUT_H_MM, ANT_KEEPOUT_H_MM, led_d))
     # mount holes
     need = MOUNT_KEEPOUT_D / 2 + MOUNT_MATERIAL_MM
     for name, pts in (("notes", MOUNT_HOLES_NOTES), ("used", MOUNT_HOLES)):
@@ -1093,8 +1128,8 @@ def selftest(verbose=True):
     mv = mount_hole_min_move(MOUNT_HOLES_NOTES[0])
     ok &= _row("OK" if abs(mv[0] - MOUNT_HOLES_MOVED[0][0]) <= 0.1 and abs(mv[1] - MOUNT_HOLES_MOVED[0][1]) <= 0.1 else "FAIL",
                "minimal move recomputed", "(8, 72) -> (%.2f, %.2f), move %.2f mm; constant (%.1f, %.1f)" % (mv[0], mv[1], mv[2], *MOUNT_HOLES_MOVED[0]))
-    ok &= _row("OK" if all(abs(MOUNT_HOLES_MOVED[1][i] - mirror_point(MOUNT_HOLES_MOVED[0])[i]) < 1e-9 for i in range(2)) else "FAIL",
-               "mount pattern left-right symmetric", "no 180-degree problem: B is turned about the vertical axis")
+    ok &= _row("OK" if abs(MOUNT_HOLES_MOVED[1][0] - (W - MOUNT_HOLES_MOVED[0][0])) < 1e-9 and MOUNT_HOLES_MOVED[0][1] == MOUNT_HOLES_MOVED[1][1] else "FAIL",
+               "mount pattern left-right symmetric", "no 180-degree or mirror problem; same (x, y) on A and B (D14)")
     dd = math.hypot(MOUNT_HOLES[0][0] - HANG_HOLE[0], MOUNT_HOLES[0][1] - HANG_HOLE[1])
     ok &= _row("OK" if dd > 20 else "FAIL", "hole to hole", "mount to hang %.1f mm" % dd)
     # keep-out sizes
