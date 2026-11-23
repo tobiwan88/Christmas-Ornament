@@ -17,7 +17,8 @@ fab:
   setup_fee_usd: 51.12                 # Standard assembly setup, D6 (job brief)
   stencil_fee_usd: 16.42               # D6 (job brief). Setup, stencil and the Extended fees are per ORDER (one panel), not per board: counted once through fab.order_includes (tree-a) / fab.fees_paid_by (tree-b); the order total is in PARTS-REVIEW.md
   order_qty: 5                         # panels = ornaments (R2.1)
-  order_limit_usd: 250                 # D20: cap per ORDER, judged on tree-a's order row (it sums both boards); here for the record only
+  order_limit_usd: 250                 # D20: cap per ORDER, judged on tree-a's order row (it sums both boards, all-in with the manual PCB quote); here for the record only
+  footprint_libs: [../lib/tree.pretty] # project footprints (joint count; the owner's order row counts them)
   fees_paid_by: ../tree-a              # panel-level accounting (optional key of calc/bom_check.py): setup, stencil and Extended parts that tree-a's BOM already carries are counted once, on tree-a's order row, not again here
 
 stackup:                               # part of the order; calc/impedance.py reads it

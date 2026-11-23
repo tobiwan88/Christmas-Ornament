@@ -19,6 +19,16 @@ fab:
   order_qty: 5                         # panels = ornaments (R2.1)
   order_limit_usd: 250                 # D20 / R2.1: cap per ORDER (5 panels), all in; the BOM check FAILs above it with parts + fees only (bare PCB, joints, shipping not included), so the real margin is smaller
   order_includes: [../tree-b]          # panel-level accounting (optional key of calc/bom_check.py): this board owns the order. With --stock its order row sums the parts of every listed board and counts setup, stencil and each unique Extended part ONCE. The listed boards say `fees_paid_by` back
+  assembly_type: Standard              # label of the cost rows (D6)
+  footprint_libs: [../lib/tree.pretty] # project footprints; KiCad's own libraries come from $KICAD_FOOTPRINT_DIR (scripts/kicad-env.sh). bom_check counts SMT joints from their pads
+  bom_variants: {B: bom-variant-b.csv} # second order run for the Li-ion variant (D10); variant switch before a B order: ORDER.md
+  extra_fees:                          # D23; source: hardware/RESEARCH-2026-11-23.md section JLCPCB, "Assembly" fee row. Per ORDER (one panel design pair), counted by calc/bom_check.py
+    - {name: handling, usd: 14.93, per: order, status: "digest says '>= 14.93': a minimum, UNVERIFIED"}
+    - {name: fixture, usd: 8.21, per: order, count: 1, status: "digest says '8.21 each': count UNVERIFIED"}
+    - {name: SMT joints, usd: 0.0016, per: joint, status: "joint counting rule UNVERIFIED"}
+    - {name: panel fee (different designs), usd_from: setup_fee_usd, per: extra_design, status: "(designs - 1) x setup 'if counted so' (digest), UNVERIFIED"}
+  pcb_quote_usd: null                  # bare PCB (5 panels 114.8 x 120 mm, 4 layers, ENIG, black, 1.0 mm) + shipping: MANUAL cart quote, ORDER.md. null = MANUAL row (WARN; FAIL with --strict)
+  pcb_estimate_usd: null               # {value, source}; null = MISSING: the research digest has no price row for this panel, never invented
 
 stackup:                               # part of the order; calc/impedance.py reads it
   name: JLC04101H-7628                 # JLCPCB 4-layer 1.0 mm default (D5); thin option -3313 not used
