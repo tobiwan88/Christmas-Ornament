@@ -67,6 +67,26 @@ GEOMETRY_OK: dict[str, tuple[set[int], str]] = {
     # 0.67 terminal centres) vs 0.80 (maker recommended land, ours); same centre.
     "C965834": ({90}, "anode corner by EasyEDA pin names vs maker p8; pads 0.12 mm (pitch 0.63 vs 0.80)"),
 }
+# LCSC parts whose EasyEDA pad numbers differ from KiCad's but whose pads were identified one by one (EasyEDA symbol pin
+# names, polarity marks, maker drawing): EasyEDA number -> KiCad number; the part is then fitted by number, so a
+# symmetric land (4 equal pads, a 180-degree holder) cannot pick the wrong angle. Value: (map, reviewer note).
+PAD_MAP: dict[str, tuple[dict[str, str], str]] = {
+    # XL-1010RGB-YG: EasyEDA symbol 1 COM+, 2 B-, 3 G-, 4 R- (CCW from top-left); maker p8 top view 1 R-, 2 G-, 3 A, 4 B-.
+    "C965834": ({"1": "3", "2": "4", "3": "2", "4": "1"}, "pads by function; EasyEDA drawn turned 90 deg"),
+    # BH-AAA-B5AA001: EasyEDA numbers per cell (1 upper +, 2 upper -, 3 lower +, 4 lower -; its silk '+' marks and the
+    # peg hole agree with the maker top view); ours 1 pack + (lower left), 2 pack - (upper left), 3/4 series link.
+    "C964881": ({"1": "4", "2": "2", "3": "1", "4": "3"}, "pads by position, peg hole at the same corner"),
+}
+# Parts whose land is the maker's and is longer or offset against EasyEDA's on purpose: the CPL centre is the KiCad
+# footprint origin (body centre = EasyEDA origin), not the least-squares fit of the pads; every EasyEDA pad centre must
+# lie within the given distance of its KiCad pad centre (and inside the KiCad pad, checked by hand). Value: (mm, note).
+ORIGIN_FIT: dict[str, tuple[float, str]] = {
+    # Johanson 2450AT42A100E: body spans the 3.9 mm gap; EasyEDA pad 2 sits at the inner end of our 4.0 mm stub pad.
+    "C2917719": (1.5, "body centre = gap centre; EasyEDA pad 2 inside the stub pad"),
+    # Boom PZ2.54-2xNAT: maker land rows 7.0 mm apart (9.00 outer, 2.00 pads), EasyEDA 5.6; both cover the feet.
+    "C192300": (0.75, "maker land 7.0 mm row centres vs EasyEDA 5.6, centre symmetric"),
+}
+
 
 
 def git(*a: str) -> str:
@@ -191,9 +211,10 @@ def centres(pads: list[tuple[str, float, float]]) -> dict[str, tuple[float, floa
     return {n: (sum(p[0] for p in v) / len(v), sum(p[1] for p in v) / len(v)) for n, v in acc.items() if n}
 
 
-def fit(kicad: list[tuple[str, float, float]], eda: list[tuple[str, float, float]], by_number: bool):
+def fit(kicad: list[tuple[str, float, float]], eda: list[tuple[str, float, float]], by_number: bool,
+        origin: tuple[float, float] | None = None):
     """Best (rotation, origin x, origin y, worst error mm, worst error of the next-best rotation) mapping EasyEDA pads
-    onto the board pads."""
+    onto the board pads. origin: keep the EasyEDA origin on this board point (ORIGIN_FIT) instead of the mean."""
     fits = []
     for deg in (0, 90, 180, 270):
         if by_number:
@@ -206,8 +227,8 @@ def fit(kicad: list[tuple[str, float, float]], eda: list[tuple[str, float, float
             kc = (sum(p[0] for p in ke) / len(ke), sum(p[1] for p in ke) / len(ke))
             ec = (sum(p[0] for p in er) / len(er), sum(p[1] for p in er) / len(er))
             pairs = [(min(ke, key=lambda q: math.dist(q, (p[0] - ec[0] + kc[0], p[1] - ec[1] + kc[1]))), p) for p in er]
-        cx = sum(a[0] - b[0] for a, b in pairs) / len(pairs)
-        cy = sum(a[1] - b[1] for a, b in pairs) / len(pairs)
+        cx = sum(a[0] - b[0] for a, b in pairs) / len(pairs) if origin is None else origin[0]
+        cy = sum(a[1] - b[1] for a, b in pairs) / len(pairs) if origin is None else origin[1]
         fits.append((max(math.dist(a, (b[0] + cx, b[1] + cy)) for a, b in pairs), deg, cx, cy))
     fits.sort()
     err, deg, cx, cy = fits[0]
@@ -229,17 +250,24 @@ def placements(parts: list[dict], offline: bool, fit_only: bool = False) -> tupl
         title, eda = easyeda_pads(p["lcsc"], offline)
         if bottom:                       # the EasyEDA footprint is drawn from the top: a bottom part shows it mirrored in x
             eda = [(n, -x, y) for n, x, y in eda]
+        mapped = p["lcsc"] in PAD_MAP
+        if mapped:                       # reviewed renumbering: then fitted by number like any other part
+            eda = [(PAD_MAP[p["lcsc"]][0].get(n, n), x, y) for n, x, y in eda]
         kicad = [(q["num"], q["x"], q["y"]) for q in p["pads"]]
         knum, enum = set(centres(kicad)), set(centres(eda))
-        by_number = (knum == enum or (len(knum & enum) >= 2 and knum & enum == knum)) and p["lcsc"] not in GEOMETRY_OK
-        deg, cx, cy, err, next_err = fit(kicad, eda, by_number)
+        by_number = mapped or ((knum == enum or (len(knum & enum) >= 2 and knum & enum == knum))
+                               and p["lcsc"] not in GEOMETRY_OK)
+        anchor = (p["x"], p["y"]) if p["lcsc"] in ORIGIN_FIT else None
+        deg, cx, cy, err, next_err = fit(kicad, eda, by_number, anchor)
         corr = round(deg - p["rot"]) % 360
-        how = ("numbers" if by_number else "geometry") + (" bot" if bottom else "")
+        how = ("map" if mapped else "numbers" if by_number else "geometry") + (" org" if anchor else "") + (" bot" if bottom else "")
         # OK: every pad within FIT_TOL_MM. LAND: the two libraries draw the lands differently (pad length, odd corner
         # pads) but the rotation is unambiguous (the next-best angle is clearly worse) and no pad is off by more than
         # LAND_TOL_MM; the centre is the least-squares fit of all pads.
         unambiguous = next_err - err >= AMBIGUITY_MM
         status = "OK" if err <= FIT_TOL_MM and unambiguous else "LAND" if err <= LAND_TOL_MM and unambiguous else "FAIL"
+        if anchor and status == "FAIL" and unambiguous and err <= ORIGIN_FIT[p["lcsc"]][0]:
+            status = "LAND"              # maker land longer than the fab's, reviewed; centre = footprint origin
         if not by_number:  # geometry fits need a human-confirmed entry; symmetric parts list every valid correction
             want = GEOMETRY_OK.get(p["lcsc"])
             if want is not None and corr in want[0] and err <= LAND_TOL_MM:
