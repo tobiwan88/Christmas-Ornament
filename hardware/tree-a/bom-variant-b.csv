@@ -31,7 +31,7 @@ SI2301CDS-T1-GE3 (SOT-23),Q1,SOT-23,1,C10487,Basic,"datasheet card, stock 2026-1
 10k 1% (0402),R32,R_0402_1005Metric,1,C25744,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",PROG 100 mA (variant B)
 2.2M 1% 100ppm (0402),"R40,R41",R_0402_1005Metric,2,C5140754,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",battery divider top; battery divider bottom
 100k 1% (0402),"R42,R44",R_0402_1005Metric,2,C25741,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VBUS_DET divider top (tree_pin_divider.py); CHG_STAT divider top (tree_pin_divider.py)
-120k 1% (0402),"R43,R45",R_0402_1005Metric,2,C25750,Preferred,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VBUS_DET divider bottom (tree_pin_divider.py); CHG_STAT divider bottom (tree_pin_divider.py)
+120k 1% (0402),"R43,R45",R_0402_1005Metric,2,C25750,Preferred,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","VBUS_DET divider bottom; variant A: pull-down, reads low (D21, DS-B5); CHG_STAT divider bottom; variant A: pull-down, reads low (D21, DS-B5)"
 0R (0402),R50,R_0402_1005Metric,1,C17168,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",pi series slot: bench-tune with a VNA
 HX 3x4x2-2P-1.6N (SMD 4x3),SW1,SW_HX_3x4x2-2P-1.6N,1,C49234124,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","tact switch, outer face"
 nRF54L10-QFAA-R7 (QFN-48 6x6),U1,QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias,1,C44800139,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","BLE SoC (D2); alternate nRF54L15-QFAA-R C42458750, same footprint"

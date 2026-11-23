@@ -89,7 +89,7 @@
 		)
 		(uuid "8e6a0878-e5a2-5aa5-9ea6-ec22c3401983")
 	)
-	(text "Variant A (order 1, D10): BT1 fitted; charger sheet (J1, J2, U3, R30-R32, R42-R45, C30, C31) DNP.\nVariant B: BT1 not fitted, charger parts fitted (bom-variant-b.csv). Holder and USB-C / JST / charger\nfootprints overlap on the board on purpose (D15).\nFirmware: INTCAP for X1/X2 (no load caps), SEL high >= 1 ms before lighting and low before sleep,\none die at a time from tree_common.slot_table(), all lines Hi-Z in sleep, read CHG_STAT/VBUS_DET at VDD 3.0 V."
+	(text "Variant A (order 1, D10): BT1 fitted; charger sheet (J1, J2, U3, R30-R32, R42, R44, C30, C31) DNP, R43/R45 fitted.\nVariant B: BT1 not fitted, charger parts fitted (bom-variant-b.csv). Holder and USB-C / JST / charger\nfootprints overlap on the board on purpose (D15).\nFirmware: INTCAP for X1/X2 (no load caps), SEL high >= 1 ms before lighting and low before sleep,\none die at a time from tree_common.slot_table(), all lines Hi-Z in sleep, read CHG_STAT/VBUS_DET at VDD 3.0 V."
 		(exclude_from_sim no)
 		(at 25.4 182.88 0)
 		(effects

@@ -73,9 +73,11 @@ P("C30", "Device:C", "4.7uF", "Capacitor_SMD:C_0603_1608Metric", "C19666", "Basi
 P("C31", "Device:C", "4.7uF", "Capacitor_SMD:C_0603_1608Metric", "C19666", "Basic", "4.7uF 16V X5R (0603)", "charger Cout on VIN (variant B, D21)", "B")
 _RT, _RB = f"{pdiv.RTOP / 1e3:.0f}k", f"{pdiv.RBOT / 1e3:.0f}k"
 P("R42", "Device:R", _RT, R0402, "C25741", "Basic", "100k 1% (0402)", "VBUS_DET divider top (tree_pin_divider.py)", "B")
-P("R43", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)", "VBUS_DET divider bottom (tree_pin_divider.py)", "B")
+P("R43", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)",
+  "VBUS_DET divider bottom; variant A: pull-down, reads low (D21, DS-B5)", "AB")
 P("R44", "Device:R", _RT, R0402, "C25741", "Basic", "100k 1% (0402)", "CHG_STAT divider top (tree_pin_divider.py)", "B")
-P("R45", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)", "CHG_STAT divider bottom (tree_pin_divider.py)", "B")
+P("R45", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)",
+  "CHG_STAT divider bottom; variant A: pull-down, reads low (D21, DS-B5)", "AB")
 # MCU (card nRF54L15-QFAA; Nordic reference schematic v0.8 config 1)
 P("U1", "tree:nRF54L15-QFAA", "nRF54L10-QFAA", "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias", "C44800139",
   "Extended", "nRF54L10-QFAA-R7 (QFN-48 6x6)", "BLE SoC (D2); alternate nRF54L15-QFAA-R C42458750, same footprint")
@@ -363,7 +365,8 @@ def charger_sheet():
                    "(D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\n"
                    "SEL low (VDD 3.0 V). U3 VBAT and C31 on VIN (D21): charge current flows through Q1\n"
                    "(source to drain, tree_charge_path.py); without a cell U3 feeds VIN directly.\n"
-                   "All parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15).", 1.1)
+                   "R43/R45 fitted on A and B: with R42/R44 DNP (variant A) they hold VBUS_DET/CHG_STAT\n"
+                   "low (no floating SENSE wake, D21). Other parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15).", 1.1)
     return s
 
 
@@ -583,7 +586,7 @@ def build_root(sheet_uuids: dict) -> Path:
                  "LED lines on P1 (GPIOTE scan)"),
         (115, 16, "Nordic network L3-L5, C6, C9, C11\npi slot C50 / R50 / C51\nchip antenna ANT1"),
         (115, 46, "R1-R8 22R, D9-D16,\nheader J3 to board B"),
-        (10, 72, "Variant A (order 1, D10): BT1 fitted; charger sheet (J1, J2, U3, R30-R32, R42-R45, C30, C31) DNP.\n"
+        (10, 72, "Variant A (order 1, D10): BT1 fitted; charger sheet (J1, J2, U3, R30-R32, R42, R44, C30, C31) DNP, R43/R45 fitted.\n"
                  "Variant B: BT1 not fitted, charger parts fitted (bom-variant-b.csv). Holder and USB-C / JST / charger\n"
                  "footprints overlap on the board on purpose (D15).\n"
                  "Firmware: INTCAP for X1/X2 (no load caps), SEL high >= 1 ms before lighting and low before sleep,\n"
