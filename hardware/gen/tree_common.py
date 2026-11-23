@@ -68,7 +68,7 @@ PIN_PLAN = [
     {"net": "NC", "gpio": "P1.02", "pin": 3, "kind": "nc", "note": "NFC1, unused, leave open"},
     {"net": "NC", "gpio": "P1.03", "pin": 4, "kind": "nc", "note": "NFC2, unused, leave open"},
     {"net": "VBAT_SENSE", "gpio": "P1.04", "pin": 5, "kind": "ain", "v_source_max": 2.1,
-     "note": "AIN0, battery divider mid-point (1M/1M: 4.2 V Li-ion -> 2.1 V); DC net, buffer between LFXO and LED lines"},
+     "note": "AIN0, battery divider mid-point (2.2M/2.2M after Q1, 100 nF filter: 4.2 V Li-ion -> 2.1 V); DC net, buffer between LFXO and LED lines"},
     {"net": "LED_L4_MCU", "gpio": "P1.05", "pin": 6, "kind": "led", "note": "via R4 to LED_L4"},
     {"net": "LED_L3_MCU", "gpio": "P1.06", "pin": 7, "kind": "led", "note": "via R3 to LED_L3"},
     {"net": "LED_L2_MCU", "gpio": "P1.07", "pin": 8, "kind": "led", "note": "via R2 to LED_L2"},

@@ -3,7 +3,7 @@ Comment,Designator,Footprint,Quantity,LCSC Part #,Class,Status,Function / notes
 BH-AAA-B5AA001 (SMT 2xAAA),BT1,BAT_MYOUNG_BH-AAA-B5AA001,1,C964881,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","cell holder, variant A (D4); pads 3/4 series link"
 2.2uF 6.3V X5R (0402),"C1,C2",C_0402_1005Metric,2,C12530,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECD (ref C1); DECA/DECRF (ref C2)
 10uF 10V X5R (0603),"C3,C20",C_0603_1608Metric,2,C19702,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VDD bulk at pins 47/48 (ref C3); TPS63900 Cin
-100nF 50V X7R (0402),"C4,C7,C8,C10",C_0402_1005Metric,4,C1525,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VDD pin 36; VDD pin 10; VDD pin 22; VDD 47/48
+100nF 50V X7R (0402),"C4,C7,C8,C10,C14",C_0402_1005Metric,5,C1525,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VDD pin 36; VDD pin 10; VDD pin 22; VDD 47/48; VBAT_SENSE filter (DS-B2)
 2.2nF 50V X7R (0402),C5,C_0402_1005Metric,1,C1531,Preferred,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECRF (ref C5)
 1.5pF C0G +-0.05pF (0201),C6,C_0201_0603Metric,1,C435397,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RF shunt, ground only via VSS_PA"
 2.0pF C0G +-0.05pF (0201),C9,C_0201_0603Metric,1,C668326,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RF shunt, ground on the bottom layer only"
@@ -24,7 +24,8 @@ SI2301CDS-T1-GE3 (SOT-23),Q1,SOT-23,1,C10487,Basic,"datasheet card, stock 2026-1
 511R 1% 100ppm (0402),R20,R_0402_1005Metric,1,C25124,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RCFG1: VO(2) 3.5 V (Table 7-2)
 10.5k 1% 100ppm (0402),R21,R_0402_1005Metric,1,C25850,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RCFG2: 100 mA input limit (Table 7-2)
 13.3k 1% 100ppm (0402),R22,R_0402_1005Metric,1,C122547,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RCFG3: VO(1) 3.0 V (Table 7-3)
-1M 1% (0402),"R23,R40,R41",R_0402_1005Metric,3,C26083,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",SEL pull-down (3.0 V at start); battery divider top; battery divider bottom
+1M 1% (0402),R23,R_0402_1005Metric,1,C26083,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",SEL pull-down (3.0 V at start)
+2.2M 1% 100ppm (0402),"R40,R41",R_0402_1005Metric,2,C5140754,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",battery divider top; battery divider bottom
 0R (0402),R50,R_0402_1005Metric,1,C17168,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",pi series slot: bench-tune with a VNA
 HX 3x4x2-2P-1.6N (SMD 4x3),SW1,SW_HX_3x4x2-2P-1.6N,1,C49234124,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","tact switch, outer face"
 nRF54L10-QFAA-R7 (QFN-48 6x6),U1,QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias,1,C44800139,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","BLE SoC (D2); alternate nRF54L15-QFAA-R C42458750, same footprint"

@@ -133,10 +133,25 @@ def rows(board: Path, bom: dict | None = None) -> list:
         tau = rsrc * cf
         out.append(("OK" if cf >= 50e-9 else "WARN", "VBAT_SENSE filter",
                     f"{cf_ref} {cf * 1e9:.0f} nF: tau {tau * 1000:.0f} ms, settle to 0.1 % (7 tau) {7 * tau:.2f} s after VIN "
-                    f"changes; the SAADC sample cap is charged from {cf * 1e9:.0f} nF (charge-sharing error < 0.01 % for a "
-                    f"pF-range sample cap)"))
+                    f"changes; the SAADC samples from the {cf * 1e9:.0f} nF reservoir (nRF sample-cap value and pin leakage not "
+                    f"read: error UNVERIFIED, bench item)"))
     else:
         out.append(("FAIL", "VBAT_SENSE filter", "no filter cap C14 on VBAT_SENSE in bom.csv"))
+    # variant B sleep sum (DS-B3): Li-ion pouch, U3 VBAT on VIN leaks IDISCHARGE back when VBUS is absent
+    nrf, eff, vdd = v("sleep", "nrf_ua"), v("sleep", "eff"), v("supply", "vdd_idle_v")
+    tq, tq_max = v("sleep", "tps_iq_ua"), v("sleep", "tps_iq_max_ua")
+    u3 = mcp["output_reverse_leakage_ua"]["value"]
+    tgt = (prof.get("design", {}).get("cycle", {}).get("sleep_ua") or {}).get("value", 5)
+    for vc in (vsl, cell_max):
+        n_c = nrf * vdd / (vc * eff)
+        d_c = vc / (rt + rb) * 1e6
+        typ = n_c + tq + d_c + u3["vdd_floating_typ"]
+        mx = n_c + tq_max + d_c * 1.02 + u3["max"]
+        st = "OK" if mx <= tgt else ("WARN" if typ <= tgt else "FAIL")
+        out.append((st, f"variant B sleep at the cell, {vc} V",
+                    f"nRF {n_c:.2f} + TPS63900 {tq} (max {tq_max}) + divider {d_c:.2f} + U3 IDISCHARGE {u3['vdd_floating_typ']} "
+                    f"(max {u3['max']}) = {typ:.2f} uA typ, {mx:.2f} uA with maxima (target {tgt} uA)"
+                    + ("" if st == "OK" else ": the U3 leakage maximum dominates (measure on the first variant B board)")))
     r_prof = v("sleep", "divider_ohm")
     out.append(("OK" if abs(r_prof - (rt + rb)) < 1 else "WARN", "board.yaml tree_power.sleep.divider_ohm",
                 f"profile {r_prof:.0f} ohm vs schematic {rt + rb:.0f} ohm" + ("" if abs(r_prof - (rt + rb)) < 1 else

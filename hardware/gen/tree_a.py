@@ -51,8 +51,14 @@ P("C21", "Device:C", "22uF", "Capacitor_SMD:C_0805_2012Metric", "C45783", "Basic
 P("R20", "Device:R", "511R", R0402, "C25124", "Extended", "511R 1% 100ppm (0402)", "RCFG1: VO(2) 3.5 V (Table 7-2)")
 P("R21", "Device:R", "10.5k", R0402, "C25850", "Extended", "10.5k 1% 100ppm (0402)", "RCFG2: 100 mA input limit (Table 7-2)")
 P("R22", "Device:R", "13.3k", R0402, "C122547", "Extended", "13.3k 1% 100ppm (0402)", "RCFG3: VO(1) 3.0 V (Table 7-3)")
-for _r, _n in (("R23", "SEL pull-down (3.0 V at start)"), ("R40", "battery divider top"), ("R41", "battery divider bottom")):
-    P(_r, "Device:R", "1M", R0402, "C26083", "Basic", "1M 1% (0402)", _n)
+P("R23", "Device:R", "1M", R0402, "C26083", "Basic", "1M 1% (0402)", "SEL pull-down (3.0 V at start)")
+# battery divider 2 x 2.2 M + 100 nF (D21, DS-B2/B3): no Basic or Preferred 0402 2.2 M (jlcparts 2026-11-23); cheapest 1 %
+# in stock: C5140754 SC0402F2204F2ANRH 100 ppm (listing; datasheet not read); deep-stock alternate C2998080 FRC0402F2204TS
+for _r, _n in (("R40", "battery divider top"), ("R41", "battery divider bottom")):
+    P(_r, "Device:R", "2.2M", R0402, "C5140754", "Extended", "2.2M 1% 100ppm (0402)", _n)
+_RT_V = _RB_V = 2.2e6          # ohm, the values above (note text and tree_charge_path read the same parts)
+assert PARTS["R40"]["val"] == PARTS["R41"]["val"] == "2.2M"
+P("C14", "Device:C", "100nF", C0402, "C1525", "Basic", "100nF 50V X7R (0402)", "VBAT_SENSE filter (DS-B2)")
 # charger, variant B (card MCP73831T-2ACI-OT, HC-TYPE-C-6P-01A); DNP in the first order (D10)
 P("J1", "Connector:USB_C_Receptacle_PowerOnly_6P", "USB-C", "tree:USB_C_HCTL_HC-TYPE-C-6P-01A", "C2894893", "Extended",
   "HC-TYPE-C-6P-01A (SMD)", "USB-C power input (variant B)", "B")
@@ -143,7 +149,7 @@ def sheet_parts() -> dict:
 
 
 # --------------------------------------------------------------------------- nets (the truth; net-intent check)
-GND_PINS = [("BT1", "2"), ("J2", "2"), ("Q1", "1"), ("C20", "2"), ("R41", "2"), ("R23", "2"), ("R20", "2"), ("R21", "2"),
+GND_PINS = [("BT1", "2"), ("J2", "2"), ("Q1", "1"), ("C20", "2"), ("R41", "2"), ("C14", "2"), ("R23", "2"), ("R20", "2"), ("R21", "2"),
             ("R22", "2"), ("U2", "8"), ("U2", "11"), ("C21", "2"), ("U1", "44"), ("U1", "49"), ("NT1", "2"),
             ("C3", "2"), ("C10", "2"), ("C7", "2"), ("C8", "2"), ("C4", "2"), ("C1", "2"), ("C2", "2"), ("C12", "2"),
             ("C5", "2"), ("X2", "2"), ("X2", "4"), ("C13", "2"), ("TC1", "5"), ("SW1", "2"), ("C9", "2"), ("C11", "2"),
@@ -154,7 +160,7 @@ NETS: dict[str, list] = {
     "BAT": [("BT1", "1"), ("J2", "1"), ("Q1", "3")],
     "BT_LINK": [("BT1", "3"), ("BT1", "4")],
     "VIN": [("Q1", "2"), ("U2", "10"), ("U2", "1"), ("C20", "1"), ("R40", "1"), ("U3", "3"), ("C31", "1")],
-    "VBAT_SENSE": [("R40", "2"), ("R41", "1"), ("U1", "5")],
+    "VBAT_SENSE": [("R40", "2"), ("R41", "1"), ("C14", "1"), ("U1", "5")],
     "LX1": [("U2", "9"), ("L2", "1")], "LX2": [("U2", "7"), ("L2", "2")],
     "TPS_SEL": [("U2", "2"), ("R23", "1"), ("U1", "11")],
     "CFG1": [("U2", "3"), ("R20", "1")], "CFG2": [("U2", "4"), ("R21", "1")], "CFG3": [("U2", "5"), ("R22", "1")],
@@ -242,8 +248,10 @@ def power_sheet():
     s.part("R40", 56, 21.5)
     s.part("R41", 56, 26.5)
     s.wire(("R40", "2"), (56, 24), ("R41", "1"))
-    s.wire((56, 24), (58, 24))
-    s.label("VBAT_SENSE", 58, 24, 0, kind="hier", shape="output")
+    s.part("C14", 61, 25.5)
+    s.wire((56, 24), (61, 24), (63, 24))
+    s.label("VBAT_SENSE", 63, 24, 0, kind="hier", shape="output")
+    s.pwr("C14", "2", "GND")
     s.pwr("R41", "2", "GND")
     s.part("U2", 95, 24)
     s.wire(("Q1", "2"), (48, 20), (56, 20), (66, 20), (89, 20), ("U2", "10"))
@@ -288,8 +296,12 @@ def power_sheet():
     s.frame(36, 13, 46.5, 31, "Q1 (D7)")
     s.text(36.5, 26.5, "P-FET: D to cell +,\nS to VIN, G to GND.\nReversed cell: VGS 0,\nbody diode blocks.\nCharge (B): S->D,\non (tree_charge_path).", 1.0)
     s.frame(46.5, 13, 74, 47, "VIN: Cin, battery sense")
-    s.text(47, 32, "C20 10uF: Cin (>= 5 uF effective, 6.3).\nR40/R41 1M/1M: VBAT_SENSE to P1.04 AIN0\n"
-                   "(4.2 V -> 2.1 V). Unswitched: 1.5 uA\n(PARTS-REVIEW 17). No filter cap:\nthe cards do not ask for one.", 1.1)
+    s.text(47, 32, "C20 10uF: Cin (>= 5 uF effective, 6.3).\n"
+                   f"R40/R41 {PARTS['R40']['val']}/{PARTS['R41']['val']} after Q1: VBAT_SENSE\n"
+                   f"to P1.04 AIN0 (4.2 V -> {4.2 * _RB_V / (_RT_V + _RB_V):.1f} V), "
+                   f"{3.0 / (_RT_V + _RB_V) * 1e6:.2f} uA\nat 3.0 V. C14 {PARTS['C14']['val']}: "
+                   f"{_RT_V * _RB_V / (_RT_V + _RB_V) / 1e6:.1f} Mohm source,\n"
+                   f"tau {_RT_V * _RB_V / (_RT_V + _RB_V) * 100e-9:.2f} s (tree_charge_path.py, D21).", 1.1)
     s.frame(74, 13, 122, 47, "U2 TPS63900 buck-boost (SLVSET3D)")
     s.text(75, 33, "EN tied to VIN (D13). SEL low = VO(1) 3.0 V (R22 13.3k, Table 7-3);\nSEL high = VO(2) 3.5 V "
                    "(R20 511R + R21 10.5k, 100 mA limit, Table 7-2).\nR23 1M pull-down: 3.0 V at start, SEL never floats.\n"
