@@ -365,6 +365,17 @@ def ant_keepout_polygon(h=None):
 # long axis and 11.0 mm across (4 pad centres assumed at +-27.875 / +-5.5: count and pad size UNVERIFIED).
 HOLDER_L, HOLDER_W, HOLDER_H = 62.2, 22.4, 11.3
 HOLDER_PAD_DX, HOLDER_PAD_DY = 55.75, 11.0
+# Height stack of the holder above the board surface (CO-B5; drawing MY-CP-0144 REV A/0, the only sheet):
+#  - 11.3 is measured in the section view from the flat underside (the four SMT tabs lie flat in that plane, flange line) to the
+#    top of the end walls.  Title-block tolerance for one decimal: +-0.25 (62.20 carries its own +-0.3).
+#  - the 0.90 in the end view is NOT a solder tab standing off the board: it is the locating peg (phi 1.30, top view) that
+#    protrudes 0.90 below that plane, into the PCB's phi 1.80 hole.  It sits inside the board thickness (0.90 < 1.0), adds
+#    nothing above the board surface and does not poke through.
+HOLDER_H_TOL = 0.25                               # drawing title block, X.X tolerance
+HOLDER_PEG_D, HOLDER_PEG_H, HOLDER_PEG_HOLE_D = 1.30, 0.90, 1.80
+SOLDER_UNDER_TAB_MM = 0.10                        # ESTIMATE (paste/solder under the tabs), not from a datasheet: UNVERIFIED
+HOLDER_MIN_CLEAR_MM = 0.2                         # threshold of this check only (nothing in REQUIREMENTS names one): engineer may change
+STANDOFF_TOL_MM = None                            # 12 mm nylon F-F standoff length tolerance: not in the repo (UNVERIFIED)
 HOLDER_MARGIN_MM = 1.0                            # job rule: at least 1 mm to the outline
 AAA_CELL_L = 44.5                                 # one AAA cell length (the holder is 17.7 mm longer)
 POUCH_L, POUCH_W, POUCH_T = 36.0, 29.0, 4.75      # Adafruit 1578
@@ -484,13 +495,46 @@ def holder_fit_rows(margin=HOLDER_MARGIN_MM):
 # ----------------------------------------------------------------------------------------------------------------
 BOARD_T = 1.0                       # both boards 1.0 mm
 GAP_MM = 12.0                       # inner face to inner face, set by the 12 mm standoffs
-LED_H = 0.4                         # RGB LED height on each outer face (job figure; XL-1010RGB-YG datasheet height not read)
-STACK_BOARDS_MM = 2 * BOARD_T + GAP_MM                 # 14.0 mm board outer face to outer face
-STACK_WITH_LEDS_MM = STACK_BOARDS_MM + 2 * LED_H       # 14.8 mm (D3 says about 14.5 mm: not reproduced, see MECHANICAL.md)
+LED_H = 0.4                         # RGB LED height on each outer face: XL-1010RGB-YG datasheet p8 / card 1.0 x 1.0 x 0.4 mm
+LED_H_TOL = 0.25                    # same page: tolerance +-0.25 mm unless noted
+STACK_BOARDS_MM = 2 * BOARD_T + GAP_MM                 # 14.0 mm board outer face to outer face (D18)
+STACK_WITH_LEDS_MM = STACK_BOARDS_MM + 2 * LED_H       # 14.8 mm nominal (D3's "about 14.5" was an estimate, D18)
+STACK_WITH_LEDS_MAX_MM = STACK_BOARDS_MM + 2 * (LED_H + LED_H_TOL)   # 15.3 mm worst case
 HEADER_FEMALE_H, HEADER_MALE_PLASTIC_H, HEADER_PIN_ABOVE = 8.5, 3.2, 6.0
 HEADER_MATED_H = HEADER_FEMALE_H + HEADER_MALE_PLASTIC_H   # 11.7 mm; research digest: HC-PM254-8.5H + Boom C192300
-HEADER_BODY = (10.16, 5.08)         # 2 x 4 at 2.54 mm: 4 x 2.54 by 2 x 2.54 (body size of the SMD parts UNVERIFIED)
+HEADER_FEMALE_H_TOL, HEADER_MALE_H_TOL = 0.15, 0.2          # cards HC-PM254-8.5H-2x4PS (8.50 +-0.15), Boom (3.20 +-0.2)
+# Header 2 x 4 (CO-B6).  Orientation: 2 columns in x (pin 2 at +x of pin 1, pitch 2.54) by 4 rows in y (pitch 2.54): 5.08 wide in x, 10.16 tall in y.
+# Same numbers as hardware/gen/build_footprints.py header(): pad y = -3.81, -1.27, +1.27, +3.81 per column (read only), body 5.08 x 10.16.
+HEADER_PITCH = 2.54
+HEADER_BODY = (5.08, 10.16)         # (x, y) footprint body = 2 x 2.54 by 4 x 2.54; the earlier (10.16, 5.08) was turned by 90 degrees
+HEADER_PIN_Y = (-3.81, -1.27, 1.27, 3.81)
+HEADER_FEMALE_PAD = dict(outer_x=8.0, length=2.50, width=1.02)   # card HC-PM254-8.5H-2x4PS (drawing RECOMMEND P.C.B LAYOUT)
+HEADER_MALE_PAD = dict(outer_x=9.0, length=2.00, width=1.00)     # card Boom (outer 9.00 +-0.2; width 1.0 UNVERIFIED)
+# Maker plastic of the female part (HC-PM254-8.5H drawing): depth 5.0 +-0.15 across the rows, length (B + 0.5) +-0.3 with B = 10.16 for 4 pins
+HEADER_FEMALE_PLASTIC = (5.0, 10.16 + 0.5, 0.3)                  # x, y, y tolerance
 HEADER_CENTER = (CX, 33.0)          # tentative (layout builder decides): above the holder window, 1 mm margin to the outline
+HEADER_HOLDER_CLEAR = 1.0           # between the header (female plastic, mated male) and the holder top edge: same 1 mm as the job's margin
+HEADER_Y_ABOVE_D15 = 37.0           # D15 wording "header above y 37"
+
+
+def header_extent(cy=None):
+    """Header extents about the centre (x half, y half): footprint body, pad (male is wider: 9.0 mm), maker plastic nominal and worst."""
+    cy = HEADER_CENTER[1] if cy is None else cy
+    pad_y = max(HEADER_PIN_Y) + max(HEADER_FEMALE_PAD["width"], HEADER_MALE_PAD["width"]) / 2
+    return dict(body_half_y=HEADER_BODY[1] / 2, body_bottom=cy + HEADER_BODY[1] / 2,
+                pad_half_x=HEADER_MALE_PAD["outer_x"] / 2, pad_half_y=pad_y, pad_bottom=cy + pad_y,
+                plastic_half_y=HEADER_FEMALE_PLASTIC[1] / 2, plastic_bottom=cy + HEADER_FEMALE_PLASTIC[1] / 2,
+                plastic_bottom_worst=cy + HEADER_FEMALE_PLASTIC[1] / 2 + HEADER_FEMALE_PLASTIC[2])
+
+
+def holder_window_with_header(header_bottom, margin=HOLDER_MARGIN_MM, clear=HEADER_HOLDER_CLEAR):
+    """Usable top-edge range (lo, hi) of the holder: outline fit with `margin` and the top edge at least `clear` below the header bottom."""
+    rng = y_ranges_for_rect(CX, HOLDER_W, HOLDER_L, margin, y_step=0.01)
+    lo, hi = rng[0]
+    lo2 = max(lo, header_bottom + clear)
+    return (round(lo2, 2), hi) if lo2 <= hi else None
+
+
 SCREW_LEN = 5.0                     # nylon M2 x 5 into the 12 mm F-F standoff
 SCREW_HEAD_H = 1.3                  # UNVERIFIED (typical pan head 1.2 to 1.6 mm)
 SCREW_ENGAGEMENT = SCREW_LEN - BOARD_T - SCREW_HEAD_H   # about 2.7 mm of thread in the standoff, UNVERIFIED
@@ -507,12 +551,13 @@ def height_zones():
     z = []
     z.append(dict(name="battery holder (variant A)", board="A", face="inner",
                   shape=("rect", CX, HOLDER_Y_TOP + HOLDER_L / 2, HOLDER_W, HOLDER_L), height_mm=HOLDER_H, status="DS",
-                  note="MYOUNG BH-AAA-B5AA001; clearance to B = %.1f mm; cells load from the top: housing opens here; y_top %.1f is a default in the fit window" % (GAP_MM - HOLDER_H, HOLDER_Y_TOP)))
+                  note="MYOUNG BH-AAA-B5AA001; clearance to B %.2f mm nominal, %.2f mm worst case (+%.2f tol, +%.2f solder est); the 0.90 foot is the locating peg in the PCB hole, not extra height; cells load from the top: housing opens here; y_top %.1f is a default in the fit window" % (
+                      GAP_MM - HOLDER_H, GAP_MM - HOLDER_H - HOLDER_H_TOL - SOLDER_UNDER_TAB_MM, HOLDER_H_TOL, SOLDER_UNDER_TAB_MM, HOLDER_Y_TOP)))
     z.append(dict(name="Li-ion pouch (variant B)", board="A", face="inner", shape=("rect", CX, 58.0, POUCH_W, POUCH_L),
                   height_mm=POUCH_T, status="UNVERIFIED", note="Adafruit 1578 29 x 36 x 4.75; does not fit the outline, position is a placeholder"))
     z.append(dict(name="header female (A) + male (B), mated", board="A+B", face="inner",
                   shape=("rect", HEADER_CENTER[0], HEADER_CENTER[1], HEADER_BODY[0], HEADER_BODY[1]), height_mm=HEADER_MATED_H, status="UNVERIFIED",
-                  note="8.5 mm female + 3.2 mm male plastic = 11.7 mm; leaves %.1f mm of the 12 mm gap; pins 5.7 mm insertion; body size is the 2.54 mm grid" % (GAP_MM - HEADER_MATED_H)))
+                  note="8.5 mm female + 3.2 mm male plastic = 11.7 mm; leaves %.1f mm of the 12 mm gap; pins 5.7 mm insertion; 2 columns in x by 4 rows in y: footprint body 5.08 x 10.16 (zone), female plastic 5.0 x 10.66 +-0.3 (maker), pads 8.0 / 9.0 mm outer to outer in x" % (GAP_MM - HEADER_MATED_H)))
     z.append(dict(name="USB-C receptacle opening", board="A", face="inner", shape=("rect", CX, H - USBC_BODY[1] / 2, USBC_BODY[0], USBC_BODY[1]),
                   height_mm=USBC_BODY[2], status="DS", note="HC-TYPE-C-6P-01A body 8.95 x 6.85 x 3.16, flush with the bottom edge (+-0.3, est); opening in the housing at y = 105, add 0.3 mm clearance each side; variant B only"))
     z.append(dict(name="SW1 tactile switch", board="A", face="outer", shape=("rect", SW1_POS[0], SW1_POS[1], 6.0, 6.0), height_mm=None, status="MISSING",
@@ -524,8 +569,8 @@ def height_zones():
                       height_mm=SCREW_HEAD_H, status="UNVERIFIED", note="nylon M2 x 5 pan head, keep-out D5 (research digest)"))
     z.append(dict(name="antenna 2450AT42A100E + keep-out", board="A+B", face="inner", shape=("poly", ant_keepout_polygon()), height_mm=1.1, status="DS",
                   note="part 5.0 x 2.0 x 1.1 mm on A's inner face; keep-out copper-free on both boards, no metal in the housing over it"))
-    z.append(dict(name="RGB LEDs", board="A+B", face="outer", shape=("poly", OUTLINE_POLY), height_mm=LED_H, status="UNVERIFIED",
-                  note="0.4 mm each side (job figure); datasheet height not read"))
+    z.append(dict(name="RGB LEDs", board="A+B", face="outer", shape=("poly", OUTLINE_POLY), height_mm=LED_H, status="DS",
+                  note="XL-1010RGB-YG 0.4 +-%.2f mm each side (datasheet p8): %.2f mm worst case" % (LED_H_TOL, LED_H + LED_H_TOL)))
     return z
 
 
@@ -1152,10 +1197,53 @@ def selftest(verbose=True):
     usb = [z for z in height_zones() if z["name"].startswith("USB-C")][0]["shape"]
     ok &= _row("OK" if abs(usb[2] + usb[4] / 2 - H) < 1e-9 and 22.0 <= usb[1] - usb[3] / 2 and usb[1] + usb[3] / 2 <= 48.0 else "FAIL", "USB-C zone at the bottom edge", "x %.1f..%.1f, y %.2f..%.1f" % (usb[1] - usb[3] / 2, usb[1] + usb[3] / 2, usb[2] - usb[4] / 2, H))
     hdr = [z for z in height_zones() if z["name"].startswith("header")][0]
-    ok &= _row("OK" if hdr["shape"][2] + hdr["shape"][4] / 2 + 1.0 <= HOLDER_Y_TOP and HEADER_MATED_H <= GAP_MM else "FAIL", "header clear of the holder window and fits the gap",
-               "header bottom y %.2f, holder top %.1f; mated %.1f mm of %.1f mm" % (hdr["shape"][2] + hdr["shape"][4] / 2, HOLDER_Y_TOP, HEADER_MATED_H, GAP_MM))
-    ok &= _row("OK" if HOLDER_H < GAP_MM else "FAIL", "holder height under the gap", "%.1f mm of %.1f mm: %.1f mm to board B" % (HOLDER_H, GAP_MM, GAP_MM - HOLDER_H))
-    ok &= _row("OK", "stack thickness", "%.1f mm boards + gap, %.1f mm with LEDs (D3 says about 14.5)" % (STACK_BOARDS_MM, STACK_WITH_LEDS_MM))
+    # header (CO-B6): 2 columns in x by 4 rows in y
+    he = header_extent()
+    hx, hy = HEADER_CENTER
+    hok = (HEADER_BODY[0] < HEADER_BODY[1] and abs(HEADER_BODY[0] - 2 * HEADER_PITCH) < 1e-9 and abs(HEADER_BODY[1] - 4 * HEADER_PITCH) < 1e-9
+           and tuple(HEADER_PIN_Y) == (-3.81, -1.27, 1.27, 3.81))
+    ok &= _row("OK" if hok else "FAIL", "header orientation (2 cols in x, 4 rows in y)",
+               "body %.2f wide x %.2f tall, pad centres at y %s per column; pad extent y +-%.2f, x %.1f (male) / %.1f (female) outer to outer" % (
+                   HEADER_BODY[0], HEADER_BODY[1], list(HEADER_PIN_Y), he["pad_half_y"], HEADER_MALE_PAD["outer_x"], HEADER_FEMALE_PAD["outer_x"]))
+    ok &= _row("OK", "header bottom y at centre y %.1f" % hy,
+               "footprint body %.2f, pad extent %.2f, maker female plastic %.2f (nominal) / %.2f (+%.1f tol)" % (
+                   he["body_bottom"], he["pad_bottom"], he["plastic_bottom"], he["plastic_bottom_worst"], HEADER_FEMALE_PLASTIC[2]))
+    env_w, env_h = 2 * he["pad_half_x"], max(HEADER_BODY[1], HEADER_FEMALE_PLASTIC[1], 2 * he["pad_half_y"])
+    em = edge_margin_of_rect(hx, hy, env_w, env_h)
+    ok &= _row("OK" if em >= HOLDER_MARGIN_MM else "FAIL", "header envelope inside outline",
+               "%.2f x %.2f mm (male pads x, maker plastic y) at (%.1f, %.1f): margin %.2f mm (need %.1f)" % (env_w, env_h, hx, hy, em, HOLDER_MARGIN_MM))
+    full = y_ranges_for_rect(CX, HOLDER_W, HOLDER_L, HOLDER_MARGIN_MM, y_step=0.01)[0]
+    for label, bottom in (("footprint body", he["body_bottom"]), ("maker plastic", he["plastic_bottom"]), ("maker plastic + tol", he["plastic_bottom_worst"])):
+        w = holder_window_with_header(bottom)
+        indef = w is not None and w[0] <= HOLDER_Y_TOP <= w[1]
+        st = "OK" if indef else ("WARN" if w else "FAIL")
+        ok &= _row(st, "holder window with header (%s)" % label,
+                   ("holder top y %.2f..%.2f (%.2f mm wide; outline alone %.2f..%.2f), bottom of the holder at y %.2f..%.2f; default %.1f %s" % (
+                       w[0], w[1], w[1] - w[0], full[0], full[1], w[0] + HOLDER_L, w[1] + HOLDER_L, HOLDER_Y_TOP, "inside" if indef else "OUTSIDE: move the default")
+                    if w else "no position: header bottom %.2f + %.1f clearance is below the holder window" % (bottom, HEADER_HOLDER_CLEAR)))
+    cy_full = full[0] - HEADER_HOLDER_CLEAR - HEADER_FEMALE_PLASTIC[1] / 2
+    d15 = he["body_bottom"] <= HEADER_Y_ABOVE_D15
+    _row("OK" if d15 else "WARN", "D15 'header above y 37'",
+         "header body bottom y %.2f at centre %.1f: %s; keeping D15's full holder window %.2f..%.2f needs a header centre <= %.2f (maker plastic) instead of %.1f" % (
+             he["body_bottom"], hy, "above 37" if d15 else "NOT above 37 (reads as: holder top >= header bottom + 1)", full[0], full[1], cy_full, hy))
+    hw = holder_window_with_header(he["plastic_bottom"])
+    ok &= _row("OK" if hw and hw[0] <= HOLDER_Y_TOP and HEADER_MATED_H <= GAP_MM else "FAIL", "header clear of the holder window and fits the gap",
+               "header plastic bottom y %.2f, holder top %.1f (min %.2f); mated %.1f mm of %.1f mm" % (
+                   he["plastic_bottom"], HOLDER_Y_TOP, hw[0] if hw else float("nan"), HEADER_MATED_H, GAP_MM))
+    hmax = HEADER_MATED_H + HEADER_FEMALE_H_TOL + HEADER_MALE_H_TOL
+    _row("OK" if hmax <= GAP_MM else "WARN", "header mated height worst case",
+         "%.2f mm (11.7 + %.2f + %.2f, tolerances from the cards) against the %.1f mm gap: %s" % (
+             hmax, HEADER_FEMALE_H_TOL, HEADER_MALE_H_TOL, GAP_MM, "fits" if hmax <= GAP_MM else "%.2f mm over: plastic faces touch before the standoffs seat (UNVERIFIED, male height is an interpretation)" % (hmax - GAP_MM)))
+    # holder stack-up (CO-B5)
+    hw_worst = HOLDER_H + HOLDER_H_TOL + SOLDER_UNDER_TAB_MM
+    clr_n, clr_w = GAP_MM - HOLDER_H, GAP_MM - hw_worst
+    ok &= _row("OK" if clr_w >= HOLDER_MIN_CLEAR_MM and HOLDER_PEG_H <= BOARD_T else "FAIL", "holder height under the gap",
+               "body %.1f mm above the tab plane (drawing MY-CP-0144 section view, the 0.90 foot is the phi %.2f locating peg below that plane, in the phi %.2f hole, %.2f < board %.1f: adds nothing); "
+               "nominal %.1f of %.1f: %.2f mm to board B; worst %.2f (+%.2f tol, +%.2f solder est): %.2f mm to B (check threshold %.1f; standoff tolerance UNVERIFIED)" % (
+                   HOLDER_H, HOLDER_PEG_D, HOLDER_PEG_HOLE_D, HOLDER_PEG_H, BOARD_T, HOLDER_H, GAP_MM, clr_n,
+                   hw_worst, HOLDER_H_TOL, SOLDER_UNDER_TAB_MM, clr_w, HOLDER_MIN_CLEAR_MM))
+    ok &= _row("OK", "stack thickness", "%.1f mm boards + gap (D18), %.1f mm with LEDs nominal, %.1f mm worst case (LEDs 0.4 +-%.2f on both outer faces)" % (
+        STACK_BOARDS_MM, STACK_WITH_LEDS_MM, STACK_WITH_LEDS_MAX_MM, LED_H_TOL))
     # panel
     offs, tw = bite_holes(BITE_HOLES_MIN)
     offs8, tw8 = bite_holes(BITE_HOLES_MAX)
