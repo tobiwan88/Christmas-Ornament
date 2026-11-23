@@ -84,21 +84,72 @@ def inside(term, land):
 
 
 # ------------------------------------------------------------------ LED XL-1010RGB-YG
+# Datasheet page 8 (Outline Dimension), read from the page image 2026-11-23 (DS-A1). Coordinates in mm, +x right, +y DOWN
+# (KiCad), origin at the package centre.
+#   TOP view (upper drawing, light side up): pin 1 top-left, 2 top-right, 3 bottom-left, 4 bottom-right.
+#   PAD-SIDE view (lower-left drawing): 3 top-left, 4 top-right, 1 bottom-left, 2 bottom-right, triangle "Mark" between 3 and
+#   4, pointing to 3: the top view flipped about the horizontal axis (columns kept, rows swapped).
+#   Recommended Soldering Pattern: pads 0.45 x 0.45, gap 0.35 both ways (centres +-0.40).
+# A KiCad footprint is drawn as seen from the component side (top view), so the pads follow the TOP view. The mark sits on
+# the pin 3/4 edge (projected through the package) and points to pin 3.
+LED_DS_TOP_VIEW = {"1": (-1, -1), "2": (+1, -1), "3": (-1, +1), "4": (+1, +1)}     # sign of (x, y) of each pin, top view
+LED_DS_PAD_SIDE = {"3": (-1, -1), "4": (+1, -1), "1": (-1, +1), "2": (+1, +1)}     # as drawn in the pad-side view
+LED_DS_PAD, LED_DS_GAP = 0.45, 0.35
+
+
+def led_pads_from_top_view() -> list:
+    c = round((LED_DS_PAD + LED_DS_GAP) / 2, 3)
+    return [(n, sx * c, sy * c) for n, (sx, sy) in sorted(LED_DS_TOP_VIEW.items())]
+
+
+def led_orientation_rows(pads: dict) -> list:
+    """pads: {num: (x, y)} of the footprint. FAIL when a pad does not sit in its top-view quadrant (mirrored = pad-side
+    view copied, rotated, or swapped). Also proves that the pad-side table is the top view mirrored about x."""
+    out = []
+    mirror_ok = all(LED_DS_PAD_SIDE[n] == (sx, -sy) for n, (sx, sy) in LED_DS_TOP_VIEW.items())
+    out.append(("OK" if mirror_ok else "FAIL", "datasheet tables: pad-side view = top view mirrored about the x axis"))
+    for n, (sx, sy) in sorted(LED_DS_TOP_VIEW.items()):
+        x, y = pads[n]
+        ok = x * sx > 0 and y * sy > 0
+        out.append(("OK" if ok else "FAIL", f"pad {n} at ({x:+.2f}, {y:+.2f}) in the top-view quadrant ({sx:+d}, {sy:+d})"))
+    return out
+
+
+def led_selftest() -> bool:
+    """Known answers: the top-view pads pass; the old pad-side copy, a 180 degree turn and a left-right mirror fail."""
+    good = {n: (x, y) for n, x, y in led_pads_from_top_view()}
+    bad_cases = [{n: (sx * 0.4, sy * 0.4) for n, (sx, sy) in LED_DS_PAD_SIDE.items()},
+                 {n: (-x, -y) for n, (x, y) in good.items()},
+                 {n: (-x, y) for n, (x, y) in good.items()}]
+    return all(r[0] == "OK" for r in led_orientation_rows(good)) and \
+        all(any(r[0] == "FAIL" for r in led_orientation_rows(b)) for b in bad_cases)
+
+
 def led():
     f = Fp("LED_XL-1010RGB-YG", "XINGLIGHT XL-1010RGB-YG 1.0x1.0 mm RGB LED, common anode. Land from the maker data sheet page 8 "
-           "Recommended Soldering Pattern (pads 0.45x0.45, gaps 0.35, LCSC copy, no revision). Pad numbers 1 R-K, 2 G-K, 3 A, "
-           "4 B-K placed from the pad-side view (mark between 3 and 4): 3 top-left, 4 top-right, 1 bottom-left, 2 bottom-right, "
-           "INFERRED (UNVERIFIED): the pattern itself has no labels", "LED RGB 1010")
-    for num, x, y in (("3", -0.4, -0.4), ("4", 0.4, -0.4), ("1", -0.4, 0.4), ("2", 0.4, 0.4)):
-        f.pad(num, x, y, 0.45, 0.45)
+           "Recommended Soldering Pattern (pads 0.45x0.45, gaps 0.35, LCSC copy, no revision). Pad numbers from the page 8 TOP "
+           "view: 1 R-K top-left, 2 G-K top-right, 3 A bottom-left, 4 B-K bottom-right; the package mark (bottom face) lies on the "
+           "3-4 edge pointing to pad 3. Silk dot = pin 1", "LED RGB 1010")
+    for num, x, y in led_pads_from_top_view():
+        f.pad(num, x, y, LED_DS_PAD, LED_DS_PAD)
     f.body(1.0, 1.0, crt_margin=0.2)
-    f.line(-0.5, -0.95, 0.5, -0.95)          # mark side (the package mark sits between pads 3 and 4)
+    f.circle(-0.9, -0.9, 0.1, "F.SilkS", 0.1, fill="yes")           # pin 1 dot, 0.29 mm off the pad 1 corner
+    f.line(-0.5, -0.95, 0.5, -0.95)                                  # pin 1/2 edge bar (top), as before but now at pin 1
+    # mark of the package (pad-side triangle on the 3-4 edge, pointing to pad 3), on the fab layer
+    f.items.append('\t(fp_poly (pts (xy -0.15 0.4) (xy 0.1 0.25) (xy 0.1 0.55)) (stroke (width 0.05) (type solid)) (fill yes) '
+                   '(layer "F.Fab"))')
     f.save()
-    gx = span(f.p("4"), "x")[0] - span(f.p("3"), "x")[1]
-    gy = span(f.p("1"), "y")[0] - span(f.p("3"), "y")[1]
-    row("OK" if near(gx, 0.35) and near(gy, 0.35) else "FAIL", f.name, f"pad 0.45x0.45, gap x {gx:.2f} y {gy:.2f} mm (drawing 0.35 / 0.35)")
-    row("WARN", f.name, "pad-number placement inferred from the pad-side view (page 8 pattern has no labels): UNVERIFIED, "
-        "polarity test on the first board")
+    gx = span(f.p("2"), "x")[0] - span(f.p("1"), "x")[1]
+    gy = span(f.p("3"), "y")[0] - span(f.p("1"), "y")[1]
+    row("OK" if near(gx, LED_DS_GAP) and near(gy, LED_DS_GAP) else "FAIL", f.name,
+        f"pad {LED_DS_PAD}x{LED_DS_PAD}, gap x {gx:.2f} y {gy:.2f} mm (drawing 0.35 / 0.35)")
+    term_ok = inside((0.18, 0.5), span(f.p("2"), "x"))        # terminal 0.32 at the corner (pad-side view 0.32)
+    row("OK" if term_ok >= 0.999 else "FAIL", f.name, f"terminal 0.32 at the package corner inside the land: {term_ok * 100:.0f} %")
+    for st, what in led_orientation_rows({p["num"]: (p["x"], p["y"]) for p in f.pads}):
+        row(st, f.name, what)
+    row("OK" if led_selftest() else "FAIL", f.name, "orientation selftest: pad-side copy, 180 degree turn and x mirror all FAIL")
+    row("WARN", f.name, "pad numbers from the page 8 top view (labelled); confirm the mark against pin 1 on the first reel "
+        "under the microscope (bring-up)")
 
 
 # ------------------------------------------------------------------ tactile switch HX 3x4x2-2P-1.6N
