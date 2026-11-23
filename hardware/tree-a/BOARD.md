@@ -53,8 +53,66 @@ Command: `python3 hardware/calc/bom_check.py hardware/tree-a --stock --qty 5 --s
 | Printed housing material | ? | ? | not priced yet (R2.2) |
 Variant B (same command, variant B rows): 231.92 USD before PCB + shipping, 25 unique Extended parts. No part carries an unconfirmed Basic/Extended class (`?`); every line still reads "status not VERIFIED" (datasheet card and stock checked 2026-11-23, no engineer sign-off): WARN rows in the gate.
 
-## Layout
-Floorplan with citations: antenna, USB, sensors vs heat, connectors, ESD, thermistor. Area share. Stack notes.
+## Floorplan (gate 4)
+2026-11-23, built by `gen/tree_a_pcb.py` (placement, zones, keep-outs, planes; no tracks). Coordinates = tree_outline mm
+(origin top-left of the 70 x 105 box, y down); the placement table is printed by the generator (`PLACE` rows).
+DRC (kicad-cli, schematic parity, all severities, zones refilled): 0 errors, 0 open warnings, 1 waiver (NT1 parity, D25),
+166 unconnected items (not routed). `critical.py --placement`: OK, 13 WARN rows with reasons (critical.yaml).
+
+Blocks and why (source in brackets):
+- Stack geometry first, from `gen/tree_geometry.py` (shared with B): LEDs D9-D16 on B.Cu rot 180 at the D8/LED_XY
+  positions, J3 F.Cu rot 0 at (35, 33), BT1 at y_top 40.0 (D24), holes from tree_outline (hang D1.4 NPTH, M2 D2.2 at
+  (10.7, 71) / (59.3, 71) with D5 rule areas `hole_*`).
+- Antenna ANT1 rot 90 at (35, 11.65): stub pad y 5.7-9.7, feed pad 13.6-14.6 = `tree_outline.ant_land_rects()` (the
+  generator checks it). Keep-out = the 17 mm tip triangle: rule area on In1/In2/B.Cu (no tracks, vias, pour), on F.Cu the
+  same triangle with a notch x 35 +- 1.4 for the land and the feed (tree_outline ANT_KEEPOUT_H_MM, D12). Johanson's
+  eval board puts ground 1 mm from the feed (y 15.6): the 17 mm keep-out wins, open item for the VNA tuning.
+- U1 nRF54L rot 90 at (35.0, 23.95): RF side (pins 25-36, ANT 31 at x 34.8) faces the antenna. Forced by D10 at (31, 26)
+  on B.Cu: the KiCad ThermalVias QFN footprint has a 4.1 mm B.Cu pad and 16 through-vias that must clear D10's pads
+  (U1 x >= 33.875); rot 0 at x 34 would put the RF chain and X2 on the same corner. Courtyard 31.35-38.65 x 20.30-27.60
+  sits on J3's courtyard top (27.62).
+- RF chain in three 0402 rows between U1 and the keep-out (y 17.0-20.3), Nordic order (parts/nRF54L15-QFAA.yaml
+  reference_layout_distances_mm): L3 at ANT, C6 (VSS_PA), L4, L5 / C9 upright, C11 at RF_50, pi slot C50 | R50 | C51 with
+  R50's ANT_FEED pad under the feed axis; NT1 bridge (D25) in the pad-32 to exposed-pad gap; NT2 on B.Cu next to C9's
+  GND_C9 pad (D21). RF class: track 0.40, pad clearance 0.15, track clearance 0.30 (rules/tree-a.kicad_dru).
+- HFXO X2 rot 180 at (31.4, 18.96), 2.9-3.0 mm from XC1/XC2 (reference 2.1-3.5). DECA C5 at pin 33, VDD C4 at the top-left
+  corner. Power cluster on the left row (pins 43-48): C10 at VDD 47/48 (1.18 mm), L1 at DCC (1.59 mm, reference 2.2-2.5),
+  C1, FB1, C12, C2 above. LFXO X1 at the bottom-left corner (4.6-5.6 mm, reference 1.8-2.1: WARN, pins 1/2 face J3).
+  Right side: C13 (nRESET), C8 (VDD 22), C3 (10 uF), C7 (VDD 10).
+- LED line resistors R1-R4 and R5-R8 in the tier-2 strips beside J3 (outside the mated-header envelope 30.5-39.5), with
+  R40/R41/C14 (battery divider), R43, R10 left and R45, R9, R42/R44 (variant B) right.
+- Power stage in the left wing: Q1 below BT1 pad 1 (BAT), TPS63900 U2 rot 90 at (19.5, 61) with L2 above (LX1/LX2 2.06 mm),
+  C20 at VIN (1.44 mm), C21 at VOUT (1.63 mm), CFG/SEL resistors below (TI SLVSET3D Figure 10-1 arrangement).
+- Variant B (DNP, D10): J2 (35, 58) and U3 (44, 78.5) under the holder (rule "D15 holder vs variant B courtyards": only
+  courtyard overlap of J1/J2/U3 with BT1 is ignored); C30/C31/R30-R32 in the right wing outside the holder courtyard.
+- J1 USB-C rot 90 at (41.75, 86) on the RIGHT trunk edge (opening at x = 48). The bottom edge (R5.4 / housing) is not
+  possible at y_top 40: BT1 rot 270 pads 3/4 (BT_LINK) span y 95.25-102.7 at x 26.45-32.55 / 37.45-43.55, J1's pad row
+  and plated slots (x 30.68-39.32 at y 98.75-102.45) land on them (needs y_top < 35.1). Open decision 1.
+- Outer face (B.Cu): SW1 at (35, 88.8) (tree_outline), TC1 Tag-Connect at (52, 62) rot 0 in the right wing: at
+  tree_outline TC_POS (35, 99.4) its three NPTH alignment holes sit inside BT1's courtyard (DRC npth_inside_courtyard,
+  an error) and the TC2030 pins would reach into the holder body. Open decision 3.
+- Planes: In1 and In2 solid GND over the outline (board.yaml stackup), clearance 0.2, thermal 0.25 / 0.3. No inner cut-out
+  under the matching network (the Nordic reference has one): open decision 2. Silk `TREE-01 A` + `${GIT_SHA}` on B.SilkS
+  at (35, 79.5 / 81.3), 1.0 mm.
+
+Area share (generator row, courtyard bounding boxes): F.Cu 1966 mm2 = 66 % of 2966 mm2 (BT1 alone 1393 mm2), B.Cu 71 mm2 = 2 %.
+Stack checks: `tree_geometry.py --check` OK (LED / header / holder / peg rows); heights on the inner face: holder 11.3
+(11.65 worst) and the mated header 11.7 are the tall items (tree_outline height_zones); everything else on F.Cu <= 3.16 mm
+(J1, variant B only, under the holder footprint: exclusive with BT1, D15). Outer face: LEDs 0.4, SW1, TC1 pads only.
+Housing consequences: the Tag-Connect access and the USB-C opening move with decisions 1 and 3.
+
+Open decisions (engineer), default first:
+1. J1 position: right trunk edge at (41.75, 86) [default] / bottom edge with BT1 y_top < 35.1 (moves the header, D24) /
+   holder rot 90 does not help (pads 1/2 then sit at the bottom, same x spans).
+2. Inner-plane cut-out under the matching network as in the Nordic reference: no [default, solid In1/In2, simpler, 0.21 mm
+   prepreg to In1] / yes (cut-out on In1/In2 under C6-C9, B.Cu GND underneath; changes the 50 ohm line reference there).
+3. TC1 position: right wing (52, 62) [default] / back to (35, 99.4) with a rule waiver (pins into the holder body: not
+   recommended) / left wing.
+4. NT1 footprint field in `tree_a.py`: set `tree:NetTie-2_SMD_Bridge0.2mm` (removes the parity waiver) [default].
+5. LFXO X1 5.6 mm from XL1: accept [default] / move LED D10 (tree_geometry, shared with B) to let U1 sit lower-left.
+6. LED fab-footprint fit (XL-1010RGB-YG, C965834): EasyEDA numbers the pads 1 TL, 2 BL, 3 BR, 4 TR, the datasheet top view
+   1 TL, 2 TR, 3 BL, 4 BR: `fab_package --fit-only` FAILs on both boards (no rotation matches by number); needs a hand
+   check of pin 1 / the mark and a GEOMETRY_OK entry in tools/fab_package.py (shared tool), see the gate 4 report.
 
 ## Routing
 What is hand-drawn, what the router did, frozen routes, build and reproduce commands.
@@ -69,7 +127,8 @@ hardware/tools/build_tree_a.sh          # symbols + footprints (with source chec
 python3 -I hardware/gen/tree_split_check.py [--selftest]
 python3 -I hardware/gen/tree_pin_divider.py
 .venv/bin/python -I hardware/gen/tree_charge_path.py hardware/tree-a [--selftest]   # also run by build_tree_a.sh
-<build board>   <route>   <freeze>
+source scripts/kicad-env.sh; .venv/bin/python hardware/gen/tree_a_pcb.py [--drc] [--render]   # board + project + rules copy; DRC with parity / review PNGs in hardware/out/review/tree-a/
+<route>   <freeze>
 python3 hardware/calc/critical.py hardware/tree-a [--placement]
 python3 hardware/calc/emi_check.py hardware/tree-a
 python3 hardware/calc/bom_check.py hardware/tree-a [--strict] [--stock --qty N]
@@ -82,3 +141,9 @@ scripts/hw-check.sh
 - Power rails other than GND/VDD/VBUS are `power:VCC` symbols whose value is the net (BAT, VIN): KiCad names the net after the value.
 - Designators differ from the Nordic reference: here L3/L4/L5 = reference L2/L3/L4 (L2 is the TPS63900 inductor), R9 = reference R1 (R1-R8 are the line resistors).
 - Fab footprint fit (`fab_package.py --fit-only`) runs only after the board file exists (gate 4).
+- KiCad 10 pcbnew: drilled pads (J1 slots, BT1 / TC1 / H holes) were saved as `"*.Cu"` only, i.e. without mask opening,
+  unless the board is saved once right after the footprints are loaded (bisected; `gen/tree_a_pcb.py` does that save).
+  The board file is saved unfilled (DRC refills; renders fill a scratch copy). `fab_package.py` exports gerbers with
+  `--check-zones`: check the mask layers of the slots in the gerbers at gate 6.
+- KiCad writes footprints / zones in KIID order (random): the generator sorts the top-level blocks and renumbers UUIDs.
+- pcbnew `ZONE.SetOutline()` takes ownership of the polygon (segfault on save when Python frees it): fill `z.Outline()`.
