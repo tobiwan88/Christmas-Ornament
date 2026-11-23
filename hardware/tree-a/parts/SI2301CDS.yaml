@@ -1,6 +1,6 @@
 # Datasheet card: Vishay Siliconix Si2301CDS (P-channel 20 V MOSFET, SOT-23). Reverse-polarity protection, decision D7.
 mpn: SI2301CDS-T1-GE3
-role: high-side reverse-polarity protection: drain to cell +, source to VIN (TPS63900 + the rest), gate to GND
+role: "high-side reverse-polarity protection: drain to cell +, source to VIN (TPS63900 + the rest), gate to GND"
 lcsc: C10487
 source:
   url: https://www.vishay.com/docs/68741/si2301cd.pdf

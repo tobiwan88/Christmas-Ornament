@@ -1,0 +1,16 @@
+# Datasheet card: Samsung CL10A106KP8NNNC (10 uF 10 V X5R 0603). TPS63900 input capacitor (Basic part).
+mpn: CL10A106KP8NNNC
+role: TPS63900 Cin, 10 uF nominal (TPS63900 8.2.2.4), effective >= 5 uF needed (6.3)
+lcsc: C19702
+source:
+  url: https://www.samsungsem.com/
+  revision: "Samsung MLCC catalog (84 pages, LCSC copy); the part is not listed by number in the text layer"
+  file: datasheets/CL10A106KP8NNNC/CL10A106KP8NNNC_lcsc.pdf
+values:
+  capacitance_uf: {value: 10, tol_pct: 10, section: "listing: 10 uF 10 V X5R +-10 % 0603", unverified: "listing"}
+  rated_voltage_v: {value: 10, section: "listing", unverified: "listing"}
+  dc_bias_derating: {value: null, section: "not stated (no per-part curve in the catalog)"}
+  derating_assumption_at_3v: {value: 0.6, section: "assumption used in board.yaml (cin_derating)", unverified: "assumption"}
+  ti_table_8_4: {value: "TI lists Murata GRM188R61A106ME69, 10 uF 10 V 0603 X5R as a recommended input capacitor", section: "TPS63900 Table 8-4"}
+checklist:
+  - "effective Cin >= 5 uF (TPS63900 6.3): 10 uF x 0.6 = 6 uF with the assumed derating: margin 20 %: UNVERIFIED"

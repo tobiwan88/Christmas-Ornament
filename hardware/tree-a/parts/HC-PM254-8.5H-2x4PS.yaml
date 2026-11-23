@@ -1,0 +1,26 @@
+# Datasheet card: Hong Cheng HC-PM254-8.5H-2x4PS (SMD female header 2 x 4, 2.54 mm, 8.5 mm high). J3 on board A (decision D3).
+mpn: HC-PM254-8.5H-2x4PS
+role: header J3, female, board A inner face (8 LED lines, no power)
+lcsc: C22373945
+source:
+  url: http://hcdz2017.com/
+  revision: "maker drawing 'HC-PM254-8.5H-2x4PS' REV A, scale 1:1, 1 sheet (LCSC copy)"
+  file: datasheets/HC-PM254-8.5H-2x4PS/HC-PM254-8.5H-2x4PS_lcsc.pdf
+values:
+  height_mm: {value: 8.5, tol_mm: 0.15, section: "drawing, side view 8.50 +-0.15; dimension table H = 8.5"}
+  pitch_mm: {value: 2.54, tol_mm: 0.1, section: "drawing front view"}
+  body_pcb_mm: {value: {PW: 7.1, PB: 8.9}, section: "drawing dimension table (PW 7.1, PB 8.9); end view 7.10 +-0.25, 8.90 +-0.25; body depth 5.0 +-0.15"}
+  pin_mm: {value: "0.54 x 0.25 contact tail", section: "drawing front view 'PIN 0.54*0.25'"}
+  pcb_layout_mm: {value: {pad_length: 2.50, pad_width: 1.02, pitch: 2.54, outer_to_outer_rows: 8.0}, section: "drawing RECOMMEND P.C.B LAYOUT (top view, tolerance +-0.05)"}
+  current_a: {value: 3, section: "drawing specifications"}
+  contact_resistance_mohm_max: {value: 20, section: "drawing specifications"}
+  insulation_resistance_mohm_min: {value: 1000, section: "drawing specifications"}
+  withstanding_voltage: {value: "AC 1000 V", section: "drawing specifications"}
+  temperature_c: {value: [-40, 105], section: "drawing specifications"}
+  reflow: {value: "200 C for 30-60 s, 255 C for 5 s", section: "drawing specifications, max processing temp"}
+  material: {value: "PA6T housing, brass contacts, gold flash", section: "drawing"}
+  mated_gap: {value: "female 8.5 mm + male plastic top 3.2 mm = 11.7 mm; tolerance +0.15 + 0.2 = +-0.35 mm: 11.35-12.05 mm against a 12.0 mm standoff", section: "calculation (calc/tree_power.py), male height from the male cards"}
+alternate: {mpn: HX PM2.54-2x4P TP, lcsc: C41397153, card: HX-PM2.54-2x4P-TP.yaml}
+checklist:
+  - "footprint: two rows of 2.50 x 1.02 mm pads, rows 8.0 mm outer-to-outer, pin 1 marking not shown on the drawing: orientation from the numbering table (pin 1 is pad A/B at the first row end): UNVERIFIED, schematic builder uses the pin table in ARCHITECTURE.md"
+  - "keep-out: body 7.1 x 8.9 mm outline on board A, 8.5 mm tall above the inner face; the AAA holder (11.3 mm) and header both fit in the gap"

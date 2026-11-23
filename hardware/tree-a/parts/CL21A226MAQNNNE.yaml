@@ -1,0 +1,15 @@
+# Datasheet card: Samsung CL21A226MAQNNNE (22 uF 25 V X5R 0805). TPS63900 output capacitor (Basic part).
+mpn: CL21A226MAQNNNE
+role: TPS63900 Cout, 22 uF nominal (TPS63900 8.2.2.3), effective >= 10 uF needed (6.3)
+lcsc: C45783
+source:
+  url: https://www.samsungsem.com/
+  revision: "Samsung MLCC catalog (84 pages, LCSC copy); the part is not listed by number in the text layer"
+  file: datasheets/CL21A226MAQNNNE/CL21A226MAQNNNE_lcsc.pdf
+values:
+  capacitance_uf: {value: 22, tol_pct: 20, section: "JLC/LCSC listing: 22 uF 25 V X5R +-20 % 0805", unverified: "listing; the catalog text layer does not list the part number"}
+  rated_voltage_v: {value: 25, section: "listing", unverified: "listing"}
+  dc_bias_derating: {value: null, section: "not stated in the catalog (no per-part DC-bias curve); Samsung's simulation tool not available offline"}
+  derating_assumption_at_3p5v: {value: 0.6, section: "assumption used in board.yaml (cout_derating): 0.6 = TI Table 8-1 'effective capacitance can vary +20 % / -50 %' scaled; to be replaced by the SEM simulation value", unverified: "assumption"}
+checklist:
+  - "effective Cout >= 10 uF after derating (TPS63900 6.3): 22 uF x 0.6 = 13.2 uF; a 25 V 0805 derates less at 3.5 V than the 6.3 V 0603 of TI Table 8-3 (general MLCC behaviour, no per-part curve): UNVERIFIED, bench-measure the output ripple/DVS on the first board"
