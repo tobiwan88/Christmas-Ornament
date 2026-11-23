@@ -1,2 +1,1 @@
 type,ref,reason
-footprint_symbol_mismatch,NT1,"D25: the layout uses tree:NetTie-2_SMD_Bridge0.2mm because the schematic's NetTie-2_SMD_Pad0.5mm (1.5 x 0.5 mm) does not fit the 0.20 mm gap at U1 pad 32 (build_footprints row). Clears when tree_a.py sets the NT1 footprint field (engineer, gate 3 change)"

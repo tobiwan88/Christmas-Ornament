@@ -102,7 +102,7 @@ P("TC1", "Connector:Conn_ARM_SWD_TagConnect_TC2030-NL", "TC2030-NL", "Connector:
   "n/a", "TC2030-NL footprint (pads)", "SWD pads, outer face, no part (DNL)", "DNL")
 PARTS["TC1"]["dnp_note"] = "DNL: footprint only, Tag-Connect cable"
 P("SW1", "Switch:SW_Push", "SW_Push", "tree:SW_HX_3x4x2-2P-1.6N", "C49234124", "Extended", "HX 3x4x2-2P-1.6N (SMD 4x3)", "tact switch, outer face")
-P("NT1", "Device:NetTie_2", "NetTie", "NetTie:NetTie-2_SMD_Pad0.5mm", "", "n/a", "net tie", "VSS_PA to GND at the exposed pad", "NONE")
+P("NT1", "Device:NetTie_2", "NetTie", "tree:NetTie-2_SMD_Bridge0.2mm", "", "n/a", "net tie", "VSS_PA to GND at the exposed pad", "NONE")
 P("NT2", "Device:NetTie_2", "NetTie", "NetTie:NetTie-2_SMD_Pad0.5mm", "", "n/a", "net tie",
   "GND_C9 (C9 ground return) to GND on the bottom layer (D21, DS-C1)", "NONE")
 # RF (Nordic reference network; designators shifted: ref L2/L3/L4 = L3/L4/L5 here, ref R1 = R9)

@@ -29,12 +29,12 @@ stackup:                               # part of the order; calc/impedance.py re
   soldermask: {thickness_mm: 0.015, er: 3.8}
   layers:
     - {name: F.Cu,  role: signal, ref: In1.Cu, dielectric_mm: 0.2104, er: 4.4}                    # 7628 prepreg
-    - {name: In1.Cu, role: plane, net: GND, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
-    - {name: In2.Cu, role: plane, net: GND}     # DECISION (proposed): GND, same stackup as tree-a (one panel, one stackup, D1/D5): GND on both inner planes, so B.Cu (J4 header) references a solid plane. Net choice for In2 is decided on tree-a; no power on this board.
+    - {name: In1.Cu, role: unused, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
+    - {name: In2.Cu, role: unused}     # D28: inner layers of B are copper-free (B has no ground net); same stackup as tree-a (one panel, one stackup, D1/D5). Was proposed: GND, same stackup as tree-a (one panel, one stackup, D1/D5): GND on both inner planes, so B.Cu (J4 header) references a solid plane. Net choice for In2 is decided on tree-a; no power on this board.
     - {name: B.Cu,  role: signal, ref: In2.Cu, dielectric_mm: 0.2104, er: 4.4}
 
 net_classes:                           # full KiCad net names; widths checked by calc/track_width.py
-  Default: {track_mm: 0.15, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3}     # fab floor 0.127/0.127 (rules/jlc-4layer.json); 0.15 keeps 18 % margin and fits the 0.4 mm QFN pitch
+  Default: {track_mm: 0.25, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3}     # fab floor 0.127/0.127 (rules/jlc-4layer.json); 0.15 keeps 18 % margin and fits the 0.4 mm QFN pitch
 
 layout:
   stitch_pitch_mm: [2, 3]
