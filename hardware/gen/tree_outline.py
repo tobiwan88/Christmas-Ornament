@@ -422,7 +422,7 @@ def _default_holder_y_top():
     return round((r[0][0] + r[0][1]) / 2 * 2) / 2
 
 
-HOLDER_Y_TOP = _default_holder_y_top()           # centre of the feasible range, rounded to 0.5 mm; the layout builder may override
+HOLDER_Y_TOP = 40.0           # D24 (header plastic + tolerance + 1 mm window 39.6-41.8); _default_holder_y_top() gives the window centre
 
 
 def holder_pad_points(cx, y_top):
