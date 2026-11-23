@@ -1,6 +1,6 @@
 # tree-a
 
-Status (current state first; history below, dated): <gate reached>, <gate output>, open decisions: <where>.
+Status (current state first; history below, dated): gate 2 (parts) in progress; 2026-11-23 `scripts/hw-check.sh` prints `hardware checks: OK` (R3.2 thresholds 20 / 30 days, order cap 250 USD, panel-level fees); `--strict` still FAILs on the empty `bom.csv` (written by the schematic generator); open decisions: ../DECISIONS.md and PARTS-REVIEW.md.
 
 ## Purpose
 <one paragraph; the contract with the other boards: ../ARCHITECTURE.md>

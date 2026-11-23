@@ -1,6 +1,6 @@
 # tree-b
 
-Status (current state first; history below, dated): <gate reached>, <gate output>, open decisions: <where>.
+Status (current state first; history below, dated): gate 2 (parts) in progress; 2026-11-23 `scripts/hw-check.sh` prints `hardware checks: OK`; `--strict` still FAILs on the empty `bom.csv` (written by the schematic generator); no power circuit on this board; open decisions: ../DECISIONS.md and PARTS-REVIEW.md.
 
 ## Purpose
 <one paragraph; the contract with the other boards: ../ARCHITECTURE.md>

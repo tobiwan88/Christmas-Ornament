@@ -15,9 +15,10 @@ fab:
   custom_drc: ../rules/tree-b.kicad_dru
   extended_fee_usd: 1.53               # per unique Extended part (JLCPCB Economic/Standard feeder loading fee, quote of 2026-11-23: UNVERIFIED, engineer figure from the job brief)
   setup_fee_usd: 51.12                 # Standard assembly setup, D6 (job brief)
-  stencil_fee_usd: 16.42               # D6 (job brief). Setup, stencil and the Extended fees are per ORDER (one panel), not per board: tree-b repeats them, so the per-board totals overcount; the order total is in PARTS-REVIEW.md
+  stencil_fee_usd: 16.42               # D6 (job brief). Setup, stencil and the Extended fees are per ORDER (one panel), not per board: counted once through fab.order_includes (tree-a) / fab.fees_paid_by (tree-b); the order total is in PARTS-REVIEW.md
   order_qty: 5                         # panels = ornaments (R2.1)
-  order_limit_usd: 150                 # BOM check FAILs above it (bare PCB, joints, shipping not included); R2.1 is all in, so the real margin is smaller
+  order_limit_usd: 250                 # D20: cap per ORDER, judged on tree-a's order row (it sums both boards); here for the record only
+  fees_paid_by: ../tree-a              # panel-level accounting (optional key of calc/bom_check.py): setup, stencil and Extended parts that tree-a's BOM already carries are counted once, on tree-a's order row, not again here
 
 stackup:                               # part of the order; calc/impedance.py reads it
   name: JLC04101H-7628                 # JLCPCB 4-layer 1.0 mm default (D5); thin option -3313 not used

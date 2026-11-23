@@ -1,5 +1,5 @@
 {
-  "_comment": "JLCPCB 4-layer 1.6 mm, 1 oz outer / 0.5 oz inner, no extra-cost options (jlcpcb.com/capabilities, 2026-10). Values have margin over the minimums: track/space 0.09, via 0.2/0.45, hole-to-hole 0.45, copper-edge 0.2, silk 0.15/1.0.",
+  "_comment": "JLCPCB 4-layer, 1 oz outer / 0.5 oz inner, no extra-cost options (jlcpcb.com/capabilities, 2026-10); the floors below are assumed not to depend on the board thickness (UNVERIFIED against the fab page for 1.0 mm; the first draft said 1.6 mm; tree-a/tree-b are 1.0 mm, stackup JLC04101H-7628, board.yaml). Values have margin over the minimums: track/space 0.09, via 0.2/0.45, hole-to-hole 0.45, copper-edge 0.2, silk 0.15/1.0.",
   "rules": {
     "min_clearance": 0.127,
     "min_track_width": 0.127,
