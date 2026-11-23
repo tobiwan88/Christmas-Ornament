@@ -248,7 +248,7 @@ def extra_fee_rows(fab: dict, qty: int, designs: int, boards: int, joints: dict 
 
 
 def order_rows(label: str, profile: dict, qty: int, extended: set, needs: dict, stock: dict | None, designs: int,
-               names: list, joints: dict | None, scope: str) -> list:
+               names: list, joints: dict | None, scope: str, totals: dict | None = None) -> list:
     """Fee and total rows of one order (one BOM variant). Returns rows (status, name, detail)."""
     fab = profile.get("fab") or {}
     fee = fab.get("extended_fee_usd")
@@ -267,6 +267,8 @@ def order_rows(label: str, profile: dict, qty: int, extended: set, needs: dict, 
         fixed = setup + stencil
         fees = len(extended) * fee + fixed + ex_total
         total = parts_usd + fees
+        if totals is not None:
+            totals.update(parts=parts_usd, fees=fees, computed=total, extended=len(extended), extras=ex_total, fixed=fixed)
         limit = fab.get("order_limit_usd")
         st = "OK" if limit is None or total <= limit else "FAIL"
         extra = (f", unpriced: {' '.join(unpriced)}" if unpriced else "") + (f", fallback first tier: {' '.join(first_tier)}" if first_tier else "")
@@ -300,11 +302,12 @@ def order_rows(label: str, profile: dict, qty: int, extended: set, needs: dict, 
 
 
 def check(rows: list[dict], profile: dict, qty: int, stock: dict | None = None, included: list | None = None,
-          owner_lcsc: set | None = None, owner_name: str = "", joints: dict | None = None, variants: dict | None = None):
+          owner_lcsc: set | None = None, owner_name: str = "", joints: dict | None = None, variants: dict | None = None,
+          totals: dict | None = None):
     """included: [(name, rows, stock)] of the other boards in this board's order (this board owns the order);
     owner_lcsc: fab part numbers in the BOM of the board that pays the fees (this board's Extended parts among them are not counted);
     joints: {'n': SMT joints per panel (all boards), 'note': how counted}; variants: {name: (rows, joints, stock)} alternative BOMs of this
-    board, run as a second order; the tuple is (rows, joints, stock)."""
+    board, run as a second order; the tuple is (rows, joints, stock); totals: dict filled with the computed order numbers."""
     fab = profile.get("fab") or {}
     fee = fab.get("extended_fee_usd")
     out, extended, needs = scan(rows, qty, stock)
@@ -341,7 +344,7 @@ def check(rows: list[dict], profile: dict, qty: int, stock: dict | None = None, 
                         f"{', unpriced: ' + ' '.join(unpriced) if unpriced else ''}), Extended fees ${len(extended) * fee:.2f}; setup, stencil, "
                         f"extra fees and shared Extended parts are counted once on {owner_name}, whose order row carries the limit"))
         return out
-    out += order_rows("", profile, qty, extended, all_needs, stock and all_stock, len(names), names, joints, scope)
+    out += order_rows("", profile, qty, extended, all_needs, stock and all_stock, len(names), names, joints, scope, totals)
     for vname, (vrows, vjoints, vstock) in (variants or {}).items():
         v_out, v_ext, v_needs = scan(vrows, qty, vstock)
         v_all_needs, v_all_ext = dict(v_needs), set(v_ext)
@@ -359,6 +362,29 @@ def check(rows: list[dict], profile: dict, qty: int, stock: dict | None = None, 
 
 
 # ---------------------------------------------------------------- selftest
+
+def separate_row(board: Path, profile: dict, qty: int, rows: list, stock: dict, included: list, panel: dict, joints_of) -> tuple:
+    """Price each board of the panel as its own order (own setup, stencil, handling, fixture, loading fees, no panel fee) with the
+    fee table of the owner and compare with the panel order. The bare PCB is not in either figure (manual quote, both ways)."""
+    fab = dict(profile.get("fab") or {})
+    for k in ("order_includes", "pcb_quote_usd", "pcb_estimate_usd", "bom_variants", "joints"):
+        fab.pop(k, None)
+    sep, parts = {}, [(profile.get("name", board.name), board, rows, stock)] + [(n, d, r, s) for n, r, s, d in included]
+    for name, d, brows, bstock in parts:
+        j = None
+        if fab.get("extra_fees"):
+            t, f, n = count_joints(d, brows, fab)
+            j = {"n": t, "note": "counted"}
+        tot: dict = {}
+        check(brows, {"name": name, "fab": fab}, qty, bstock, joints=j, totals=tot)
+        sep[name] = tot.get("computed", 0.0)
+    total = sum(sep.values())
+    delta = panel["computed"] - total
+    return ("OK", f"panel vs separate orders at qty {qty}",
+            f"one panel order ${panel['computed']:.2f} vs {' + '.join(f'{n} ${v:.2f}' for n, v in sep.items())} = ${total:.2f} as separate orders: "
+            f"the panel is ${-delta:.2f} {'cheaper' if delta < 0 else 'dearer'} in parts and assembly fees; the bare PCB is not in either figure "
+            f"(manual quote for the panel and for each board)")
+
 
 def selftest() -> bool:
     ok = True
@@ -445,6 +471,8 @@ def main() -> int:
     ap.add_argument("--stock", action="store_true")
     ap.add_argument("--qty", type=int, default=None)
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--separate", action="store_true",
+                    help="with --stock: also price every board of the panel as its own order and print the panel vs separate-orders delta")
     a = ap.parse_args()
     if a.selftest:
         good = selftest()
@@ -488,7 +516,11 @@ def main() -> int:
     for vname, vfile in (fab.get("bom_variants") or {}).items():
         vrows = load_rows(board, vfile)
         variants[vname] = (vrows, joints_of(vrows) if joints else None, stock_of(vrows))
-    res = check(rows, profile, qty, stock_of(rows), [(n, r, s) for n, r, s, _ in included], owner_lcsc, owner_name, joints, variants)
+    totals: dict = {}
+    base_stock = stock_of(rows)
+    res = check(rows, profile, qty, base_stock, [(n, r, s) for n, r, s, _ in included], owner_lcsc, owner_name, joints, variants, totals)
+    if a.separate and a.stock and included and totals:
+        res.append(separate_row(board, profile, qty, rows, base_stock, included, totals, joints_of))
     bad = False
     for st, name, detail in res:
         if st in ("MISSING", "MANUAL"):
