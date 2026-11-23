@@ -1,4 +1,4 @@
-# Architecture (2026-11-23, v0.1)
+# Architecture (2026-11-23, v0.2: stale statements aligned with D2-D23; pin tables unchanged)
 
 ## Boards
 | Board | Profile | Layers | Role | Faces |
@@ -25,7 +25,7 @@ Mating test (pure Python, no KiCad: `tree_common.mate_table()`, `mate_selftest()
 stack gives J3 net = J4 net on all 8 pads. With B turned 180 degrees in its own plane, all 8 lines swap as Lk <-> L(k+4).
 Those are exactly the pairs that are never a die, the lines are signals only, and every line has its series R on A, so
 nothing is damaged; the wrong LEDs light. That stack cannot be assembled: the tree outline is not symmetric under a
-180 degree turn (tip and hanging hole at the top, trunk at the bottom), and the two M2 holes sit only at y = 72 mm, so B's
+180 degree turn (tip and hanging hole at the top, trunk at the bottom), and the two M2 holes sit only at y = 71.0 mm (D17), so B's
 holes and outline do not line up with A's.
 Escape: tracks leave along the columns (outer pins around the
 inner ones), giving the left-to-right bus order L1..L8 with no crossing (J3 pins 1,3,5,7,8,6,4,2).
@@ -44,9 +44,9 @@ inner ones), giving the left-to-right bus order L1..L8 with no crossing (J3 pins
 Net names: `LED_Ln` = line on the LED side of Rn (header, LED pads on both boards); `LED_Ln_MCU` = GPIO side of Rn (board A).
 Resistors R1-R8 on board A, one per line, between the GPIO and the header; 22 ohm recommended (led_matrix.py, 2026-11-23).
 
-### LED matrix (R4.1, D9)
+### LED matrix (R4.1, D9, D14)
 Pattern: the LED with anode on line a has R on a+2, G on a+3, B on a+7 (board B) and R on a+6, G on a+5, B on a+1 (board A),
-lines counted mod 8. Board A's offsets are the negatives of board B's (D(n+8) mirrors D(n)). Every line is the cathode of 6
+lines counted mod 8. Board A's offsets are the negatives of board B's (D(n+8) shares the anode line of D(n); it is an assignment, not a position mirror: D14). Every line is the cathode of 6
 dies. Offset 4 is unused, so line a never forms a die with line a+4. Red offsets 2 and 6 mean no red+red sneak chain spans a
 line pair that firmware drives. Pads: 1 R cathode, 2 G cathode, 3 common anode, 4 B cathode.
 
@@ -85,7 +85,7 @@ from `tree_common.slot_table()`: anode line high, cathode line low, all other li
 other pair, in particular never line a with line a+4 (mod 8; there is no die there). The ghost safety of R4.3 relies on it,
 because the red+red chains (3.6 V minimum, below VDD max + 0.1 V) span exactly those pairs.
 
-## Pin plan: nRF54L15 QFN48 (board A; pin numbers unverified: PS HTML summary)
+## Pin plan: nRF54L15 / nRF54L10 QFN48 (board A; the BOM part is the nRF54L10, D2, same pin table; pin numbers confirmed against Nordic's QFAA reference schematic v0.8, electrical limits from the PS HTML summary: UNVERIFIED)
 Package sides (standard QFN numbering, check the PS drawing): pins 1-12 left (pin 1 top), 13-24 bottom, 25-36 right,
 37-48 top. The LED lines need 8 P1 pins; P1 has no 8 adjacent free pins (pins 5-9 and 37-42 are its free pins), so they form
 two groups of 4 adjacent pins, numbered along the package edge (pin 9 up to 6, around the top-left corner, 42 down to 39).
@@ -99,14 +99,14 @@ pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 are fre
 | xtal | XL2 | P1.01 | 2 | LFXO |
 | nc | NC | P1.02 | 3 | NFC1, unused, leave open |
 | nc | NC | P1.03 | 4 | NFC2, unused, leave open |
-| ain | VBAT_SENSE | P1.04 | 5 | AIN0, battery divider mid-point (1M/1M: 4.2 V Li-ion -> 2.1 V) |
+| ain | VBAT_SENSE | P1.04 | 5 | AIN0, battery divider mid-point (2 x 2.2 M + 100 nF after D21, mid-point at half the cell voltage: 4.2 V Li-ion -> 2.1 V) |
 | led | LED_L4_MCU | P1.05 | 6 | via R4 to LED_L4 |
 | led | LED_L3_MCU | P1.06 | 7 | via R3 to LED_L3 |
 | led | LED_L2_MCU | P1.07 | 8 | via R2 to LED_L2 |
 | led | LED_L1_MCU | P1.08 | 9 | via R1 to LED_L1 (P1.08 = EXTREF, not used) |
 | out | TPS_SEL | P2.00 | 11 | TPS63900 SEL: high = VO(2) lit, low = VO(1) 3.0 V; external pull-down (never float, 3.0 V at start) |
 | spare | SPARE_P2_01 | P2.01 | 12 | spare; D13: TPS63900 EN tied to VIN, no GPIO (EN can see 4.2 V > VDD + 0.3 V) |
-| spare | VBAT_DIV_EN | P2.02 | 13 | reserved: low-side switch of the battery divider if R3.3 picks a switched divider |
+| spare | VBAT_DIV_EN | P2.02 | 13 | reserved, not used: D21 keeps the divider unswitched (2 x 2.2 M); pin kept free for a low-side switch |
 | spare | SPARE_P2_03..05 | P2.03-P2.05 | 14-16 | spare |
 | swo | SWO | P2.07 | 18 | optional to TC2030 pin 6 (TRACE pin) |
 | in | CHG_STAT | P0.00 | 23 | Li-ion variant; pin-voltage rule below |
@@ -125,21 +125,21 @@ pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 are fre
 Pin-voltage rules (D13; `tree_common.PIN_VOLTAGE_RULES`, checked by `led_matrix.py`). The nRF pin limit is VDD + 0.3 V,
 which is 3.3 V at VDD idle 3.0 V (unverified: PS HTML summary).
 - CHG_STAT: MCP73831 STAT is push-pull to its own VDD = VBUS, up to 5.25 V. Use a series diode (cathode to STAT) with the
-  nRF pull-up to VDD, or a divider giving at most 3.0 V at 5.25 V. Schematic, gate 3.
+  nRF pull-up to VDD, or a divider giving at most 3.0 V at 5.25 V. Built as a divider (R44 100 k / R45 120 k, `gen/tree_pin_divider.py`).
 - VBUS_DET: VBUS can reach 5.25 V. Use a divider giving at most 3.0 V at 5.25 V (values from a calc script), or a diode clamp.
-  Schematic, gate 3.
+  Built as a divider (R42 100 k / R43 120 k, `gen/tree_pin_divider.py`; the 120 k doubles as the pull-down of the floating input on variant A, D21).
 - TPS63900 EN: tied to VIN, not connected to a GPIO (EN can see 4.2 V with a Li-ion cell).
 
 Unused: P2.06, P2.08-P2.10 (TRACE). Power and decoupling pins (10, 22, 36, 47, 48 VDD; 33, 43, 45, 46 DECRF/DECA/DECD/DCC;
 31, 32 ANT/VSS_PA; 34, 35 XC1/XC2): Nordic reference circuit, config 1.
 
 ## Power
-Cell (A: 2 x AAA, B: Li-ion) -> [reverse-polarity P-MOSFET (A)] -> TPS63900 VIN; VOUT = VDD (3.0 V idle / 3.5 V lit, SEL from a GPIO). Li-ion variant: USB-C VBUS -> MCP73831 -> cell. Battery voltage to ADC via divider; VBUS detect and charger STAT to GPIO (variant B).
+Cell (A: 2 x AAA, B: Li-ion) -> reverse-polarity P-MOSFET Q1 (both variants, D7) -> VIN -> TPS63900; VOUT = VDD (3.0 V idle / 3.5 V lit, SEL from a GPIO). Li-ion variant: USB-C VBUS -> MCP73831 -> cell. Battery voltage to ADC via divider; VBUS detect and charger STAT to GPIO (variant B).
 
-## Mechanical stack (gap about 14 mm, to be fixed by the header research)
-B (1.0 mm) | gap: header, cell/holder (11.2 mm), nylon standoffs | A (1.0 mm). Overall thickness about 17 mm with LED heights. The antenna keep-out region is copper-free on both boards. USB-C opens at the bottom edge of A. Housing: transparent 3D print, see `hardware/panel/MECHANICAL.md`.
+## Mechanical stack (D3, D18; numbers from `gen/tree_outline.py`)
+B (1.0 mm) | gap 12.0 mm: J3/J4 header mated 8.5 + 3.2 = 11.7 mm, holder 11.3 mm (11.65 mm worst case), M2 nylon standoffs 12 mm | A (1.0 mm). Thickness board outer face to outer face 14.0 mm, 14.8 mm with the LEDs (D18); the Li-ion pouch may overhang the outline by up to 1.5 mm per side inside the gap (D16). The antenna keep-out region is copper-free on both boards. USB-C opens at the bottom edge of A. Housing: transparent 3D print, see `hardware/panel/MECHANICAL.md`.
 
 ## Decisions (dated)
 - 2026-11-23: one panel for both boards (engineer). Consequence: board B is also 4-layer at 1.0 mm; assembly is two-sided for the panel. Cost delta against two separate orders is computed in `hardware/panel/BOARD.md`.
-- 2026-11-23: D(n) on B and D(n+8) on A share anode line n (assumption, mirror positions).
+- 2026-11-23: D(n) on B and D(n+8) on A share anode line n (assumption; not a position mirror, D14).
 - 2026-11-23: board naming: tree-a, tree-b, panel (template folder `ornamnents` retired).
