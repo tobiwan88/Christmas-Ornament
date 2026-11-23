@@ -1,13 +1,22 @@
-# Settings of calc/emi_check.py (diff pair, edge fence, antenna, planes, loops, parallel runs). Each limit names its source.
-# Template placeholders removed: no USB pair on this board (no pair_* keys), no switch-node net or "NET*/SW*" parallel rule declared yet.
-# The layout builder adds antenna_area (rule area name), sw_nets, edge_exempt rectangles and parallel rules with the routed board.
-# Numeric settings below are emi_check.py's own defaults, written out so a reader sees them (no board-specific source yet).
-edge_pitch_mm: 5.0          # GND via fence along the board edge: largest gap between neighbouring vias
+# Settings of calc/emi_check.py (edge fence, antenna, planes, loops, parallel runs) for the routed board (gate 5 runs it;
+# at gate 4 there is no copper, so most rows have nothing to measure). Each limit names its source; numbers without a
+# board source are emi_check.py's own defaults, written out so a reader sees them. No USB pair (no pair_* keys).
+# Coordinates: board mm = tree_outline mm (origin top-left of the 70 x 105 box, the outline's bounding box).
+antenna_area: antenna_keepout_top   # F.Cu rule area of gen/tree_a_pcb.py: the 17 mm tip triangle (tree_outline
+                                    # ANT_KEEPOUT_H_MM) minus the notch x 35 +- 1.4 for the antenna land and its feed;
+                                    # rule area antenna_keepout (same triangle, no notch) bars In1, In2, B.Cu
+edge_pitch_mm: 5.0          # GND via fence along the board edge: largest gap between neighbouring vias (emi_check default)
 edge_band_mm: 1.6
-void_max_mm: 1.0            # longest signal run over a plane void
-loop_max_mm: 12.0
-sw_nets: []                 # switch-node nets (full KiCad names)
-sw_area_max_mm2: 3.0
-parallel: []                # {name, victims: [net globs], aggressors: [net globs], gap_mm, max_mm}
-edge_exempt: []             # rectangles with a reason: antenna, holes, overhangs, module pad columns, corners
-known: []                   # row + reason + the fix for next time
+edge_exempt:                # rectangles {box: [x0, y0, x1, y1], reason}
+  - {box: [40.0, 80.5, 48.5, 91.5], reason: "J1 USB-C (variant B, DNP) shell overhangs the right trunk edge at x 48; its plated slots are the GND there"}
+  - {box: [22.0, 95.0, 48.0, 105.0], reason: "trunk bottom: BT1 pads 3/4 (BT_LINK, 7.45 x 6.10) reach y 102.7, no room for an edge via row under them"}
+void_max_mm: 1.0            # longest signal run over a plane void (emi_check default)
+plane_ref: {F.Cu: In1.Cu, B.Cu: In2.Cu}   # board.yaml stackup: In1 and In2 both solid GND (In2 = proposed decision)
+loop_max_mm: 12.0           # emi_check default; TPS63900 loops are placed at 1.4-3.3 mm pad to pad (critical.yaml)
+sw_nets: [/power/LX1, /power/LX2]   # TPS63900 switch nodes (netlist names)
+sw_area_max_mm2: 3.0        # emi_check default: L2 pads sit 2.06 mm from LX1 / LX2 (critical.yaml), short stubs only
+parallel:                   # {name, victims, aggressors, gap_mm, max_mm}; own targets (no datasheet number)
+  - {name: rf_feed_vs_all, victims: ["/rf/*", "/mcu/ANT_PA"], aggressors: ["/leds/*", "/mcu/SW*", "/mcu/XC*", "/mcu/XL*", "/power/*", "VDD", "VIN", "BAT"], gap_mm: 0.5, max_mm: 0.5}
+  - {name: hfxo_vs_switching, victims: ["/mcu/XC*", "/mcu/XL*"], aggressors: ["/leds/*", "/power/*", "/mcu/DCC"], gap_mm: 0.5, max_mm: 1.0}
+  - {name: led_lines_vs_adc, victims: ["/mcu/VBAT_SENSE"], aggressors: ["/leds/*", "/power/*"], gap_mm: 0.4, max_mm: 3.0}
+known: []
