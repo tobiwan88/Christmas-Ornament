@@ -9,3 +9,4 @@ CLAUDE.local.md
 # vendor datasheets and conversions: local only (copyright); the datasheet cards in parts/ carry the facts and URLs
 hardware/*/datasheets/*
 !hardware/*/datasheets/README.md
+.venv/
