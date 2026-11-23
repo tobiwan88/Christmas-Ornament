@@ -1,4 +1,4 @@
-# Mechanical: tree outline, holes, keep-outs, battery fit, stack, panel (2026-11-23)
+# Mechanical: tree outline, holes, keep-outs, battery fit, stack, panel (2026-11-23; holder stack-up, header zone, LED height 2026-11-23 review CO-B5/B6)
 
 Single source of every number here: `python3 hardware/gen/tree_outline.py --selftest` (module `hardware/gen/tree_outline.py`,
 imported by the board generators and the panel script). Convention: mm, origin top-left of the 70 x 105 bounding box, x right,
@@ -12,19 +12,36 @@ pads 55.75 mm apart along the long axis, 11.0 mm across. Margin to the outline 1
 
 | Question | Result (selftest rows `fit:`) |
 |---|---|
-| Does the 62.2 mm holder fit at all, upright and centred (x = 35)? | YES, but only in one window: top edge at y = 37.6 to 41.8 mm (holder covers y 37.6 to 99.8 at the top end of the window, 41.8 to 104.0 at the bottom end). Above y = 37.6 tier 2 is too narrow (the holder's top corners need a half width of about 12.4 mm incl. the margin along the slope; tier 2 has 6 mm at y = 28 and grows 2/3 mm per mm); below y = 41.8 the bottom edge breaks the 1 mm margin. |
+| Does the 62.2 mm holder fit at all, upright and centred (x = 35)? | YES, but only in one window: top edge at y = 37.6 to 41.8 mm by the outline alone (holder covers y 37.6 to 99.8 at the top end of the window, 41.8 to 104.0 at the bottom end); with the 2 x 4 header above it the window is 39.1 to 41.8 (below). Above y = 37.6 tier 2 is too narrow (the holder's top corners need a half width of about 12.4 mm incl. the margin along the slope; tier 2 has 6 mm at y = 28 and grows 2/3 mm per mm); below y = 41.8 the bottom edge breaks the 1 mm margin. |
 | Sideways slack in the trunk | 26.0 mm trunk - 22.4 mm holder = 3.6 mm: 0.8 mm each side after the 1 mm margin. The holder cannot move off-centre. |
 | Does the holder fit rotated across tier 3 (62.2 along x)? | NO. It needs a half width of 32.1 mm over its whole 22.4 mm height; tier 3 reaches that only below y = 72.5 and ends at y = 76 (3.5 mm tall). Across tier 2 it is worse (22 mm half width at most). |
 | Holder pads inside the outline | yes, worst pad centre 6.3 mm from the edge (pad count and size UNVERIFIED: the research gives the two pitches only). |
 | Holder against the USB-C opening at the bottom edge | The window ends at y = 99.8 to 104.0; the USB-C receptacle (8.95 x 6.85 mm body, plus 1 mm) needs y >= 97.0. Overlap 2.8 to 7.0 mm. Longest holder that keeps the USB-C zone free: 59.4 mm (y 37.6 to 97.0), 2.8 mm shorter than the real holder. |
-| Original mock-up | Two AAA cells side by side, measured y about 50 to 94 mm (44 mm long, 22 mm wide; the job text said 63 to 94, the image shows 50 to 94). A 44.5 mm cell fits easily. The 62.2 mm holder is 17.7 mm longer than the cell (Keystone 1022 is 61.5 mm), so the mock-up's cell position is not the holder's. |
+| Original mock-up | Two AAA cells side by side, measured y about 50 to 94 mm (44 mm long, 22 mm wide; the job text said 63 to 94, the image shows 50 to 94). A 44.5 mm cell fits easily. The 62.2 mm holder is 17.7 mm longer than the cell (history: the earlier Keystone 1022 candidate, 61.5 mm, was replaced by the MYOUNG holder, D4), so the mock-up's cell position is not the holder's. |
 | Pouch 36 x 29 mm (Adafruit 1578, 29 x 36 x 4.75) | Does NOT fit inside the outline. 29 mm wide cannot enter the 26 mm trunk, so it must stay between y about 41 and 76: the tallest 29 mm wide rectangle is 32.0 mm with 1 mm margin and 34.5 mm with margin 0 (grid 0.25 mm; 35.25 mm on the sharp polygon), i.e. 1 to 4 mm short of 36. 36 mm across: no position. The mock-up's blue dashed 30 x 35 rectangle also overhangs the trunk by 2 mm each side. |
 | Free area for parts on A's inner face (outline 2966 mm2; 0.3 mm copper-to-edge; antenna keep-out and the two D5 keep-outs removed) | holder at y_top 39.5: 1324 mm2 left (holder rectangle 1393 mm2); pouch 29 x 36 at y_top 40: 1683 mm2; nothing in the gap: 2725 mm2. |
+
+Holder stack-up (CO-B5, drawing MY-CP-0144 REV A/0, `hardware/tree-a/datasheets/BH-AAA-B5AA001/`, rendered at 300 dpi): the 0.90 mm in the
+end view is the locating peg (phi 1.30, top view; phi 1.80 hole in the PCB), 0.90 mm long below the flat underside, not a solder tab that
+stands off the board. The four SMT tabs lie flat in the underside plane (flange line in the section view) and the 11.3 mm is measured from that
+plane to the top of the end walls. The peg goes into the board hole (0.90 < 1.0 mm board, does not poke through) and adds nothing above the
+board surface. Height above A's inner face: 11.3 mm nominal, 11.3 + 0.25 (title block tolerance X.X) + about 0.10 (solder under the tabs,
+estimate UNVERIFIED) = 11.65 mm worst case. **The 12.0 mm gap works: 0.70 mm to board B nominal, 0.35 mm worst case** (12 mm standoff length tolerance
+not in the repo, UNVERIFIED; B's inner face must carry only flat parts under the holder).
+
+Header zone (CO-B6): 2 columns in x (pitch 2.54) by 4 rows in y (pitch 2.54), i.e. 5.08 wide in x and 10.16 tall in y (the module had it turned by
+90 degrees). Pad centres at y = -3.81, -1.27, +1.27, +3.81 per column (`build_footprints.py`); pad extent y +-4.32, x 8.0 (female) / 9.0 (male) outer to
+outer; maker plastic of the female part 5.0 x 10.66 +-0.3 (drawing HC-PM254-8.5H: (B + 0.5) +-0.3, B = 10.16). Header centre (35, 33.0) tentative:
+bottom y = 38.08 (footprint body), 37.32 (pads), 38.33 (maker plastic), 38.63 (with tolerance). With 1 mm to the holder the holder window
+becomes top edge y 39.1 to 41.8 (2.7 mm wide, maker plastic 39.3 to 41.8; 39.6 to 41.8 with the plastic tolerance); the default 39.5 stays inside
+except for the tolerance worst case (0.13 mm short). The window is small but not empty. D15's wording "header above y 37" does not hold literally at
+centre 33.0 (bottom 38.1): what must hold is holder top >= header bottom + 1. To keep the full 37.6 to 41.8 window the header centre must be
+<= 31.3 mm (engineer's / layout builder's choice; D15 not changed).
 
 Consequence: the holder takes the whole centre of the tree from tier 2 to the trunk bottom (y 38 to 100). What stays free on A's
 inner face with the holder in: the tip below the antenna keep-out (y 17 to 38, 14.6 mm wide at y 17 growing to about 25 mm at y 38) and the two wings of tier 3
 beside the holder (triangular: up to 24 mm wide at y 76, narrowing to 4 mm at y 52). The header, nRF54L15, crystals, TPS63900 and the 8 resistors must go
-into those areas. The mock-up's header position (y 41 to 46) lies inside the holder window and must move above y 37.
+into those areas. The mock-up's header position (y 41 to 46) lies inside the holder window and must move up: its bottom edge (plus 1 mm) must lie above the holder top edge (y 39.1 and below, see the header zone above).
 
 Nearest layouts, with numbers (engineer decides; the layout builder needs one of them before placement):
 
@@ -36,8 +53,8 @@ Nearest layouts, with numbers (engineer decides; the layout builder needs one of
 | L4 | Taller trunk (outline 105 -> 107.8 mm) | holder top at 37.6 + 62.2 = 99.8 mm must end at the USB-C zone start (y 97.0 for 105 mm): 2.8 mm more height | PCB area (about 26 mm x 2.8 mm per board) | outline is the engineer's decision (R1.1); every y in this file moves |
 | L5 | Rotated across tier 3 | impossible (numbers above) | - | - |
 
-Recommended default for the layout builder: L1, USB-C footprint at the bottom edge as an exclusive-with-holder footprint, header
-above y 37; open decision for the engineer: the pouch variant (it needs L4-like height or a narrower pouch).
+Decided (D15): L1, USB-C footprint at the bottom edge as an exclusive-with-holder footprint, header above the holder (holder top >= header bottom + 1 mm,
+see the header zone); the pouch variant is D16 (overhang up to 1.5 mm per side inside the gap).
 
 ## 2. Outline
 
@@ -100,24 +117,23 @@ Component height zones (`height_zones()`; heights from the board face; the gap i
 
 | Zone | Board, face | Position (x, y) | Height | Status |
 |---|---|---|---|---|
-| battery holder 62.2 x 22.4 | A inner | centre (35, 70.6) at y_top 39.5 | 11.3 mm (0.7 mm to B) | maker data (research digest) |
-| header 2 x 4 mated | A inner (female) + B inner (male) | (35, 33.0) tentative | 8.5 + 3.2 = 11.7 mm | UNVERIFIED body size |
+| battery holder 62.2 x 22.4 | A inner | centre (35, 70.6) at y_top 39.5 | 11.3 mm +-0.25 (0.70 mm to B, 0.35 mm worst case; the 0.90 foot is the locating peg) | maker drawing MY-CP-0144 |
+| header 2 x 4 mated | A inner (female) + B inner (male) | (35, 33.0) tentative, 5.08 wide x 10.16 tall (y 27.92 to 38.08) | 8.5 + 3.2 = 11.7 mm (12.05 mm worst case by the card tolerances) | body from the footprint; male height UNVERIFIED |
 | USB-C receptacle | A inner, bottom edge | x 30.5 to 39.5, y 98.15 to 105 | 3.16 mm | HC-TYPE-C drawing sheet 1/2 |
 | antenna 2450AT42A100E | A inner, tip | land y 5.7 to 14.6 | 1.1 mm | datasheet Rev 2.0 p2 |
 | SW1 | A outer, trunk | (35, 88.8) mock-up | not known | MISSING (switch not chosen) |
 | Tag-Connect TC2030-NL | A outer, trunk | (35, 99.4) mock-up | pads only | block 8 x 5 mm UNVERIFIED |
 | nylon screw heads | A outer and B outer | at the mount holes, keep-out D5 | about 1.3 mm | UNVERIFIED |
-| RGB LEDs | both outer faces | everywhere | 0.4 mm | job figure, datasheet height not read |
+| RGB LEDs | both outer faces | everywhere | 0.4 mm +-0.25 (0.65 mm worst case) | XL-1010RGB-YG datasheet p8 |
 
 ## 5. Stack
 
 - Two boards 1.0 mm, gap 12.0 mm (inner face to inner face): 14.0 mm over both boards, 14.8 mm with 0.4 mm LEDs on both outer
-  faces. D3 says "about 14.5 mm": not reproduced by this arithmetic (14.0 or 14.8); the difference is 0.3 mm, check which LED
-  height the 14.5 assumed.
+  faces, 15.3 mm worst case with the LED tolerance (0.4 +-0.25, datasheet p8). D3's "about 14.5 mm" was an estimate (D18 settles 14.0 / 14.8).
 - Standoffs M2 nylon F-F 12 mm, screws M2 x 5 nylon, hole D2.2, keep-out D5. Thread engagement about 5 - 1.0 (board) - 1.3 (head)
   = 2.7 mm (head height UNVERIFIED); an M2 x 6 screw gives 3.7 mm.
 - Header: SMD female 8.5 mm on A + SMD male 3.2 mm plastic on B = 11.7 mm mated, 0.3 mm short of the gap, insertion 5.7 mm
-  (research digest, heights UNVERIFIED until the parts arrive). The holder (11.3 mm) and the mated header both fit the 12 mm gap.
+  (research digest, heights UNVERIFIED until the parts arrive). The holder (11.3 mm, 11.65 worst case) and the mated header (11.7 mm nominal; 12.05 mm worst case by the card tolerances, 0.05 mm over, UNVERIFIED) fit the 12 mm gap at nominal.
 - Antenna keep-out copper-free on both boards; nothing metal over it in the housing.
 
 ## 6. Panel (`panel_arrangements()`, no KiCad panel yet)
@@ -148,7 +164,7 @@ Fiducials 1 mm / 2 mm mask, 3 to 4 per panel, tool holes 2 mm: JLC pages disagre
 
 ## 7. What the housing designer needs
 
-Housing: transparent 3D print around the 70 x 105 x 14.8 mm stack (DXF outline: `outline/tree_outline.dxf`).
+Housing: transparent 3D print around the 70 x 105 x 14.8 mm stack (15.3 mm worst case with the LED tolerance; DXF outline: `outline/tree_outline.dxf`).
 Openings and access:
 1. Hanging hole D1.4 at (35, 4.5), through both boards and the shell (a loop or eyelet on the shell at the tip).
 2. USB-C opening (variant B), bottom edge of A, centred x = 35, width 8.95 mm + 0.3 mm each side, height 3.16 mm above A's inner
@@ -156,18 +172,20 @@ Openings and access:
 3. Battery door or removable shell over the holder: cells load from the top (towards B), holder y 37.6 to 104.0 (default 39.5 to 101.7).
 4. SW1 button access on A's outer face (35, 88.8); Tag-Connect cable access at (35, 99.4) (removable part or opening).
 5. Screw access D5 at the mount holes (10.7, 71.0) and (59.3, 71.0), nylon heads on both outer faces.
-6. Clearance for LEDs 0.4 mm on both outer faces; transparent shell at the tip: no metal.
+6. Clearance for LEDs 0.4 mm (+-0.25) on both outer faces; transparent shell at the tip: no metal.
 7. STEP of the assembled stack: not produced yet (the 3D models of the holder, header and USB-C part are not in the repo).
 
 ## 8. Open items and decisions
 
 1. (closed by D14) No x mirror between A and B; identity coordinates.
-2. Holder layout (section 1): L1 default; L2/L3/L4 cost; the pouch variant does not fit (engineer).
-3. Mount holes: moved to (10.7, 71.0) / (59.3, 71.0) because of the 2.5 mm material rule; keep (8, 72) / (62, 72) with 1.09 mm material
-   round the D5 keep-out? (engineer; module switch `USE_NOTES_MOUNT_HOLES`).
+2. (closed by D15) Holder layout L1. Pouch variant: D16 (overhang up to 1.5 mm per side inside the gap).
+3. (closed by D17) Mount holes at (10.7, 71.0) / (59.3, 71.0); module switch `USE_NOTES_MOUNT_HOLES` keeps the notes' (8, 72) / (62, 72) as history.
 4. (closed) Hanging hole is non-plated, no copper ring (coordinator's decision).
 5. Antenna keep-out size (17 mm default; Johanson shows 9.6 x 18 mm only on its own board): layout builder with a VNA.
 6. Panel: arrangement 3 reading; JLC support questions: two designs in one panel, price tier above 102 x 102, rails.
-7. D3 thickness 14.5 mm vs 14.0 / 14.8 mm (section 5).
-8. Unverified: holder pad count and size, header body sizes, screw head height, LED height, switch, Tag-Connect block, USB-C
-   flush edge (+-0.3 mm), JLC inside-corner radius, 3D models.
+7. (closed by D18) Stack 14.0 / 14.8 mm (15.3 mm worst case).
+8. Header centre y and holder default: header bottom 38.08 to 38.63 at centre 33.0 leaves the holder window 39.1 (39.6 worst case) to 41.8; default 39.5.
+   Options: keep (window 2.2 to 2.7 mm), move the header up to centre <= 31.3 (full D15 window 37.6 to 41.8), or default 40.0 (engineer; D15 not changed).
+9. Unverified: holder pad count (four tabs, 7.45 x 6.10 pads, drawing), solder height under the tabs (0.10 estimate), standoff length tolerance,
+   header male height (interpretation of the drawing) and pad width, screw head height, switch, Tag-Connect block, USB-C flush edge (+-0.3),
+   JLC inside-corner radius, 3D models.
