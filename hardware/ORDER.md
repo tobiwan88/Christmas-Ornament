@@ -66,6 +66,14 @@ carry the evidence.
 1a. Battery sense calibration (D26, FIRMWARE-RULES rule 5; bench supply on VIN, no cell, SEL low): force VIN to 2.00 V and to 3.00 V, read VIN with the meter on the VIN node and record the firmware reading of VBAT_SENSE at each point (one sample per second, wait 7 tau = 0.77 s after each step). Do not put the meter on the pin: a 10 Mohm meter on the 1.1 Mohm source takes 10 % off the reading. From the two points fit reading = gain x VIN + offset and keep gain and offset in the firmware. Threshold: offset above 25 mV at the pin (SAADC offset and pin leakage across the 1.1 Mohm source, both UNVERIFIED) -> swap R40/R41 to 2 x 1 M C26083 (the R23 part, Basic; source 500 kohm); that is a BOM change for the engineer (D26): rerun `tree_charge_path.py` and the sleep rows of `tree_power.py` first (sleep current of the divider rises from 0.68 uA to 1.5 uA at 3.0 V).
 2. LED orientation and colours: light each die of one LED of A and of B through the slot table; microscope check of the first part
    (DS-A1; footprint follows the datasheet top view; pad numbering UNVERIFIED on a real part, tree-b finding 4).
+2a. LED mark under the microscope (section 7; the mark is on the pad side and hidden once the part is soldered): on a loose part from the
+   same LCSC lot (C965834, order a few spare), pad side up, the green triangle "Mark" between two pads must point to the anode pad (maker
+   p8 pad-side view: pad 3, "+"); write down which corner of the tape pocket that pad faces. On the assembled boards, before firmware:
+   meter in diode test, red lead on the anode pad, black lead on each cathode pad, one LED per board: D1 (B, top): anode pad 3 = LED_L1,
+   pad 1 R = LED_L3, pad 2 G = LED_L4, pad 4 B = LED_L8; D9 (A, bottom): anode pad 3 = LED_L1, pad 1 R = LED_L7, pad 2 G = LED_L6, pad 4
+   B = LED_L2. Good: red glows on pad 1, green and blue glow faintly (meter test voltage permitting); no glow on any pair with the leads
+   reversed. A part turned 90 degrees moves the anode to another pad: then no pair glows with the red lead on pad 3 (stop, check the CPL
+   rotation of section 7 for that side before the next panel).
 3. LED Vf at 1 uA / 1 mA / 5 mA per colour; ghost glow in the dark with a green die lit (FIRMWARE-RULES rule 1, tree-a finding 10); current
    at minimum-drive pins (D13, 0.77 mA worst case for green/blue).
 4. Read the part code and the memory sizes of U1 over SWD before the first flash: expect nRF54L10, 1012 kB RRAM, 192 kB RAM (UNVERIFIED,
@@ -75,7 +83,17 @@ carry the evidence.
 6. DC/DC: efficiency and ripple with the 0805 L1 (UNVERIFIED, finding 13); VDD lit and idle.
 7. Antenna: first reel sample, brown mark against pin 1 under the microscope (about 90 % sure, UNVERIFIED, finding 1); VNA sweep of S11 at
    2.4-2.5 GHz (return loss at least 9.5 dB per Johanson on its own board), bench tune with the R50/C50/C51 pi slots; keep-out check (finding 2).
-8. Holder BT1: continuity and polarity with two cells; the series link (UNVERIFIED, finding 22).
+8. Holder BT1: continuity and polarity with two cells; the series link (UNVERIFIED, finding 22). Exact steps (section 7; pad numbers of
+   tree:BAT_MYOUNG_BH-AAA-B5AA001, nets from `tree-a/netlist.csv`: pad 1 BAT = pack +, pad 2 GND = pack -, pads 3/4 BT_LINK):
+   (i) look first: the holder's locating peg sits in the 1.8 mm NPTH (board point (45.45, 47.65), next to pad 2 = GND);
+   a holder turned 180 degrees cannot seat its peg and stands proud: stop, it would reverse the pack.
+   (ii) no cells, no supply: pad 1 to pad 2 open (above 1 Mohm on the ohm range; below 10 ohm = the pack would be shorted: stop);
+   pad 3 to pad 4 0 ohm (the BT_LINK copper joins them; record whether the holder also links them inside: either is fine);
+   pad 1 to Q1 pin 3 (drain, BAT) 0 ohm; pad 2 to a GND test point 0 ohm; pad 1 to pad 3 and pad 2 to pad 4 open (no cell).
+   (iii) two cells inserted following the cavity marks (maker top view: the cell next to the peg has - at the peg end): BAT to GND = the
+   sum of both cells and POSITIVE (about +2.4 to +3.2 V); BT_LINK (pad 3 or 4) to GND = one cell, about half of BAT; BAT to BT_LINK = the
+   other cell. A negative BAT reading = reversed pack (Q1 blocks it; remove the cells); BAT about one cell = one cell reversed.
+   (iv) only then connect VIN loads (step 1 limits apply).
 9. Header: measure the male plastic height and the mated gap of one stack against 11.7 mm in a 12.0 mm gap (UNVERIFIED, finding 15).
 10. Autonomy: average current over a lit/unlit cycle on 2 AAA cells (compare with 1.9 mA and the 1.0 mA default, D19); sleep current < 5 uA after
     SEL has been low for about 10 s (FIRMWARE-RULES rule 3, 11); pack cut-off behaviour at 2.0 V (rule 4).
@@ -88,5 +106,32 @@ Parts that arrive hand-fitted: standoffs, screws, cells (variant A); pouch (vari
 - [ ] Routed board, gate OK at all DRC severities; `hw-check.sh --strict --stock --qty 5` OK (needs the manual quote above); clean tree.
 - [ ] Engineer's KiCad review done; `fab_package.py --require-clean` run; fab capability page read against the smallest track/via used.
 - [ ] Stock rechecked right before paying (nRF54L10 C44800139, antenna, J3, J4).
-- [ ] Placement preview checked by a human (every IC, connector, LED polarity, antenna, USB-C shell, board B rotated 180 degrees).
+- [ ] Placement preview checked by a human (every IC, connector, LED polarity, antenna, USB-C shell, board B rotated 180 degrees), with
+      the per-part checks of section 7.
 - [ ] Support answers of section 3 written here; this file updated; `GATES.md` gate 6 status.
+
+## 7. CPL conventions (fab-footprint fit, 2026-11-23)
+JLC places each part as its own EasyEDA footprint drawn at the CPL angle and centre (the placement preview shows exactly that). So the CPL
+rotation is "KiCad angle + correction", where the correction turns the EasyEDA drawing onto our land BY PAD FUNCTION. The centre is the
+board point of the EasyEDA origin. `tools/fab_package.py` computes both from the fit (`--fit-only --offline` prints `corr` and `offset`).
+Never edit the CPL by hand: fix the footprint or the reviewed tables in the tool. Evidence: maker drawings (local PDFs, D11) and the cached
+EasyEDA footprints and symbols in `hardware/out/fab/easyeda/<LCSC>/component.json`.
+
+| Part (LCSC) | Refs, side | Our land vs EasyEDA | Correction (CPL minus KiCad angle) | Origin offset | Check in JLC's placement preview |
+|---|---|---|---|---|---|
+| XL-1010RGB-YG (C965834) | D1-D8 board B top (KiCad 0 -> CPL 90); D9-D16 board A bottom (KiCad 180) | Ours: maker p8 recommended land, 0.45 mm pads at +-0.40 (0.80 pitch), numbers from the p8 top view 1 R- TL, 2 G- TR, 3 anode BL, 4 B- BR. EasyEDA: 0.40 pads at +-0.315 (0.63 pitch, close to the 0.67 terminal centres: terminals 0.32 with 0.35 gaps, p8 pad-side view), numbered counter-clockwise 1 COM+ TL, 2 B- BL, 3 G- BR, 4 R- TR (its symbol pin names), polarity dot and silk "+" at pad 1 = the anode. By function this is the same part turned 90 degrees, not a mirror. The pitch difference does not move the part: both lands share one centre | +90 on top. Bottom: +90 in the tool's mirrored fit (EasyEDA mirrored in x, then fit: board angle 270 for KiCad 180). How JLC's bottom-side rotation maps onto that is UNVERIFIED, and the tool writes no bottom CPL rows yet (open, see below) | 0.00 mm (both origins = body centre) | The EasyEDA anode marker (dot / "+") sits on OUR pad 3 (net LED_L1 on D1 and D9). Board B top, rotation 0: pad 3 is the lower-left pad. Board A bottom, seen from the bottom side: pad 3 is the lower-left pad of the mirrored footprint (top-view board coordinates: +x, +y of the centre) |
+| BH-AAA-B5AA001 (C964881) | BT1 board A top (KiCad -90 -> CPL 270) | Same geometry within 0.001 mm: 7.45 x 6.10 pads, centres +-27.875 / +-5.5, 1.80 NPTH peg hole at (-23.45, -10.45) in both (maker "PCB Layout Diagram", a bottom view = the top view flipped top to bottom). Numbers differ: EasyEDA numbers per cell (1 upper +, 2 upper -, 3 lower +, 4 lower -; its silk "+" at (20.2, -5.0) and (-20.5, 6.0) match the maker top view: upper cell - left / + right, lower cell + left / - right, peg upper left). Ours: 1 = lower-left = pack + (BAT), 2 = upper-left = pack - (GND), 3/4 = right end, series link (BT_LINK). Both describe the same tabs; the netlist uses ours | 0. Never 180: a holder turned 180 degrees reverses the pack, and its peg misses the hole. The tool's geometry fit cannot see the hole and ties 0/180, so the fix is a pad map (open, below) | 0.00 mm | The EasyEDA peg hole lies on our 1.8 mm NPTH at board (45.45, 47.65), beside BT1 pad 2 (GND). The EasyEDA "+" silk next to our pad 1 (BAT, board (29.5, 43.2)) and the other "+" at the far end on the pad 4 side |
+| 2450AT42A100E (C2917719) | ANT1 board A top (KiCad 90 -> CPL 90) | Ours: Johanson land (Doc 36S0021A Rev 2.0 p3): feed pad 1.0 x 1.8, gap 3.9, stub pad 4.0 x 1.8, 8.9 overall; the 5.00 x 2.00 body (p2, terminals a = 0.50 +-0.30) spans the gap, so its centre is the gap centre = our footprint origin. EasyEDA: two 0.8 x 2.3 pads at +-2.5 about the body centre, pad 1 = "ANT" (feed) with its polarity dot; pad 2 lies inside our stub pad. Pad 1 = feed = brown-mark end in both | 0 | 0.00 mm: the CPL centre must be our footprint origin (35.00, 11.65 board, y down). The tool's least-squares centre is 0.75 mm toward the stub: WRONG; the feed terminal would sit half off its 1.0 mm pad. Open, below | The body lies centred on the 3.9 mm gap, both terminals on copper. The EasyEDA dot and brown-mark end is at the feed pad (board y 14.1, toward the RF line) |
+| Boom 2.54-2x4P vertical SMD pin (C192300) | J4 board B bottom (KiCad 180) | Ours: maker drawing PZ2.54-2xNAT P.C.B layout, 2.00 x 1.0 pads, 9.00 +-0.2 outer to outer, so row centres 7.0 mm, 2.54 pitch. EasyEDA: 1.27 x 2.8 pads, rows 5.6 mm apart (title LS7.4 = the 7.40 leg span), drawn turned 90 degrees. Both cover the feet (leg tips 7.40 apart, plastic 5.0 wide, so each foot runs from 2.5 to 3.7 mm off the centre). The part has 8 identical pins and no pin-1 feature on the drawing, so pin 1 is a netlist matter only | 270 (90 gives the same physical result) | 0.00 mm | The 8 legs on the 8 pads; the plastic centred between the two rows |
+| HC-PM254-8.5H female (C22373945) | J3 board A top (KiCad 0 -> CPL 270) | Fits by number within 0.15 mm (row OK, not printed) | 270 | 0.00 mm | Legs on pads, body centred |
+
+Open for the tool owner (the gate still FAILS on ANT1, BT1, J4 and 14 of the 16 LEDs; see the report of 2026-11-23):
+- `GEOMETRY_OK` holds only the LED's correction 90. The 4 equal LED pads fit equally at every angle, so the geometry fit's pick is float
+  noise: D1 and D9 pass, the others show FAIL (never a wrong OK). BT1 ties 0/180 because the peg hole is not part of the fit. ANT1 and J4
+  exceed `LAND_TOL_MM` (0.70 mm) because the maker lands are longer than EasyEDA's. A table entry cannot express these cases.
+- Proposed (backwards compatible, tested on both boards: `placement fit tree-a: OK`, `tree-b: OK`): a `PAD_MAP` table (EasyEDA ->
+  KiCad pad numbers for C965834 {1:3, 2:4, 3:2, 4:1} and C964881 {1:4, 2:2, 3:1, 4:3}), then a by-number fit. Plus an `ORIGIN_FIT`
+  table (C2917719 1.5 mm, C192300 0.75 mm) that pins the CPL centre to the footprint origin and accepts the longer maker land as LAND.
+- Bottom-side CPL rows (D9-D16 on board A, J4 on board B) are not written: `fab_package.py` stops for an assembled bottom part outside
+  `--fit-only`. Before a board A order, someone must settle JLC's bottom rotation convention against its placement preview (UNVERIFIED) and
+  extend the tool.

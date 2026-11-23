@@ -59,6 +59,13 @@ GEOMETRY_OK: dict[str, tuple[set[int], str]] = {
     # CMF4532F-900 (HongyeX): EasyEDA numbers the pads 1-2 across the width, EMTEK/KiCad 1-2 along a winding; the
     # body is symmetric under 180 deg, so 90 and 270 put the same part on the same lands (EasyEDA drawn turned 90 deg).
     "C963746": ({90, 270}, "180-degree-symmetric 4-pad choke; lands match within 0.08 mm"),
+    # XINGLIGHT XL-1010RGB-YG: EasyEDA symbol pins 1 COM+ (top-left, its polarity dot and silk '+'), 2 B- (bottom-left),
+    # 3 G- (bottom-right), 4 R- (top-right); maker p8 top view 1 R- TL, 2 G- TR, 3 A(+) BL, 4 B- BR, bottom mark points
+    # to pad 3. By function the EasyEDA land is the same part turned 90 deg (anode corner TL -> BL): correction 90 on top
+    # and on the bottom (mirrored fit, KiCad 180 -> 270). Only 90 is valid: the 4 equal pads fit equally at every angle,
+    # so the geometry fit's pick is arbitrary and any other pick shows CHECK (fail-safe). Pitch 0.63 (EasyEDA, near the
+    # 0.67 terminal centres) vs 0.80 (maker recommended land, ours); same centre.
+    "C965834": ({90}, "anode corner by EasyEDA pin names vs maker p8; pads 0.12 mm (pitch 0.63 vs 0.80)"),
 }
 
 
