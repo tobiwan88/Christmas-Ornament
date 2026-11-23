@@ -1,0 +1,41 @@
+# Datasheet card: XINGLIGHT XL-1010RGB-YG (1.0 x 1.0 x 0.4 mm RGB LED, common anode). LCSC copy of the maker sheet, no revision or date printed.
+mpn: XL-1010RGB-YG
+role: 16 RGB LEDs of the charlieplexed matrix (D1-D8 board B, D9-D16 board A)
+lcsc: C965834
+source:
+  url: null     # maker XINGLIGHT (title block); no maker page found, document is the LCSC-hosted copy of the maker data sheet
+  revision: "maker technical data sheet (15 pages) as hosted by LCSC, no revision or date printed"
+  file: datasheets/XL-1010RGB-YG/XL-1010RGB-YG_lcsc.pdf
+values:
+  pins: {value: "1 = R cathode, 2 = G cathode, 3 = common anode, 4 = B cathode", section: "page 8 Outline Dimension, internal schematic"}
+  outline_mm: {value: {l: 1.0, w: 1.0, h: 0.4, tolerance: 0.25}, section: "page 8 Outline Dimension; page 1"}
+  recommended_land_mm: {value: {pad: [0.45, 0.45], gap_x: 0.35, gap_y: 0.35, pitch: 0.80}, section: "page 8 Recommended Soldering Pattern (no pad labels on the pattern; read from the image)"}
+  pin_orientation_on_land: {value: "land seen from the PCB top, mark at the top: 3 top-left, 4 top-right, 1 bottom-left, 2 bottom-right", section: "page 8 pad-side view with the mark between pins 3 and 4; the recommended pattern itself carries no pin numbers: inferred", unverified: "inferred from the pad-side view, confirm with the 3D model / polarity test on the first board"}
+  if_abs_max_ma: {value: {R: 20, G: 20, B: 20}, section: "page 3 Absolute Maximum Rating, continuous forward current"}
+  ifp_abs_max_ma: {value: {R: 60, G: 80, B: 80}, section: "page 3, peak forward current, pulse width <= 0.1 ms, duty <= 1/10"}
+  power_dissipation_mw: {value: {R: 50, G: 70, B: 70}, section: "page 3 max power dissipation"}
+  reverse_voltage_v: {value: 5, section: "page 3 VR; IR <= 1 uA at VR 5 V (page 4)"}
+  esd_v: {value: 2000, section: "page 3 antistatic ability"}
+  operating_temp_c: {value: [-30, 85], section: "page 3 TOPR (LCSC listing says -20 C)"}
+  msl: {value: 3, section: "page 1"}
+  vf_at_20ma_v: {value: {R: [1.8, 2.4], G: [2.6, 3.4], B: [2.6, 3.4]}, section: "page 4 forward voltage VF, IF = 20 mA, 25 C (min/max only, no typ)"}
+  vf_grading_v: {value: {R: ["N11-4 1.9-2.1", "N11-5 2.1-2.3"], G_B: ["N13-2 2.6-2.8", "N13-3 2.8-3.0", "N13-4 3.0-3.2", "N13-5 3.2-3.4"], tolerance_v: 0.1}, section: "page 5 voltage grading, IF = 20 mA"}
+  vf_typical_curve: {value: "red: 0 mA below about 1.7 V, about 1.8 V at 1 mA, about 2.1 V at 20 mA, about 2.3 V at 80 mA; green and blue: 0 mA below about 2.5 V, about 2.6-2.7 V at 1 mA, about 2.95 V at 20 mA, about 3.2 V at 80 mA", section: "page 6 volt-ampere characteristic graph, read from the image (EST: graph read, no table)"}
+  iv_at_20ma_mcd: {value: {R: [100, 200], G: [550, 1000], B: [80, 200]}, section: "page 4 light intensity, IF = 20 mA"}
+  dominant_wavelength_nm: {value: {R: [620, 625], G: [515, 530], B: [460, 475]}, section: "page 4"}
+  peak_wavelength_nm_typ: {value: {R: 630, G: 525, B: 465}, section: "page 4"}
+  half_angle_deg: {value: 120, section: "page 4"}
+  relative_intensity_vs_current: {value: "red rises faster than linear to 40 mA; green and blue saturate above 25 mA; at 5 mA about 0.45 (R about 0.3) of the value at 20 mA", section: "page 6 relative luminous intensity vs forward current graph (read from the image, EST)"}
+  derating: {value: "IF 20 mA up to 30 C, falls to 10 mA at 85 C", section: "page 6 derating graph (read from the image)"}
+  reflow: {value: "lead-free: 255 C peak +0/-5 C 5-10 s, ramp 3 C/s, 217 C liquidus 60-120 s", section: "page 7 reflow conditions"}
+  vf_at_low_current: {value: null, section: "not tabulated (graph only, see vf_typical_curve); the ghost margin needs the graph and a bench check"}
+checklist:
+  - "ghost margin: two red dies in series (min Vf 1.8 V each at 20 mA, about 1.7 V turn-on at the curve): 2 x 1.7 = 3.4 V against VDD 3.5 V +1.5 % = 3.55 V: NO margin at low current, see PARTS-REVIEW A1; calc/led_matrix.py owner re-runs with these numbers"
+  - "per-die current at 3.5 V: green/blue up to 3.4 V Vf at 20 mA; the curve gives about 2.6-2.7 V at 1 mA, so headroom exists only at small currents (page 6 graph, EST)"
+  - "pulse rating: slots of about 100 us at 1/48 duty are inside the 0.1 ms / 1/10 pulse condition for IFP (page 3); GPIO drive (4 mA) is far below IF max"
+  - "footprint: 0404 land 0.45 x 0.45 mm pads, gap 0.35 mm (page 8); fab footprint fit by the layout gate"
+alternate:
+  mpn: 18-239A/R6GHBHC-M01/2T(DF)
+  lcsc: C17701865
+  maker: Everlight
+  datasheet: "NOT obtained: LCSC download returned an HTML page, the maker file was not found. Everlight red Vf 1.7-2.1 V is a LCSC listing statement (UNVERIFIED). Not usable as an alternate until the ghost margin is checked with its own datasheet"

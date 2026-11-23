@@ -10,39 +10,160 @@ requirements: ../REQUIREMENTS.md
 
 fab:
   house: JLCPCB
-  assembly: "<economic | standard>, <side>, <hand-soldered parts>"
-  rules: ../rules/jlc-4layer.json      # fab floors; router_rules must agree
+  assembly: "Standard two-sided assembly (D6); hand-soldered: Li-ion pouch plug-in (variant B), standoffs, screws. Variant A first order (D10)"
+  rules: ../rules/jlc-4layer.json      # fab floors; router_rules must agree. NOTE its _comment says 1.6 mm: floors are not thickness dependent, stackup below is 1.0 mm
   custom_drc: ../rules/tree-a.kicad_dru
-  extended_fee_usd: null               # per unique Extended part, fee table <date>
-  setup_fee_usd: null
-  stencil_fee_usd: null
-  order_qty: null
-  order_limit_usd: null                # BOM check FAILs above it (bare PCB, joints, shipping not included)
+  extended_fee_usd: 1.53               # per unique Extended part (JLCPCB Economic/Standard feeder loading fee, quote of 2026-11-23: UNVERIFIED, engineer figure from the job brief)
+  setup_fee_usd: 51.12                 # Standard assembly setup, D6 (job brief)
+  stencil_fee_usd: 16.42               # D6 (job brief). Setup, stencil and the Extended fees are per ORDER (one panel), not per board: tree-b repeats them, so the per-board totals overcount; the order total is in PARTS-REVIEW.md
+  order_qty: 5                         # panels = ornaments (R2.1)
+  order_limit_usd: 150                 # BOM check FAILs above it (bare PCB, joints, shipping not included); R2.1 is all in, so the real margin is smaller
 
 stackup:                               # part of the order; calc/impedance.py reads it
-  name: JLC04161H-7628
-  copper_mm: 0.035
+  name: JLC04101H-7628                 # JLCPCB 4-layer 1.0 mm default (D5); thin option -3313 not used
+  copper_mm: 0.035                     # outer; inner 0.0152 (1/2 oz finished)
+  inner_copper_mm: 0.0152
+  total_mm: 1.0
   soldermask: {thickness_mm: 0.015, er: 3.8}
   layers:
-    - {name: F.Cu,  role: signal, ref: In1.Cu, dielectric_mm: 0.2104, er: 4.4}
-    - {name: In1.Cu, role: plane, net: GND}
-    - {name: In2.Cu, role: plane, net: GND}
+    - {name: F.Cu,  role: signal, ref: In1.Cu, dielectric_mm: 0.2104, er: 4.4}                    # 7628 prepreg
+    - {name: In1.Cu, role: plane, net: GND, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
+    - {name: In2.Cu, role: plane, net: GND}     # DECISION (proposed): GND, so B.Cu references a solid plane (LED lines, SW1, TC2030). Nordic's reference layout has two solid inner planes with the same cut-out under the matching network; the net of its 3rd layer is not labelled: UNVERIFIED. VDD is routed on the outer layers.
     - {name: B.Cu,  role: signal, ref: In2.Cu, dielectric_mm: 0.2104, er: 4.4}
 
 net_classes:                           # full KiCad net names; widths checked by calc/track_width.py
-  Default: {track_mm: 0.2, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3}
-  # Power: {track_mm: 0.5, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3, current_a: 1.0, nets: [...]}
-  # USB:   {track_mm: 0.27, gap_mm: 0.15, nets: [USB_DP, USB_DN]}    # from calc/impedance.py
+  Default: {track_mm: 0.15, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3}     # fab floor 0.127/0.127 (rules/jlc-4layer.json); 0.15 keeps 18 % margin and fits the 0.4 mm QFN pitch
+  Power:                                # nets are provisional names: the schematic generator sets them (gate 3)
+    track_mm: 0.3
+    clearance_mm: 0.15
+    via_mm: 0.6
+    drill_mm: 0.3
+    current_a: 0.5                      # TPS63900 peak switch current limit 0.51 A max in the 100 mA setting (card 6.5); average input 0.1 A
+    nets: [VBAT, VIN, VDD, LX1, LX2, VBUS]
+  RF:                                   # 50 ohm single-ended feed to ANT1 (microstrip over In1 GND)
+    track_mm: 0.40                      # calc/impedance.py --try 0.40/6.0 on this stackup: Zdiff 99.2 ohm with mask at S 6 mm => Z0 about 49.6 ohm; 0.38 gives 51.0 ohm. Microstrip model only: the Johanson feed is GCPW (coplanar ground): re-check the width/gap pair with the fab impedance calculator before layout release (EST)
+    clearance_mm: 0.30
+    via_mm: 0.6
+    drill_mm: 0.3
+    nets: [ANT_FEED, ANT_PA]
 
 layout:
   stitch_pitch_mm: [2, 3]
   thermal_relief: {spoke_mm: 0.3, gap_mm: 0.25, spokes: 4}
-  max_board_mm: [50, 50]
+  max_board_mm: [70, 105]               # R1.1 outline
   temp_rise_c: 10
 
 alternates:                             # primary LCSC: {lcsc: alternate, note: "what else must change"}
   C2917719:                             # ANT1 primary: Johanson 2450AT42A100E (5 x 2 mm), decision D12
     lcsc: C89334                        # alternate: Johanson 2450AT18A100E (1206), JLC stock 0 on 2026-11-23
     note: "ANT1 alternate: different footprint (1206 land 4.2 / 2.6 / 1.6 instead of 8.9 / 3.9 / 4.0 x 1.8), needs a tee or pi match (values by VNA), different keep-out; parts/2450AT18A100E.yaml"
-power: []                               # regulators for calc/buck.py
-design: {}                              # inputs of calc/power_budget.py and calc/rail_switch.py: each {value, source}
+  C44800139:                            # U1 first order (D2): nRF54L10-QFAA-R7, JLC stock 941
+    lcsc: C42458750                     # nRF54L15-QFAA-R, JLC stock 0 on 2026-11-23
+    note: "same QFN48 pin table (UNVERIFIED, PS HTML summary); L10 has less flash and RAM: check the firmware image against the L10 limits; read the part code over SWD at bring-up"
+  C23894:                               # TPS63900 inductor
+    lcsc: C97005                        # WPN201610H2R2MT 2.0 x 1.6 x 1.0 mm
+    note: "2.2 uH, Isat 1.90 A vs 1.85 A; different land (0806 class: pad 0.7 x 1.7, gap 0.7 mm instead of 0.85 x 2.0, gap 0.8); parts/WPN201610H2R2MT.yaml"
+  C63166:                               # nRF DC/DC inductor L1 (0805)
+    lcsc: C7216321                      # LLBHB1608KKT4R7MG 0603 = the Nordic reference size, JLC stock 0
+    note: "0603 footprint; 370 mA, 0.635 ohm; stock 0 on 2026-11-23, so only if it returns"
+  C965834:                              # D9-D16: XL-1010RGB-YG
+    lcsc: C17701865                     # Everlight 18-239A/R6GHBHC-M01/2T(DF)
+    note: "GHOST MARGIN: Everlight red Vf can be 1.7 V (listing, datasheet not obtained); two series red dies then sum to 3.4 V against VDD 3.55 V max: ghosting. Not usable until its datasheet is read and calc/led_matrix.py re-run; pad order must also be re-checked"
+  C22373945:                            # J3 female header
+    lcsc: C41397153                     # HX PM2.54-2x4P TP
+    note: "same land (2.50 x 1.02 mm pads, rows 8.0 mm outer-to-outer); body end view 7.2 vs 7.1 mm"
+power: []                               # calc/buck.py does not apply: it needs a feedback divider, Vref and a routed pcb; the TPS63900 is set by CFG resistors. Circuit checks: calc/tree_power.py (inputs below)
+
+design:                                 # inputs of calc/power_budget.py: each {value, source}. Currents are AT THE CELL; calc/tree_power.py recomputes and cross-checks them
+  cell:
+    cell_mah: {value: 1250, source: "R3.2: 2 x AAA alkaline IN SERIES: the pack capacity is that of one cell, 1250 mAh (not 2500). Energizer EN92 p1: about 1280 mAh at 10 mA to 0.8 V/cell, 1210 mAh at 25 mA (bar chart, read from the image: EST)"}
+    vcutoff_firmware_v: {value: 2.0, source: "assumption: firmware cut-off 1.0 V per cell (FIRMWARE-RULES.md to confirm); keeps the pack above the TPS63900 recommended VI minimum 1.8 V (6.3) after the path drop"}
+  buckboost:
+    path_r_ohm: {value: 0.86, source: "calc/tree_power.py: P-FET 0.20 ohm (SI2301CDS Rds(on) at Vgs -1.8 V, EST) + holder contacts 0.06 ohm (BH-AAA drawing: 30 mohm max each, 2) + 2 cells x 0.30 ohm (Energizer EN92 nominal IR 150-300 mohm fresh; aged cells are higher: UNVERIFIED)"}
+    vin_min_v: {value: 1.8, source: "TPS63900 SLVSET3D 6.3 Recommended Operating Conditions, VI minimum"}
+  load:
+    peak_a: {value: 0.1, source: "TPS63900 average input current limit 100 mA setting (CFG2 10.5 kohm, Table 7-2); the 0.51 A inductor peak is supplied by the 10 uF input capacitor"}
+  cycle:                                # esp_* = the effects window of this board (name fixed by power_budget.py); no sensor
+    period_s: {value: 86400, source: "one day"}
+    esp_active_s: {value: 39600, source: "R3.1: effects 16:00-24:00 and 06:00-09:00 = 11 h"}
+    esp_active_ma: {value: 4.086, source: "calc/tree_power.py 'effects window at the cell': (LED 2.0 + nRF 0.58) mA x 3.5 V / (2.6 V x 0.85)"}
+    sensor_on_s: {value: 0, source: "no sensor on this board"}
+    sensor_ma: {value: 0, source: "no sensor on this board"}
+    sleep_ua: {value: 5, source: "R3.3 (assumption A in REQUIREMENTS.md section 8): whole board below 5 uA at 3.0 V"}
+    autonomy_days_min: {value: 35, source: "R3.2 FAIL threshold (assumption A); the requirement text says 40 days"}
+  sleep:
+    vcell_v: {value: 3.0, source: "R3.3 condition (at 3.0 V)"}
+    buckboost_eff: {value: 0.70, source: "TPS63900 Figure 8-7 (page 23): about 70-85 % at 1-10 uA, low end taken (graph read: EST); only used by power_budget for rail 3v3 loads, none are declared that way"}
+    loads:                              # all at the cell (rail: cell); each recomputed by calc/tree_power.py
+      nrf: {ua: 2.143, rail: cell, source: "calc/tree_power.py: nRF54L15 System ON idle GRTC + LFXO 1.5 uA at 3 V (PS HTML summary, UNVERIFIED) x 3.0 V / (3.0 V x 0.70)"}
+      tps63900: {ua: 0.075, ua_max: 1.0, rail: cell, source: "TPS63900 SLVSET3D 6.5 Iq into VIN typ 75 nA, max 1 uA"}
+      divider: {ua: 1.5, ua_max: 1.53, rail: cell, source: "R40 + R41 = 1 M + 1 M unswitched across the cell: 3.0 V / 2 Mohm (calc/tree_power.py); a switched divider (VBAT_DIV_EN, P2.02) removes it"}
+
+tree_power:                             # inputs of calc/tree_power.py; each {value, source}
+  supply:
+    vdd_lit_v: {value: 3.5, source: "R3.5, TPS63900 VO(2) preset (RCFG1 511 ohm + RCFG2 10.5 kohm, Table 7-2)"}
+    vdd_idle_v: {value: 3.0, source: "R3.5, VO(1) preset (RCFG3 13.3 kohm, Table 7-3)"}
+    vout_tol_pct: {value: 1.5, source: "TPS63900 SLVSET3D 6.5 output voltage DC accuracy +-1.5 %"}
+    nrf_vdd_max_rec_v: {value: 3.6, source: "nRF54L15 recommended VDD maximum (PS HTML summary, UNVERIFIED)"}
+    nrf_vdd_abs_max_v: {value: 3.9, source: "nRF54L15 absolute maximum VDD (PS HTML summary, UNVERIFIED)"}
+    cell_min_v: {value: 1.8, source: "R3.4 variant A pack range 1.8-3.2 V"}
+    cell_max_v: {value: 3.2, source: "R3.4 variant A pack range 1.8-3.2 V"}
+    cell_cutoff_v: {value: 2.0, source: "same assumption as design.cell.vcutoff_firmware_v"}
+    uvlo_falling_v: {value: 1.65, source: "TPS63900 6.5: VIT+(UVLO) 1.75 V typ - Vhys 100 mV typ (derived, not printed)"}
+    uvlo_rising_max_v: {value: 1.77, source: "TPS63900 6.5 VIT+(UVLO) max"}
+    vin_min_rec_v: {value: 1.8, source: "TPS63900 6.3 VI minimum"}
+  fet:
+    rds_on_ohm_at_vgs_min: {value: 0.20, source: "SI2301CDS Vishay 68741: -2.5 V max 0.142 ohm (page 2); -1.8 V not tabulated, graph-read typ 0.13 ohm, 0.20 ohm assumed as max (EST, card)"}
+    vgs_th_max_v: {value: 1.0, source: "SI2301CDS page 2 VGS(th) -0.4 to -1.0 V"}
+    vgs_max_v: {value: 8, source: "SI2301CDS page 1 VGS +-8 V"}
+  loads:
+    i_avg_a: {value: 0.04, source: "job brief: 40 mA average draw from the cell in the effects window (LED 2 mA + nRF through the boost at the lowest cell voltage is about 4-6 mA; 40 mA is the margin case)"}
+    i_start_peak_a: {value: 0.5, source: "job brief: 500 mA start-up peak case (TPS63900 peak limit during start-up 0.35-0.83 A, card 6.5)"}
+  path:
+    contact_ohm: {value: 0.06, source: "BH-AAA-B5AA001 drawing note 2a: contact resistance 30 mohm max, two contacts in the path"}
+    cell_esr_ohm_total: {value: 0.6, source: "Energizer EN92 p1 nominal IR 150-300 mohm fresh, 2 cells x 0.3 ohm; aged cells higher (not stated): UNVERIFIED"}
+  charger:                              # variant B only, listed for the check (D10: DNP in the first order)
+    vbus_max_v: {value: 5.25, source: "USB 5 V +5 % (USB specification, not in the MCP73831 sheet)"}
+    vpth_min_v: {value: 2.69, source: "MCP73831 DS20001984H 1.0: VPTH min 64 % x VREG 4.20 V (card)"}
+    ireg_max_a: {value: 0.110, source: "MCP73831 1.0: IREG max 110 mA with PROG = 10 kohm"}
+    rth_ja_c_per_w: {value: [130, 230], source: "MCP73831 1.0 thermal characteristics, SOT-23-5 large copper / minimum copper"}
+    ta_max_c: {value: 40, source: "R1.2 indoor 0-40 C"}
+    tj_regulation_c: {value: 150, source: "MCP73831 4.10 thermal regulation"}
+  header:
+    female_h_mm: {value: 8.5, source: "HC-PM254-8.5H-2x4PS drawing (card)"}
+    female_tol_mm: {value: 0.15, source: "same drawing, side view 8.50 +-0.15"}
+    male_plastic_top_mm: {value: 3.2, source: "Boom C192300 drawing '3.20 +-0.2' (card: interpretation UNVERIFIED)"}
+    male_tol_mm: {value: 0.2, source: "same drawing"}
+    board_gap_mm: {value: 12.0, source: "D3: 12 mm nylon F-F standoffs"}
+    gap_tol_mm: {value: 0.1, source: "assumption: nylon standoff length tolerance (no datasheet: UNVERIFIED)"}
+    pin_above_plastic_mm: {value: 6.0, source: "Boom C192300 drawing 6.00 +-0.2"}
+  tps:
+    cout_nominal_uf: {value: 22, source: "TPS63900 8.2.2.3"}
+    cout_tol_up_pct: {value: 20, source: "TPS63900 Table 8-1 footnote: effective capacitance +20 % / -50 %"}
+    idle_load_ua: {value: 1.5, source: "rail-side load that discharges Cout after SEL goes low: nRF54L15 System ON idle 1.5 uA (PS HTML summary, UNVERIFIED); the battery divider hangs on the cell, not on VDD"}
+    dv_v: {value: 0.5, source: "VO(2) - VO(1) = 3.5 - 3.0 V"}
+    dvs_step_v: {value: 0.1, source: "TPS63900 7.3.5: 100 mV steps"}
+    tw_dvs_us_max: {value: 150, source: "TPS63900 6.5 tw(DVS) max"}
+    td_sel_us_max: {value: 40, source: "TPS63900 6.5 td(SEL) max"}
+  inductor:
+    tps_isat_a: {value: 1.85, source: "Sunlord SWPA252012S2R2MT catalogue page 3 Isat (card)"}
+    tps_peak_a_max: {value: 0.51, source: "TPS63900 6.5 peak current limit, 100 mA setting, max"}
+    tps_isat_required_a: {value: 1.0, source: "TPS63900 6.3 ISAT for settings <= 100 mA"}
+    nrf_l1_isat_est_a: {value: 0.25, source: "Sunlord MPL2012S4R7MHT page 3 inductance-vs-current graph, 4R7 H curve, about -30 % at 250-300 mA (EST: graph read; the table gives only Ir 800 mA heating)"}
+    nrf_dcdc_peak_a: {value: null, source: "nRF54L15 PS DC/DC peak coil current: not read (PS PDF unavailable)"}
+  effects:
+    led_avg_ma: {value: 2.0, source: "R3.2: LED average capped by firmware at about 2 mA (at the 3.5 V rail)"}
+    nrf_ma: {value: 0.58, source: "assumption: 0.55 mA constant-latency/HF clock for the scan timer (nRF54L15 PS HTML summary, UNVERIFIED) + 0.03 mA BLE advertising average (assumption)"}
+  cell:
+    vcell_avg_v: {value: 2.6, source: "assumption: 1.3 V/cell mean over life at a few mA (Energizer EN92 p1 'Remote' and 'Light' discharge curves, read from the image: EST)"}
+    eff_lit: {value: 0.85, source: "TPS63900 Figure 8-7 (page 23): 85-92 % at 3.3 V out, 100 uA-100 mA, low end taken; no curve for 3.5 V out or for boost from 2.6 V (EST)"}
+    hours_lit: {value: 11, source: "R3.1"}
+    cell_mah: {value: 1250, source: "R3.2 (see design.cell)"}
+    usable_frac: {value: 0.8, source: "fixed 80 % in calc/power_budget.py (autonomy = 0.8 x capacity / average): assumption. Energizer EN92 gives about 1280 mAh at 10 mA to 0.8 V/cell; the firmware cut-off is higher (1.0 V/cell), so the usable capacity is below that: 80 % of the 1250 mAh label is plausible but not a datasheet value"}
+  sleep:
+    vcell_v: {value: 3.0, source: "R3.3 condition"}
+    eff: {value: 0.70, source: "TPS63900 Figure 8-7 low end at 1-10 uA (EST)"}
+    nrf_ua: {value: 1.5, source: "nRF54L15 System ON idle, GRTC + LFXO, 64 kB RAM retained, 3 V DC/DC (PS HTML summary, UNVERIFIED); 128 kB would be 1.9 uA"}
+    tps_iq_ua: {value: 0.075, source: "TPS63900 6.5 typ"}
+    tps_iq_max_ua: {value: 1.0, source: "TPS63900 6.5 max"}
+    divider_ohm: {value: 2000000, source: "R40 + R41 (ARCHITECTURE.md VBAT_SENSE 1M/1M)"}
