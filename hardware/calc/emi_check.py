@@ -5,7 +5,8 @@ Reads <board>/board.yaml, critical.yaml, <board>/emi.yaml (else critical.yaml em
               plug orientation, series resistor bodies count equally), stub lengths and skew, vias, spacing of every
               other net's tracks/vias to the pair (outside rule area `fanout_area`), other copper crossing under/over
               the main run (plan view, any layer), the pair's stub round trip against the edge time
-  edge        GND via fence along the board edge: largest gap between neighbouring vias (exempt spans: hole and antenna
+  edge        (emi.yaml `edge_fence: false` + `edge_fence_reason` skips it on a board with no GND net)
+              GND via fence along the board edge: largest gap between neighbouring vias (exempt spans: hole and antenna
               rule areas and critical.yaml emi.edge_exempt rectangles), limit emi.edge_pitch_mm (REQUIREMENTS E2)
   antenna     tracks or vias inside the antenna rule area (emi.antenna_area), copper above the top edge
   planes      signal tracks over a void of their reference plane (F.Cu -> In1, B.Cu -> In2): longest continuous run
@@ -251,6 +252,8 @@ def check_pair(b, e, emi):
 
 
 def check_edge(b, emi):
+    if emi.get("edge_fence") is False:      # opt-out for a board with no GND net (emi.yaml: edge_fence: false + reason); default unchanged
+        return [row(True, "edge GND fence", "not applicable: " + str(emi.get("edge_fence_reason", "board has no GND net")))]
     x0, y0, x1, y1 = b.box
     lim = emi.get("edge_pitch_mm", 5.0)
     band = emi.get("edge_band_mm", 1.6)

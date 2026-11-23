@@ -1,10 +1,14 @@
 # Critical blocks, declared by intent; checked by calc/critical.py (--placement before routing). Pins are REF.PAD from the
 # generated netlist; distances in mm. Limits are design targets unless a source is named. `known:` on an entry turns a
 # FAIL into a WARN with the reason. EMI settings live in emi.yaml (critical.py rejects an unknown top-level key).
-# Empty on purpose: the template's example entries (U1/C1 refs, USB pair) are removed. This board has NO USB pair (LED board: 8 LEDs and
-# the header, no USB at all), so calc/impedance.py has nothing to check and needs no USB net class.
-# The entries for the real blocks (there is no regulator or IC on this board: likely none beyond the header and LED lines) are added by the layout builder once the
-# schematic netlist exists: entry forms: .claude/skills/hw-base/templates/critical.yaml.
+# Entries by intent (gate 5, 2026-11-23): board B has no regulator, IC, sensor, USB pair or series part, so none of the six constraint
+# types of calc/critical.py (switcher_loop, feedback, decoupling, series_termination, diff_pair, thermal_distance) has anything to
+# check, and an entry with invented refs would be a false check. The constraints that DO exist on this board are enforced elsewhere:
+#   antenna keep-out (no copper on any layer under the tip): KiCad rule area `antenna_keepout` (DRC) + calc/emi_check.py "antenna
+#     strip" row (antenna_area in emi.yaml) + `python3 hardware/gen/tree_b_pcb.py --proof` (rule area on 4 copper layers);
+#   header J4 position, rotation and the 8 line nets, LED positions and rotation: tree_b_pcb.py --proof against tree_geometry /
+#     tree_common (pad positions, nets, mating with J3 by position), and hw-check hook 45 (tree_geometry --check);
+#   LED lines: routed, DRC clean, no via in an SMD pad (custom DRC rule + the router's masks).
 switcher_loop: []        # {name, cin, vin, gnd, max_mm, sw, inductor, sw_max_mm}
 feedback: []             # {divider, pin, max_mm}; none: the TPS63900 is set by CFG resistors, there is no FB divider
 decoupling: []           # {pin: "U1.<pad>", cap: "C<n>.1", max_mm}

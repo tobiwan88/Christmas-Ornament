@@ -1,13 +1,17 @@
-# Settings of calc/emi_check.py (diff pair, edge fence, antenna, planes, loops, parallel runs). Each limit names its source.
-# Template placeholders removed: no USB pair on this board (no pair_* keys), no switch-node net or "NET*/SW*" parallel rule declared yet.
-# No antenna, regulator or switch node on this board; the layout builder adds edge_exempt rectangles (holes, header) with the routed board.
-# Numeric settings below are emi_check.py's own defaults, written out so a reader sees them (no board-specific source yet).
-edge_pitch_mm: 5.0          # GND via fence along the board edge: largest gap between neighbouring vias
+# Settings of calc/emi_check.py for tree-b (LED board: 8 LEDs, header J4, lines LED_L1..LED_L8, no ground net, no IC, no switch node,
+# no USB pair). Rows that make sense here: antenna strip (nothing in the antenna keep-out), and the plane row switched off below.
+antenna_area: antenna_keepout   # rule area written by gen/tree_b_pcb.py (tree_geometry.antenna_keepout_polygon, all 4 copper layers)
+# GND via fence and plane void rows: board B has no ground net (D13: the header carries 8 LED lines only), its inner layers are
+# copper-free (BOARD.md Floorplan), so there is no fence to build and no reference plane to void.
+edge_fence: false
+edge_fence_reason: "board B has no GND net and no ground plane (D13, BOARD.md Floorplan); the 8 LED lines are slow PWM lines driven through 22 ohm on board A"
+plane_ref: {}                   # no reference plane layers: the planes row skips every track
+edge_pitch_mm: 5.0
 edge_band_mm: 1.6
-void_max_mm: 1.0            # longest signal run over a plane void
+void_max_mm: 1.0
 loop_max_mm: 12.0
-sw_nets: []                 # switch-node nets (full KiCad names)
+sw_nets: []                     # no switch node on this board
 sw_area_max_mm2: 3.0
-parallel: []                # {name, victims: [net globs], aggressors: [net globs], gap_mm, max_mm}
-edge_exempt: []             # rectangles with a reason: antenna, holes, overhangs, module pad columns, corners
-known: []                   # row + reason + the fix for next time
+parallel: []                    # the 8 lines are all LED drive lines of one class: no victim / aggressor pair on this board
+edge_exempt: []
+known: []

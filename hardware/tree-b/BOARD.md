@@ -31,22 +31,58 @@ Command: `python3 hardware/calc/bom_check.py hardware/tree-b --stock --qty 5` (n
 | Loading fee, J4 (C192300) only; the LED C965834 is already counted on tree-a | 1.53 | 0.31 | `fab.extended_fee_usd` |
 | B's share of the panel, PCB, shipping | ? | ? | manual quote for the panel (../ORDER.md), not split per board |
 
-## Layout
-Floorplan with citations: antenna, USB, sensors vs heat, connectors, ESD, thermistor. Area share. Stack notes.
+## Floorplan (gate 4; every position comes from `gen/tree_geometry.py`, which imports `gen/tree_outline.py`; nothing is copied)
+Layout status 2026-11-23: placed, routed, DRC 0 at all severities with schematic parity, 0 unconnected; details under Routing review.
+| Item | Rule | Source |
+|---|---|---|
+| Outline, Ø1.4 hanging hole, M2 holes (10.7, 71.0) / (59.3, 71.0) Ø2.2, NPTH, no copper | same on A and B | `tree_outline.holes_for_board`, D17 |
+| Antenna keep-out (top 17 mm of the tip) | no tracks, vias, pads or pours on all 4 copper layers: rule area `antenna_keepout` | `tree_geometry.antenna_keepout_polygon`, A's keep-out; D12 |
+| M2 screw head / standoff ring Ø5 | rule area `hole_h_mount1/2`, no tracks or vias (nylon, so only a mechanical margin) | `tree_outline.MOUNT_KEEPOUT_D` |
+| LEDs D1-D8, F.Cu, rotation 0 | positions from `tree_geometry.LED_XY`: D1 (35, 17.85) .. D8 (53, 68); D1 pad edge 0.225 mm below the keep-out line | D8, D27 |
+| J4 (B.Cu, file orientation 180) at (35, 33) | the J4 trap in the `tree_geometry` docstring: pads are written at (px, -py), orientation 0 would swap all 8 lines; proved by `--proof` and `tree_geometry --kicad-proof` | D14, D24, D27 |
+| Silk | LED designators and pin-1 dots from the footprints (F.SilkS 0.8 mm, stroke 0.15), J4 on B.SilkS, board name and `${GIT_SHA}` on B.SilkS (inner face, 1.0 mm) | `rules/jlc-4layer.json` text 0.8 / 0.15 |
+| Fiducials, tooling holes | the panel's job (`../panel/`) | D1, D17 |
+Area: courtyards of LEDs and J4 are 4 % of the 2966 mm2 board; routing is the only constraint.
+
+Inner layers In1 / In2 (answer to the open question, decision for the engineer): board B has no ground net in its schematic (D13, the header carries 8 LED lines, no supply, no ground), so a `GND` plane would be an orphan net with no pad on it.
+| Option | What it is | Check | Cost / risk |
+|---|---|---|---|
+| none (built, default) | In1 and In2 carry no copper; the stackup stays 4-layer JLC04101H-7628 1.0 mm for the panel | DRC 0, emi_check OK (no plane row to check) | JLC accepts empty inner layers on a 4-layer board in general (UNVERIFIED for this fab and thickness: ask in the panel quote); inner copper balance of the panel is then A's alone |
+| floating (`tree_b_pcb.py --inner floating`) | one net-less pour on each inner layer, cut out at the antenna keep-out, 0.5 mm back from the outline and holes | DRC: 2 warnings `isolated_copper` (needs 2 waivers in drc-waivers.csv with a reason) | copper balance for the panel; a floating 60 x 70 mm sheet 12 mm under A's radio is an uncontrolled parasitic conductor beside the antenna (not simulated), and it carries no return path for anything |
+| GND net (not built) | a real net: needs a pad on the schematic (netlist change: engineer) | n/a | ground on the header would need a header pin: no pin left (8 of 8 are lines) |
+Recommendation: none. For the panel builder: the panel has one stackup; B's inner layers being empty is the only difference to A in the stackup; if JLC objects on copper balance, switch to floating and waive the two warnings. `board.yaml` `stackup.layers` still says `role: plane, net: GND` for In1/In2 (not this job's key): it should read `role: unused` / no net for B; `calc/impedance.py` does not run on this board.
 
 ## Routing
-What is hand-drawn, what the router did, frozen routes, build and reproduce commands.
+Router: `gen/tree_b_route.py` (own grid router, 0.05 mm grid, 45 degree moves, C A* in `gen/tree_b_astar.c` compiled on demand with `cc`), result frozen in `frozen-routes.json` (board coordinates) and replayed as LOCKED copper by `gen/tree_b_pcb.py`, so a rebuild is identical. The kit's KiCadRoutingTools (hardware/.tools, trial 2026-11-23, 0.2 mm tracks, 0.6/0.3 vias) left 3 of 8 nets open and used 33 vias with wobbling tracks, so it is not used for this board.
+- Hand-drawn: none. Fixed by rule in the router: every LED pad has a 1.3 mm F.Cu stub to a dog-bone via (pads 1 and 3 leave left, 2 and 4 right; the pads are 0.45 mm with 0.35 mm gaps, nothing fits between them), so every pad can be reached on both layers; 17 of these 32 dog-bone vias carry copper on B.Cu and stay (plus 9 router vias = 26), the rest are dropped (a via with copper on one layer only is a DRC warning).
+- Net order and the 40 trials are seeded (`--seed 3`); the committed result is trial 34 of that run (best length + 6 mm per via).
+- Rules used: track 0.25 mm (class Default 0.15 mm in board.yaml is the GUI default; widths here are the router's, proposal: class Default track 0.25), clearance 0.15 mm (fab floor 0.127), via 0.6 / 0.3 mm (floor 0.45 / 0.2), copper to edge >= 0.3, via to edge 0.35 (custom rule), hole to hole 0.5.
+- Layers: F.Cu and B.Cu only; In1 / In2 stay empty.
 
-## Routing review (date)
-Pair numbers, loops, areas, plane voids, edge gaps, detours accepted, fab-floor tracks/vias, residual risks, where to look first.
+## Routing review (2026-11-23)
+Numbers from `frozen-routes.json` and KiCad DRC; no pair, loop or switch-node rows exist on this board.
+- Copper: 182 tracks, 26 vias (all 0.6 / 0.3), 621.7 mm of track, all 0.25 mm. Per line (length mm F.Cu / B.Cu, vias): L1 5.2 / 66.6, 4; L2 9.9 / 61.9, 4; L3 58.3 / 24.7, 4; L4 65.0 / 1.0, 1; L5 38.7 / 30.7, 3; L6 62.4 / 15.2, 4; L7 5.2 / 77.4, 4; L8 70.8 / 28.9, 2.
+- Longest line L8 99.7 mm, shortest L4 66.0 mm: slow PWM lines (22 ohm on A), so length is no issue; the detours come from the charlieplex crossings (every line meets 4 LEDs spread over the whole tree).
+- Edge: nearest track edge to the outline 0.374 mm (rule 0.3); nearest copper to the antenna keep-out line: D1's top pads / stubs at y = 17.45 (track centre) and via edge 17.15 mm (line at 17.0), nothing inside the keep-out (DRC rule area, emi_check antenna strip OK).
+- Planes: none (inner layers empty, see Floorplan), so there is no return-path row; the lines are single-ended, slow, with the return on board A's ground through the pins of the LED drivers: nothing to check on B.
+- J4: its 8 pads go to the lines by 8 tracks on B.Cu leaving through the 5 mm gap between the pad columns and past the outer pad ends; pin map proved by `tree_b_pcb.py --proof` (mating with J3 by position, 8 of 8).
+- Checks run (2026-11-23): `kicad-cli pcb drc --severity-all --schematic-parity --refill-zones`: 0 violations, 0 unconnected, 0 parity; `calc/critical.py` OK (no entries apply, see critical.yaml); `calc/emi_check.py` OK (antenna strip; GND fence and plane rows are not applicable, `edge_fence: false`, `plane_ref: {}`); `calc/track_width.py` OK (no current class); `gen/tree_split_check.py` OK; `tree_geometry.py --kicad-proof` OK; `tree_b_pcb.py --proof` OK; build twice identical.
+- Residual risks (bench or fab): (1) fab capability for 0.25 / 0.15 and 0.6 / 0.3 is well above the floors, but the rule floors file is UNVERIFIED against the fab page for 1.0 mm; (2) 26 vias are tented, no via in a pad; (3) the A/B pair D(n)/D(n+8) sits back to back: vias of B are on B's F/B copper, not A's, no interaction; (4) inner layers empty: ask JLC (UNVERIFIED); (5) silk `${GIT_SHA}` is replaced by the fab package.
+- Look first at: `layer_F.png` and `layer_B.png` around D1 (keep-out edge) and the J4 pads, the tight loops round D1 and D6, and the via row next to D3.
 
 ## Commands
 ```
-hardware/tools/build_tree_b.sh          # symbols + footprints + gen/tree_b.py (ERC, net intent, review, PNGs, BOM) + split check
-.venv/bin/python hardware/gen/tree_b.py  # schematic only (after `source scripts/kicad-env.sh`)
+hardware/tools/build_tree_b.sh                      # schematic (ERC, net intent, BOM) first; the layout needs tree-b.kicad_sch and netlist.csv
+.venv/bin/python hardware/gen/tree_b_pcb.py          # board: tree-b.kicad_pcb, .kicad_pro, .kicad_dru (frozen routes replayed, locked)
+.venv/bin/python hardware/gen/tree_b_pcb.py --check  # build twice, same hash
+.venv/bin/python hardware/gen/tree_b_pcb.py --inner floating --out DIR   # the other inner-layer option, into DIR (not the repo)
+source scripts/kicad-env.sh; $KICAD_PYTHON hardware/gen/tree_b_pcb.py --proof hardware/tree-b/tree-b.kicad_pcb   # pcbnew vs tree_geometry
+kicad-cli pcb drc --format json --severity-all --schematic-parity --refill-zones -o hardware/out/drc-tree-b.json hardware/tree-b/tree-b.kicad_pcb
+# re-route on purpose (about 3 minutes, needs cc; the result replaces frozen-routes.json, then rebuild and run DRC):
+.venv/bin/python hardware/gen/tree_b_route.py --trials 40 --seed 3 --track 0.25 --via 0.6 0.3 --write
+.venv/bin/python hardware/gen/tree_b_render.py       # PNGs in hardware/out/review/tree-b-pcb/ (F.Cu, B.Cu, In1, In2, composite, regions)
 python3 -I hardware/gen/tree_split_check.py [--selftest]
-<build board>   <route>   <freeze>
-python3 hardware/calc/critical.py hardware/tree-b [--placement]
+python3 hardware/calc/critical.py hardware/tree-b
 python3 hardware/calc/emi_check.py hardware/tree-b
 python3 hardware/calc/bom_check.py hardware/tree-b [--strict] [--stock --qty N]
 scripts/hw-check.sh
@@ -55,4 +91,4 @@ scripts/hw-check.sh
 ## Pitfalls specific to this board
 - J4 sits on B.Cu: KiCad mirrors it, so J4 pin 1 touches J3 pin 2 (LED_L8). The schematic pin map follows `tree_common.j4_pin_net()`; do not "fix" it to match J3 pin numbers.
 - J4 plastic height 3.2 mm and its pad width are readings of the Boom drawing (UNVERIFIED, PARTS-REVIEW B1/B2).
-- Fab footprint fit (`fab_package.py --fit-only`) runs only after the board file exists (gate 4).
+- Fab footprint fit (`fab_package.py --fit-only`, now with a mirrored fit for bottom parts, see report 2026-11-23) needs the EasyEDA footprints in `hardware/out/fab/easyeda/` (fetched once without `--offline`; empty in a clean checkout, then the gate prints MISSING and passes). With them fetched (2026-11-23) it FAILS for tree-b: (1) the 8 LEDs, C965834: the fab footprint numbers its pads 1 top-left, 2 bottom-left, 3 bottom-right, 4 top-right at 0.63 mm pitch, ours follows the maker datasheet (1 R top-left, 2 G top-right, 3 A bottom-left, 4 B bottom-right, 0.8 mm pitch, DS-A1): worst pad 0.72 mm; assembly places by the package, but a human must confirm the LED orientation against the mark and add a `GEOMETRY_OK` entry or fix the land (gate 6, engineer); (2) J4, C192300: the fab footprint has its pads 5.6 mm apart across (y +-2.8) and rotated 90 degrees against our 7.0 mm centres (maker drawing 9.0 mm overall, 2.0 mm pads; PARTS-REVIEW B1/B2): worst pad 0.705 mm; settle the real land (maker drawing vs the fab part) before the order.

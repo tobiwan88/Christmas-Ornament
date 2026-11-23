@@ -207,23 +207,27 @@ def fit(kicad: list[tuple[str, float, float]], eda: list[tuple[str, float, float
     return deg, cx, cy, err, fits[1][0]
 
 
-def placements(parts: list[dict], offline: bool) -> tuple[list[list[str]], list[str], bool]:
+def placements(parts: list[dict], offline: bool, fit_only: bool = False) -> tuple[list[list[str]], list[str], bool]:
     rows, report, ok = [], [], True
     for p in parts:
         if not p["lcsc"] or p["dnp"] or p["exclude_bom"]:
             continue
-        if p["side"] != "Top":
-            sys.exit(f"{p['ref']}: assembled part on the bottom: not handled (mirrored EasyEDA fit)")
+        bottom = p["side"] != "Top"
+        if bottom and not fit_only:      # fit-only (gate) mode below checks the land pattern; the CPL row of a bottom part is not written
+            sys.exit(f"{p['ref']}: assembled part on the bottom: CPL rows for bottom parts are not handled (rotation and mirror "
+                     "convention of the fab's bottom-side placement not verified); run --fit-only for the land fit")
         if offline and not (CACHE / p["lcsc"] / "component.json").exists():
             report.append(f"MISSING {p['ref']:5} {p['lcsc']:10} no cached fab footprint: run once without --offline")
             continue
         title, eda = easyeda_pads(p["lcsc"], offline)
+        if bottom:                       # the EasyEDA footprint is drawn from the top: a bottom part shows it mirrored in x
+            eda = [(n, -x, y) for n, x, y in eda]
         kicad = [(q["num"], q["x"], q["y"]) for q in p["pads"]]
         knum, enum = set(centres(kicad)), set(centres(eda))
         by_number = (knum == enum or (len(knum & enum) >= 2 and knum & enum == knum)) and p["lcsc"] not in GEOMETRY_OK
         deg, cx, cy, err, next_err = fit(kicad, eda, by_number)
         corr = round(deg - p["rot"]) % 360
-        how = "numbers" if by_number else "geometry"
+        how = ("numbers" if by_number else "geometry") + (" bot" if bottom else "")
         # OK: every pad within FIT_TOL_MM. LAND: the two libraries draw the lands differently (pad length, odd corner
         # pads) but the rotation is unambiguous (the next-best angle is clearly worse) and no pad is off by more than
         # LAND_TOL_MM; the centre is the least-squares fit of all pads.
@@ -241,7 +245,8 @@ def placements(parts: list[dict], offline: bool) -> tuple[list[list[str]], list[
                       f"{how:8} rot {deg:3} (KiCad {p['rot']:g}, corr {corr:3}) "
                       f"offset {math.dist((cx, cy), (p['x'], p['y'])):.2f} mm, worst pad {err:.3f} mm (next angle {next_err:.2f})")
         # JLC's CPL takes KiCad's position-file convention: y up (negated board y), angle counter-clockwise
-        rows.append([p["ref"], f"{cx:.4f}mm", f"{-cy:.4f}mm", "Top", f"{deg % 360}"])
+        if not bottom:
+            rows.append([p["ref"], f"{cx:.4f}mm", f"{-cy:.4f}mm", "Top", f"{deg % 360}"])
     return rows, report, ok
 
 
@@ -281,7 +286,7 @@ def main() -> None:
             subprocess.run([py, str(ROOT / "hardware/tools/pcb_parts.py"), str(pcb), str(tmp / "parts.json")],
                            check=True, capture_output=True)
             parts = json.loads((tmp / "parts.json").read_text())
-        rows, report, ok = placements(parts, "--offline" in flags)
+        rows, report, ok = placements(parts, "--offline" in flags, fit_only)
         if fit_only:  # gate mode (scripts/hw-check.sh): fit report only, no files written
             print("\n".join(r for r in report if not r.startswith("OK ")) or f"{pcb.stem}: all {len(rows)} placements fit")
             print(f"placement fit {pcb.stem}: {'OK' if ok else 'FAILED'}")

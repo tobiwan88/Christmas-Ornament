@@ -567,7 +567,11 @@ def main():
     ap.add_argument("--no-routes", action="store_true")
     ap.add_argument("--router-input", action="store_true", help="add the User.2 keep-out polygons KiCadRoutingTools reads")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--inner", choices=("none", "floating"), help="inner layers: no copper (default) or a net-less pour on In1/In2")
     a = ap.parse_args()
+    global INNER_PLANES
+    if a.inner:
+        INNER_PLANES = a.inner
     if a.proof:
         sys.exit(0 if proof(a.proof) else 1)
     routes = None if a.no_routes else load_routes()
