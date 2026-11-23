@@ -62,7 +62,7 @@ def leds_sheet():
     s = ts.Draw("leds", f"{NAME}.kicad_sch", sheet_parts(), note="RGB LEDs D1-D8 (outer face) and header J4 to board A",
                 project=NAME, title="tree-b: LEDs D1-D8 and header J4 (whole board)")
     s.text(6, 4, "TREE-01 board B (tree-b): LED board, 4 layers, outer face (F.Cu) = LEDs D1-D8, inner face (B.Cu) = J4. "
-                 "No power circuit:\nthe 8 lines LED_L1..LED_L8 come from board A through J4 (mates J3 on A, D3/D14); "
+                 "No power circuit: the 8 lines LED_L1..LED_L8 come from board A through J4 (mates J3 on A, D3/D14); "
                  "board A drives them (GPIO -> 22R -> J3).", 1.5)
     for i, ref in enumerate(LEDS_B):
         x, y = 18 + 26 * (i % 2), 18 + 8 * (i // 2)
@@ -73,9 +73,12 @@ def leds_sheet():
     s.tag("J4", reference=(1.27, -10.2), value=(1.27, -8.0), just="center")
     for p, net in J4_NETS.items():
         s.lab("J4", str(p), net, 3, kind="local")
-    s.text(82.4, 17.15, "pin 1 v", 1.0)
-    s.frame(6, 12, 60, 50, "RGB LEDs D1-D8 (XL-1010RGB-YG, common anode)")
-    s.text(7, 47, "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board B: R on a+2, G on a+3, B on a+7 (tree_common.LED_MATRIX).", 1.0)
+    px, py = s.at("J4", "1")
+    s.text(px / 2.54 - 3.2, py / 2.54 - 2.2, "pin 1", 1.0)
+    s.text(82.4, 25.0, "View from the top of board A (the F.Cu view of both boards):\nJ4 is on B.Cu, so its pin 1 is top right and touches J3 pin 2.", 1.0)
+    s.frame(6, 12, 60, 55, "RGB LEDs D1-D8 (XL-1010RGB-YG, common anode)")
+    s.text(7, 47, "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board B: R on a+2, G on a+3, B on a+7 (tree_common.LED_MATRIX).\n"
+                  "LED -> (R, G, B cathode line):\n" + ts.led_table(tc, "B"), 1.0)
     s.frame(66, 12, 106, 46, "J4 to board A (D3, D14)")
     pl = [f"{p}={n[4:]}" for p, n in sorted(J4_NETS.items())]
     mates = ", ".join(f"J3.{a}-J4.{b}" for a, b, _, _ in tc.mate_table()[:4])
@@ -83,8 +86,9 @@ def leds_sheet():
                    f"Mirrored by B.Cu: J4 pin n mates J3 pin n+1 (n odd) / n-1\n(n even): {mates}, ...\n"
                    "Net of each pin = net of the J3 pad it touches\n(tree_common.j4_pin_net / mate_table).\n"
                    "No supply, no ground: the lines are the only nets.\nJ4 plastic height 3.2 mm: UNVERIFIED (PARTS-REVIEW B1).", 1.0)
-    s.text(6, 52, "Mounting holes and the outline are board-only (layout generator). Same LED part as board A (one unique "
+    s.text(6, 57, "Mounting holes and the outline are board-only (layout generator). Same LED part as board A (one unique "
                   "Extended part per order).", 1.1)
+    s.raw.append(ts.triangle(px / 2.54, py / 2.54 - 0.7, 270))          # pin 1 marker over pin 1, after the frames so their tint does not cover it (round 2)
     return s
 
 

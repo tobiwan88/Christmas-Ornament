@@ -6,7 +6,6 @@
 	(paper "A3")
 	(title_block
 		(title "tree-a: mcu")
-		(date "2026-11-23")
 		(rev "generated")
 		(company "TREE-01 ornament")
 		(comment 1 "Sheet: mcu")
@@ -2871,7 +2870,7 @@
 		(uuid "393ebd0f-11da-5d34-b5c8-82317f518c6b")
 	)
 	(rectangle
-		(start 251.46 109.22)
+		(start 245.11 109.22)
 		(end 302.26 152.4)
 		(stroke
 			(width 0.3)
@@ -2926,7 +2925,7 @@
 	)
 	(text "pin 47/48"
 		(exclude_from_sim no)
-		(at 136.14 86.36 0)
+		(at 136.14 61.98 0)
 		(effects
 			(font
 				(size 1 1)
@@ -2937,7 +2936,7 @@
 	)
 	(text "pin 47/48"
 		(exclude_from_sim no)
-		(at 123.44 86.36 0)
+		(at 123.44 61.98 0)
 		(effects
 			(font
 				(size 1 1)
@@ -2960,7 +2959,7 @@
 	)
 	(text "P1.09 internal pull-up, wake from\nSystem OFF. R10 1k limits ESD current\ninto the pin (D21)."
 		(exclude_from_sim no)
-		(at 252.73 142.24 0)
+		(at 246.38 142.24 0)
 		(effects
 			(font
 				(size 1 1)
@@ -2982,7 +2981,7 @@
 	)
 	(text "pin 36"
 		(exclude_from_sim no)
-		(at 148.84 86.36 0)
+		(at 148.84 61.98 0)
 		(effects
 			(font
 				(size 1 1)
@@ -3016,7 +3015,7 @@
 	)
 	(text "pin 22"
 		(exclude_from_sim no)
-		(at 161.54 86.36 0)
+		(at 161.54 61.98 0)
 		(effects
 			(font
 				(size 1 1)
@@ -3025,7 +3024,7 @@
 		)
 		(uuid "90d8df8c-e43c-590a-81b7-fd2dc212522a")
 	)
-	(text "No external load caps on X1 / X2 (internal INTCAP): firmware must set INTCAP from CL\n(X2 8 pF, X1 9 pF = the LFXO maximum of 6-9 pF: start-up test at 1.7-3.6 V, PARTS-REVIEW 7).\nUnused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\nVSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\nReset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: Nordic reference schematic v0.8 (L10: same table, UNVERIFIED)."
+	(text "No external load caps on X1 / X2 (internal INTCAP): firmware must set INTCAP from CL\n(X2 8 pF, X1 9 pF = the LFXO maximum of 6-9 pF: start-up test at 1.7-3.6 V, PARTS-REVIEW\n7).\nUnused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a\nGPIO).\nVSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\nReset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: Nordic reference schematic\nv0.8 (L10: same table, UNVERIFIED)."
 		(exclude_from_sim no)
 		(at 236.22 213.36 0)
 		(effects
@@ -3038,7 +3037,7 @@
 	)
 	(text "pin 10"
 		(exclude_from_sim no)
-		(at 174.24 86.36 0)
+		(at 174.24 61.98 0)
 		(effects
 			(font
 				(size 1 1)
@@ -3060,7 +3059,7 @@
 	)
 	(text "SW1 (outer face), R10"
 		(exclude_from_sim no)
-		(at 252.73 110.24 0)
+		(at 246.38 110.24 0)
 		(effects
 			(font
 				(size 1.5 1.5)
@@ -3639,7 +3638,7 @@
 		(uuid "0668b374-dead-56e4-8717-b39720f3b2e1")
 	)
 	(label "BTN_SW1"
-		(at 232.41 124.46 0)
+		(at 246.38 124.46 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5802,25 +5801,25 @@
 		(dnp no)
 		(uuid "a49b6fd5-4541-538b-87d7-f86b9782bde1")
 		(property "Reference" "L1"
-			(at 169.84 109.19 0)
+			(at 165.44 109.19 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 		(property "Value" "4.7uH"
-			(at 169.84 111.79 0)
+			(at 165.44 111.79 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 		(property "Footprint" "Inductor_SMD:L_0805_2012Metric"

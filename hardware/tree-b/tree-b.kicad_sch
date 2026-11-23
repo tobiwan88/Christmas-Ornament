@@ -6,7 +6,6 @@
 	(paper "A3")
 	(title_block
 		(title "tree-b: LEDs D1-D8 and header J4 (whole board)")
-		(date "2026-11-23")
 		(rev "generated")
 		(company "TREE-01 ornament")
 		(comment 1 "Sheet: leds")
@@ -691,9 +690,24 @@
 			(embedded_fonts no)
 		)
 	)
+	(polyline
+		(pts
+			(xy 213.36 46.48) (xy 212.22 43.74) (xy 214.5 43.74) (xy 213.36 46.48)
+		)
+		(stroke
+			(width 0.2)
+			(type solid)
+			(color 200 0 0 1)
+		)
+		(fill
+			(type color)
+			(color 200 0 0 1)
+		)
+		(uuid "30aab659-98e7-5c92-a2b7-6a97ec284a7a")
+	)
 	(rectangle
 		(start 15.24 30.48)
-		(end 152.4 127)
+		(end 152.4 139.7)
 		(stroke
 			(width 0.3)
 			(type dash)
@@ -703,7 +717,7 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "27920797-75dd-5efd-a363-de2bf2fae53e")
+		(uuid "444a1db8-940c-5968-996a-5fbdeb1ea341")
 	)
 	(rectangle
 		(start 167.64 30.48)
@@ -717,21 +731,42 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "6195c154-b8eb-5bda-8b44-9308e8e3f0cb")
+		(uuid "ba41b906-c1f8-5eda-86e7-e2c2acc81ec9")
 	)
-	(text "RGB LEDs D1-D8 (XL-1010RGB-YG, common anode)"
+	(text "Mounting holes and the outline are board-only (layout generator). Same LED part as board A\n(one unique Extended part per order)."
 		(exclude_from_sim no)
-		(at 16.51 31.5 0)
+		(at 15.24 144.78 0)
 		(effects
 			(font
-				(size 1.5 1.5)
-				(bold yes)
+				(size 1.1 1.1)
 			)
 			(justify left top)
 		)
-		(uuid "444a1db8-940c-5968-996a-5fbdeb1ea341")
+		(uuid "21e8a3de-623b-5079-94e8-c3c8d4d614ff")
 	)
-	(text "TREE-01 board B (tree-b): LED board, 4 layers, outer face (F.Cu) = LEDs D1-D8, inner face (B.Cu) = J4. No power circuit:\nthe 8 lines LED_L1..LED_L8 come from board A through J4 (mates J3 on A, D3/D14); board A drives them (GPIO -> 22R -> J3)."
+	(text "View from the top of board A (the F.Cu view of both boards):\nJ4 is on B.Cu, so its pin 1 is top right and touches J3 pin 2."
+		(exclude_from_sim no)
+		(at 209.3 63.5 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "27920797-75dd-5efd-a363-de2bf2fae53e")
+	)
+	(text "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board B: R on a+2, G on a+3, B on a+7\n(tree_common.LED_MATRIX).\nLED -> (R, G, B cathode line):\nD1 (anode L1) -> R L3, G L4, B L8\nD2 (anode L2) -> R L4, G L5, B L1\nD3 (anode L3) -> R L5, G L6, B L2\nD4 (anode L4) -> R L6, G L7, B L3\nD5 (anode L5) -> R L7, G L8, B L4\nD6 (anode L6) -> R L8, G L1, B L5\nD7 (anode L7) -> R L1, G L2, B L6\nD8 (anode L8) -> R L2, G L3, B L7"
+		(exclude_from_sim no)
+		(at 17.78 119.38 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "6195c154-b8eb-5bda-8b44-9308e8e3f0cb")
+	)
+	(text "TREE-01 board B (tree-b): LED board, 4 layers, outer face (F.Cu) = LEDs D1-D8, inner face\n(B.Cu) = J4. No power circuit: the 8 lines LED_L1..LED_L8 come from board A through J4\n(mates J3 on A, D3/D14); board A drives them (GPIO -> 22R -> J3)."
 		(exclude_from_sim no)
 		(at 15.24 10.16 0)
 		(effects
@@ -741,17 +776,6 @@
 			(justify left top)
 		)
 		(uuid "9e5f0937-12f0-5468-821e-28b049ce0306")
-	)
-	(text "J4 male 2x4 SMD (Boom PZ254, C192300), inner face = B.Cu.\nPin=line: 1=L8, 2=L1, 3=L7, 4=L2\n5=L6, 6=L3, 7=L5, 8=L4\nMirrored by B.Cu: J4 pin n mates J3 pin n+1 (n odd) / n-1\n(n even): J3.1-J4.2, J3.2-J4.1, J3.3-J4.4, J3.4-J4.3, ...\nNet of each pin = net of the J3 pad it touches\n(tree_common.j4_pin_net / mate_table).\nNo supply, no ground: the lines are the only nets.\nJ4 plastic height 3.2 mm: UNVERIFIED (PARTS-REVIEW B1)."
-		(exclude_from_sim no)
-		(at 170.18 71.12 0)
-		(effects
-			(font
-				(size 1 1)
-			)
-			(justify left top)
-		)
-		(uuid "b0f2fc89-da25-5fa2-b3dc-4e3e3f50dec5")
 	)
 	(text "J4 to board A (D3, D14)"
 		(exclude_from_sim no)
@@ -763,22 +787,23 @@
 			)
 			(justify left top)
 		)
-		(uuid "ba41b906-c1f8-5eda-86e7-e2c2acc81ec9")
+		(uuid "b0f2fc89-da25-5fa2-b3dc-4e3e3f50dec5")
 	)
-	(text "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board B: R on a+2, G on a+3, B on a+7 (tree_common.LED_MATRIX)."
+	(text "RGB LEDs D1-D8 (XL-1010RGB-YG, common anode)"
 		(exclude_from_sim no)
-		(at 17.78 119.38 0)
+		(at 16.51 31.5 0)
 		(effects
 			(font
-				(size 1 1)
+				(size 1.5 1.5)
+				(bold yes)
 			)
 			(justify left top)
 		)
 		(uuid "c685caef-1bf9-5679-8ee1-2dc97a00bb8b")
 	)
-	(text "pin 1 v"
+	(text "pin 1"
 		(exclude_from_sim no)
-		(at 209.3 43.56 0)
+		(at 205.23 42.67 0)
 		(effects
 			(font
 				(size 1 1)
@@ -787,12 +812,12 @@
 		)
 		(uuid "e59b4050-dfd5-57b7-bf33-644efa12fa68")
 	)
-	(text "Mounting holes and the outline are board-only (layout generator). Same LED part as board A (one unique Extended part per order)."
+	(text "J4 male 2x4 SMD (Boom PZ254, C192300), inner face = B.Cu.\nPin=line: 1=L8, 2=L1, 3=L7, 4=L2\n5=L6, 6=L3, 7=L5, 8=L4\nMirrored by B.Cu: J4 pin n mates J3 pin n+1 (n odd) / n-1\n(n even): J3.1-J4.2, J3.2-J4.1, J3.3-J4.4, J3.4-J4.3, ...\nNet of each pin = net of the J3 pad it touches\n(tree_common.j4_pin_net / mate_table).\nNo supply, no ground: the lines are the only nets.\nJ4 plastic height 3.2 mm: UNVERIFIED (PARTS-REVIEW B1)."
 		(exclude_from_sim no)
-		(at 15.24 132.08 0)
+		(at 170.18 71.12 0)
 		(effects
 			(font
-				(size 1.1 1.1)
+				(size 1 1)
 			)
 			(justify left top)
 		)

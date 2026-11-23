@@ -234,7 +234,9 @@ def power_sheet():
     s.rail("GND", 12, 33, 270)
     s.pflag(12, 32, rot=90)
     s.part("J2", 26, 30)
-    s.tag("J2", reference=(0.5, 8.4), value=(0.5, 10.6))
+    s.tag("J2", reference=(7.0, 3.2), value=(0.5, 10.6))      # reference beside the cross, clear of the NC marker (round 2)
+    s.text(21.3, 28.6, "+", 1.5)                              # pin polarity next to the pins, outside the DNP cross (UNVERIFIED)
+    s.text(21.3, 31.0, "-", 1.5)
     s.wire(("J2", "1"), (22, 30), (22, 20))
     s.wire(("J2", "2"), (23, 31), (23, 33))
     s.rail("GND", 23, 33, 270)
@@ -242,11 +244,15 @@ def power_sheet():
     s.wire(("BT1", "1"), (12, 20), (20, 20), (22, 20), ("Q1", "3"))
     s.wire((20, 20), (20, 18))
     s.rail("BAT", 20, 18, 90)
-    s.pflag(20, 18, rot=180)                 # the cell supplies BAT (ERC power-flag on the rail symbol)
+    s.wire((16, 20), (16, 22))               # the cell supplies BAT: ERC power flag on a short stub, off the BAT arrow
+    s.pflag(16, 22, rot=180, note=(0.9, 0.1))
     # reverse-polarity P-FET: drain to the cell, source to VIN, gate to GND (D7)
     s.part("Q1", 40, 21, rot=90)
     s.tag("Q1", reference=(3.0, 2.6), value=(3.0, 4.6))
     s.pwr("Q1", "1", "GND", 1)
+    for pin, name, dx, dy in (("3", "D", -1.6, -1.2), ("2", "S", 0.5, -1.2), ("1", "G", -1.9, -0.9)):   # pin names (round 2)
+        qx, qy = s.at("Q1", pin)
+        s.text(qx / 2.54 + dx, qy / 2.54 + dy, name, 1.2)
     # VIN: Cin, divider, EN
     s.part("C20", 48, 21.5)
     s.pwr("C20", "2", "GND")
@@ -293,13 +299,13 @@ def power_sheet():
     s.wire(("U2", "6"), (114, 20), (118, 20))
     s.rail("VDD", 118, 20, 90)
     # frames and notes
-    s.frame(4, 13, 36, 47, "Cell input: BT1 2xAAA (variant A) / J2 pouch (variant B)")
+    s.frame(4, 13, 33, 47, "Cell input: BT1 2xAAA (variant A) / J2 pouch (variant B)")
     s.text(5, 37, f"{variant_text('BT1')}; {variant_text('J2')}.\nBT1 pads 3/4 = far-end tabs, joined: series pack.\n"
                   "A reversed BT1 cell or J2 pouch reaches Q1 only:\nVIN and U2, U3, C31, R40 stay at 0 V (D21).\n"
                   "Pad-to-cell mapping and J2 pin 1 = cell +:\nUNVERIFIED (continuity test). BT1 and J1/J2/U3\n"
                   "overlap on the board on purpose (D15).", 1.1)
-    s.frame(36, 13, 46.5, 31, "Q1 (D7)")
-    s.text(36.5, 26.5, "P-FET: D to cell +,\nS to VIN, G to GND.\nReversed cell: VGS 0,\nbody diode blocks.\nCharge (B): S->D,\non (tree_charge_path).", 1.0)
+    s.frame(33, 13, 46.5, 31, "Q1 (D7)")
+    s.text(33.5, 26.5, "P-FET: D to cell +,\nS to VIN, G to GND.\nReversed cell: VGS 0,\nbody diode blocks.\nCharge (B): S->D,\non (tree_charge_path).", 1.0)
     s.frame(46.5, 13, 74, 47, "VIN: Cin, battery sense")
     s.text(47, 32, "C20 10uF: Cin (>= 5 uF effective, 6.3).\n"
                    f"R40/R41 {PARTS['R40']['val']}/{PARTS['R41']['val']} after Q1: VBAT_SENSE\n"
@@ -322,10 +328,11 @@ def charger_sheet():
     s.wire(("J1", "A9"), (26, 27), (44, 27), (54, 27), ("U3", "4"))
     s.wire((26, 27), (26, 25))
     s.rail("VBUS", 26, 25, 90)
-    s.pflag(26, 25, rot=180)                 # USB supplies VBUS (ERC power-flag on the rail symbol)
+    s.wire((30, 27), (30, 29))               # USB supplies VBUS: ERC power flag on a short stub, off the VBUS arrow
+    s.pflag(30, 29, rot=180, note=(0.9, 0.1))
     s.part("R30", 34, 33.5)
     s.part("R31", 27, 34.5)
-    s.tag("R31", reference=(-2.6, 1.2), value=(-2.6, 3.4), just="right")
+    s.tag("R31", reference=(-3.0, 5.6), value=(-3.0, 7.8), just="right")   # below J1's body and clear of R30 (round 2)
     s.wire(("J1", "A5"), ("R30", "1"))
     s.wire(("J1", "B5"), ("R31", "1"))
     above(s, "CC1", 28.5, 32)
@@ -355,17 +362,17 @@ def charger_sheet():
     s.rail("VIN", 92, 29, 90)
     s.pwr("C31", "2", "GND")
     s.part("R44", 79.5, 37, rot=90)
-    s.part("R45", 81, 38.5)
+    s.part("R45", 83, 38.5)
     s.wire(("U3", "1"), (76, 31), (76, 37), ("R44", "1"))
     above(s, "STAT", 74.2, 31)
-    s.wire(("R44", "2"), (86, 37))
+    s.wire(("R44", "2"), (83, 37), (86, 37))
     s.label("CHG_STAT", 86, 37, 0, kind="hier", shape="output")
     s.pwr("R45", "2", "GND")
-    s.frame(4, 13, 40, 47, "J1 USB-C power only (HC-TYPE-C-6P-01A)")
-    s.text(5, 41, "CC1/CC2 5.1k Rd: 5 V sink. Shell SH to GND.\nNo TVS on VBUS (DS-B4): no Basic/Preferred 5 V\n"
+    s.frame(4, 13, 42.5, 49, "J1 USB-C power only (HC-TYPE-C-6P-01A)")
+    s.text(5, 42, "CC1/CC2 5.1k Rd: 5 V sink. Shell SH to GND.\nNo TVS on VBUS (DS-B4): no Basic/Preferred 5 V\n"
                   "TVS in SOD-323/523/SOT-23 at JLC (2026-11-23).", 1.1)
-    s.frame(40, 13, 104, 47, "U3 MCP73831-2 charger, 100 mA (DS20001984H)")
-    s.text(41, 42, f"PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers {_RT}/{_RB}: <= 3.0 V at VBUS 5.25 V "
+    s.frame(42.5, 13, 104, 49, "U3 MCP73831-2 charger, 100 mA (DS20001984H)")
+    s.text(43, 41.5, f"PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers {_RT}/{_RB}: <= 3.0 V at VBUS 5.25 V "
                    "(D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\n"
                    "SEL low (VDD 3.0 V). U3 VBAT and C31 on VIN (D21): charge current flows through Q1\n"
                    "(source to drain, tree_charge_path.py); without a cell U3 feeds VIN directly.\n"
@@ -405,9 +412,10 @@ def mcu_sheet():
         s.part(ref, 50 + 5 * i, 30)
         s.pwr(ref, "1", "VDD")
         s.pwr(ref, "2", "GND")
-        s.text(50 + 5 * i - 1.4, 34.0, "pin " + DECOUPLING_PIN[ref], 1.0)
+        s.text(50 + 5 * i - 1.4, 24.4, "pin " + DECOUPLING_PIN[ref], 1.0)     # above the caps (round 2)
     # DC/DC: L1 DCC-DECD, C1, FB1 to DECA/DECRF, C2 C12 C5
     s.part("L1", 66, 43.5)
+    s.tag("L1", reference=(-2.2, -1.3), value=(-2.2, 1.3), just="right")     # texts left, clear of the DECD label (round 2)
     s.wire(("U1", "46"), (66, 42))
     above(s, "DCC", 69, 42)
     s.part("C1", 62, 46.5)
@@ -476,7 +484,7 @@ def mcu_sheet():
     (bx, by), _ = s.end("U1", "37", 0)
     s.part("R10", bx + 13.5, by, rot=90)
     s.wire(("U1", "37"), ("R10", "1"))
-    above(s, "BTN_SW1", bx + 2.5, by)
+    above(s, "BTN_SW1", bx + 8, by)
     s.part("SW1", bx + 21, by + 2, rot=270)
     s.tag("SW1", reference=(4.0, -0.6), value=(4.0, 1.6))
     s.wire(("R10", "2"), ("SW1", "1"))
@@ -495,8 +503,8 @@ def mcu_sheet():
                    "Unused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\n"
                    "VSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\n"
                    "Reset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: Nordic reference schematic v0.8 (L10: same table, UNVERIFIED).", 1.1)
-    s.frame(bx + 10, by - 6, bx + 30, by + 11, "SW1 (outer face), R10")
-    s.text(bx + 10.5, by + 7, "P1.09 internal pull-up, wake from\nSystem OFF. R10 1k limits ESD current\ninto the pin (D21).", 1.0)
+    s.frame(bx + 7.5, by - 6, bx + 30, by + 11, "SW1 (outer face), R10")
+    s.text(bx + 8, by + 7, "P1.09 internal pull-up, wake from\nSystem OFF. R10 1k limits ESD current\ninto the pin (D21).", 1.0)
     return s
 
 
@@ -522,7 +530,7 @@ def rf_sheet():
     s.wire(("R50", "2"), (55, y), ("ANT1", "1"))
     above(s, "RF_N1", 17.2, y)
     above(s, "RF_N2", 26.2, y)
-    above(s, "RF_50", 39.5, y)
+    above(s, "RF_50", 38.5, y)
     above(s, "ANT_FEED", 51.3, y)
     s.wire(("C6", "2"), (20, 35))
     s.label("VSS_PA", 20, 35, 270, kind="hier")
@@ -550,7 +558,7 @@ def rf_sheet():
 def leds_sheet():
     s = new("leds", "leds.kicad_sch", "LED lines: R1-R8 22R, RGB LEDs D9-D16 (outer face), header J3 to board B")
     for n, line in enumerate(tc.LINE_NETS, start=1):
-        y = 18 + 3 * (n - 1)
+        y = 18 + 3.5 * (n - 1)       # pitch 3.5 cells: value text clear of the next reference (round 2)
         r = tc.LINE_RESISTOR[line]
         s.label(tc.MCU_NETS[line], 10, y, 180, kind="hier", shape="input")
         s.part(r, 15.5, y, rot=90)
@@ -567,17 +575,21 @@ def leds_sheet():
     s.tag("J3", reference=(1.27, -12.4), value=(1.27, -10.2), just="center")
     for p, net in tc.HEADER_J3.items():
         s.lab("J3", str(p), net, 3, kind="local")
-    s.text(107.9, 17.15, "pin 1 v", 1.0)
-    s.frame(4, 12, 30, 46, "Line resistors (D13)")
-    s.text(5, 41.5, "One 22R per line, GPIO side\n(LED_Ln_MCU) to line (LED_Ln).", 1.1)
-    s.frame(32, 12, 86, 50, "RGB LEDs D9-D16 (XL-1010RGB-YG, common anode)")
-    s.text(33, 47, "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board A: R on a+6, G on a+5, B on a+1 (tree_common.LED_MATRIX).", 1.0)
+    px, py = s.at("J3", "1")
+    s.text(px / 2.54 - 3.2, py / 2.54 - 2.2, "pin 1", 1.0)
+    s.text(107.9, 25.0, "View from the top of board A: J3 pin 1 is top left.", 1.0)
+    s.frame(4, 12, 30, 50, "Line resistors (D13)")
+    s.text(5, 46, "One 22R per line, GPIO side\n(LED_Ln_MCU) to line (LED_Ln).", 1.1)
+    s.frame(32, 12, 86, 55, "RGB LEDs D9-D16 (XL-1010RGB-YG, common anode)")
+    s.text(33, 47, "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board A: R on a+6, G on a+5, B on a+1 (tree_common.LED_MATRIX).\n"
+                   "LED -> (R, G, B cathode line):\n" + ts.led_table(tc, "A"), 1.0)
     s.frame(92, 12, 130, 46, "J3 to board B (D3, D14)")
     pl = [f"{p}={n[4:]}" for p, n in sorted(tc.HEADER_J3.items())]
     mates = ", ".join(f"J3.{a}-J4.{b}" for a, b, _, _ in tc.mate_table()[:4])
     s.text(94, 28, f"J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: {', '.join(pl[:4])}\n{', '.join(pl[4:])}\n"
                    f"Mirrored (J4 on B.Cu of board B): J3 pin n mates\nJ4 pin n+1 (n odd) / n-1 (n even): {mates}, ...\n"
                    "(tree_common.mate_table). No supply, no ground.", 1.0)
+    s.raw.append(ts.triangle(px / 2.54, py / 2.54 - 0.7, 270))          # pin 1 marker over pin 1, after the frames so their tint does not cover it (round 2)
     return s
 
 
@@ -587,21 +599,27 @@ SHEETS = [("power", "power.kicad_sch"), ("charger", "charger.kicad_sch"), ("mcu"
 
 # root block diagram (cells); boxes in power-flow order charger -> power -> mcu, then rf and leds
 ROOT_ARROWS = [  # graphic power-path arrows: rails are power symbols on the sheets (no hierarchical label on a rail)
-    ((30, 19), (38, 19), "VIN (variant B: U3 VBAT)"),
+    ((30, 19), (38, 19), "VIN (shared)"),
     ((64, 19), (74, 19), "VDD 3.0 / 3.5 V"),
+    ((20, 36), (20, 30), "VBUS (USB-C J1)"),         # inputs into the charger and power boxes (round 2)
+    ((50, 36), (50, 30), "BAT (cell BT1 / pouch J2)"),
 ]
+ARROW_LABEL_AT = [(31, 17.2), (65, 17.2), (21, 32.8), (51, 32.8)]
 
 
 def _arrow_items(seed: str) -> list:
     out = []
+    mm = lambda v: round(v * 2.54, 2)  # noqa: E731
     for n, ((x1, y1), (x2, y2), _) in enumerate(ROOT_ARROWS):
-        mm = lambda v: round(v * 2.54, 2)  # noqa: E731
         u = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{seed}/arrow/{n}/{k}")) for k in range(2)]
-        out.append(f'\t(polyline (pts (xy {mm(x1)} {mm(y1)}) (xy {mm(x2 - 0.6)} {mm(y2)})) '
+        dx, dy = (x2 > x1) - (x2 < x1), (y2 > y1) - (y2 < y1)          # unit direction of the (axis-parallel) arrow
+        px, py = -dy, dx
+        bx, by = x2 - 0.8 * dx, y2 - 0.8 * dy                          # arrow-head base
+        out.append(f'\t(polyline (pts (xy {mm(x1)} {mm(y1)}) (xy {mm(x2 - 0.6 * dx)} {mm(y2 - 0.6 * dy)})) '
                    f'(stroke (width 0.6) (type solid) (color 200 0 0 1)) (fill (type none)) (uuid "{u[0]}"))')
-        out.append(f'\t(polyline (pts (xy {mm(x2 - 0.8)} {mm(y2 - 0.4)}) (xy {mm(x2)} {mm(y2)}) (xy {mm(x2 - 0.8)} {mm(y2 + 0.4)}) '
-                   f'(xy {mm(x2 - 0.8)} {mm(y2 - 0.4)})) (stroke (width 0.2) (type solid) (color 200 0 0 1)) '
-                   f'(fill (type color) (color 200 0 0 1)) (uuid "{u[1]}"))')
+        out.append(f'\t(polyline (pts (xy {mm(bx + 0.4 * px)} {mm(by + 0.4 * py)}) (xy {mm(x2)} {mm(y2)}) '
+                   f'(xy {mm(bx - 0.4 * px)} {mm(by - 0.4 * py)}) (xy {mm(bx + 0.4 * px)} {mm(by + 0.4 * py)})) '
+                   f'(stroke (width 0.2) (type solid) (color 200 0 0 1)) (fill (type color) (color 200 0 0 1)) (uuid "{u[1]}"))')
     return out
 
 
@@ -609,7 +627,7 @@ def build_root(sheet_uuids: dict) -> Path:
     led_pins = [("right", 52 + i, tc.MCU_NETS[n]) for i, n in enumerate(tc.LINE_NETS)]
     sheets = [
         dict(name="charger", file="charger.kicad_sch", x=6, y=16, w=24, h=14, page="3",
-             pins=[("bottom", 18, "VBUS_DET"), ("bottom", 14, "CHG_STAT")], shapes={"VBUS_DET": "output", "CHG_STAT": "output"},
+             pins=[("right", 26, "VBUS_DET"), ("right", 28, "CHG_STAT")], shapes={"VBUS_DET": "output", "CHG_STAT": "output"},
              fill=(235, 235, 235)),
         dict(name="power", file="power.kicad_sch", x=38, y=16, w=26, h=14, page="2",
              pins=[("right", 22, "TPS_SEL"), ("right", 24, "VBAT_SENSE")], shapes={"TPS_SEL": "input", "VBAT_SENSE": "output"}),
@@ -627,7 +645,8 @@ def build_root(sheet_uuids: dict) -> Path:
     for sh in sheets:
         sh["uuid"] = sheet_uuids[sh["name"]]
     wires = [((64, 22), (74, 22)), ((64, 24), (74, 24)),
-             ((18, 30), (18, 52)), ((18, 52), (74, 52)), ((14, 30), (14, 54)), ((14, 54), (74, 54)),
+             ((30, 26), (36, 26)), ((36, 26), (36, 52)), ((36, 52), (74, 52)),      # charger pins face the mcu box, no crossing
+             ((30, 28), (34, 28)), ((34, 28), (34, 54)), ((34, 54), (74, 54)),
              ((102, 22), (120, 22)), ((102, 24), (120, 24))] + [((102, 52 + i), (120, 52 + i)) for i in range(8)]
     dnp_b = ", ".join(sorted(VARB, key=ts._ref_key))
     never = ", ".join(sorted((r for r, q in PARTS.items() if q["var"] == "DNP"), key=ts._ref_key))
@@ -635,11 +654,11 @@ def build_root(sheet_uuids: dict) -> Path:
     fit_a_only = ", ".join(sorted((r for r, q in PARTS.items() if q["var"] == "A"), key=ts._ref_key))
     texts = [
         (6, 4, "#TREE-01 board A (tree-a): main board, 4 layers, inner face = parts, outer face = LEDs D9-D16, SW1, TC1"),
-        (6, 7.5, "Power path (red arrows; the rails BAT, VIN, VDD are power symbols on the sheets): cell BT1 or pouch J2 -> BAT -> "
-                 "Q1 reverse-polarity P-FET -> VIN -> U2 TPS63900 -> VDD -> U1 nRF54L10."),
-        (6, 9.5, "Variant B adds USB-C J1 -> U3 MCP73831 -> VIN (charges the pouch through Q1). LED lines: GPIO -> R1-R8 -> J3 -> board B."),
-        (31, 17.2, ROOT_ARROWS[0][2].split(" (")[0]),
-        (65, 17.2, ROOT_ARROWS[1][2]),
+        (6, 6.5, ts.wrap("Power path (red arrows; the rails BAT, VIN, VDD are power symbols on the sheets): cell BT1 or pouch J2 -> BAT -> "
+                         "Q1 reverse-polarity P-FET -> VIN -> U2 TPS63900 -> VDD -> U1 nRF54L10. Variant B adds USB-C J1 -> U3 MCP73831 -> VIN "
+                         "(charges the pouch through Q1). LED lines: GPIO -> R1-R8 -> J3 -> board B.")),
+        *[(ARROW_LABEL_AT[i][0], ARROW_LABEL_AT[i][1], ROOT_ARROWS[i][2]) for i in range(len(ROOT_ARROWS))],
+        (6, 12, "Legend: red arrow = power flow, not a net; grey box = not fitted in variant A."),
         (7, 18, "USB-C J1 -> U3 MCP73831\n-> VIN (variant B,\nDNP in A); R43/R45\nfitted on A and B"),
         (39, 18, f"{variant_text('BT1')}\n{variant_text('J2')}\n(both on this sheet) -> BAT -> Q1 -> VIN\n-> U2 TPS63900 -> VDD; VBAT_SENSE"),
         (75, 30, "U1 nRF54L10 (BOM, D2;\nsymbol nRF54L15-QFAA, same pins)\nDC/DC, HFXO 32 MHz, LFXO 32.768 kHz\n"
@@ -652,6 +671,7 @@ def build_root(sheet_uuids: dict) -> Path:
                 "charger footprints overlap on the board on purpose (D15).\n"
                 "Mounting holes and the hanging hole are board-only footprints (layout generator)."),
     ]
+    texts = [(x, y, b if b.startswith("#") else ts.wrap(b)) for x, y, b in texts]
     path, _ = root_sheet(BOARD, "root", sheets, texts, wires, [], project=NAME, title="tree-a: block diagram")
     txt = path.read_text()
     txt = txt.replace("\t(sheet_instances", "\n".join(_arrow_items(NAME)) + "\n\t(sheet_instances", 1)

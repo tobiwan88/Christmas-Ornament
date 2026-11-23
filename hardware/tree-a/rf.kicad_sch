@@ -6,7 +6,6 @@
 	(paper "A3")
 	(title_block
 		(title "tree-a: rf")
-		(date "2026-11-23")
 		(rev "generated")
 		(company "TREE-01 ornament")
 		(comment 1 "Sheet: rf")
@@ -1268,7 +1267,7 @@
 		(uuid "612ce791-9c06-5d85-925b-28856f3dbd53")
 	)
 	(label "RF_50"
-		(at 100.33 76.2 0)
+		(at 97.79 76.2 0)
 		(effects
 			(font
 				(size 1.27 1.27)

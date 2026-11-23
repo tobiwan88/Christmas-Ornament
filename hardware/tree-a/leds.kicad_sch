@@ -6,7 +6,6 @@
 	(paper "A3")
 	(title_block
 		(title "tree-a: leds")
-		(date "2026-11-23")
 		(rev "generated")
 		(company "TREE-01 ornament")
 		(comment 1 "Sheet: leds")
@@ -833,7 +832,7 @@
 	)
 	(rectangle
 		(start 81.28 30.48)
-		(end 218.44 127)
+		(end 218.44 139.7)
 		(stroke
 			(width 0.3)
 			(type dash)
@@ -843,11 +842,11 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "28575f11-9ad4-52e5-8f1e-3a8f443ab515")
+		(uuid "83a5b586-635f-5d81-aec2-009aeba0a815")
 	)
 	(rectangle
 		(start 10.16 30.48)
-		(end 76.2 116.84)
+		(end 76.2 127)
 		(stroke
 			(width 0.3)
 			(type dash)
@@ -857,7 +856,22 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "96a05c5e-32cc-548f-9267-5ae3cb2d37ea")
+		(uuid "88e424bb-243c-512e-8d65-2c99189bdcf5")
+	)
+	(polyline
+		(pts
+			(xy 279.4 46.48) (xy 278.26 43.74) (xy 280.54 43.74) (xy 279.4 46.48)
+		)
+		(stroke
+			(width 0.2)
+			(type solid)
+			(color 200 0 0 1)
+		)
+		(fill
+			(type color)
+			(color 200 0 0 1)
+		)
+		(uuid "94fbf0dd-d46d-5be5-8714-63b0eba4934f")
 	)
 	(rectangle
 		(start 233.68 30.48)
@@ -871,29 +885,7 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "e920e102-9a0e-51b6-a5eb-bbf8dea4415f")
-	)
-	(text "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board A: R on a+6, G on a+5, B on a+1 (tree_common.LED_MATRIX)."
-		(exclude_from_sim no)
-		(at 83.82 119.38 0)
-		(effects
-			(font
-				(size 1 1)
-			)
-			(justify left top)
-		)
-		(uuid "191332de-2dc0-5073-b294-06fe85583c74")
-	)
-	(text "One 22R per line, GPIO side\n(LED_Ln_MCU) to line (LED_Ln)."
-		(exclude_from_sim no)
-		(at 12.7 105.41 0)
-		(effects
-			(font
-				(size 1.1 1.1)
-			)
-			(justify left top)
-		)
-		(uuid "726fe66a-e1fe-58ed-a0f8-b4a6bcab35e8")
+		(uuid "b23daee3-a6cd-55b2-9f07-dcd23a730b16")
 	)
 	(text "RGB LEDs D9-D16 (XL-1010RGB-YG, common anode)"
 		(exclude_from_sim no)
@@ -905,7 +897,18 @@
 			)
 			(justify left top)
 		)
-		(uuid "83a5b586-635f-5d81-aec2-009aeba0a815")
+		(uuid "191332de-2dc0-5073-b294-06fe85583c74")
+	)
+	(text "One 22R per line, GPIO side\n(LED_Ln_MCU) to line (LED_Ln)."
+		(exclude_from_sim no)
+		(at 12.7 116.84 0)
+		(effects
+			(font
+				(size 1.1 1.1)
+			)
+			(justify left top)
+		)
+		(uuid "28575f11-9ad4-52e5-8f1e-3a8f443ab515")
 	)
 	(text "Line resistors (D13)"
 		(exclude_from_sim no)
@@ -917,7 +920,40 @@
 			)
 			(justify left top)
 		)
-		(uuid "88e424bb-243c-512e-8d65-2c99189bdcf5")
+		(uuid "726fe66a-e1fe-58ed-a0f8-b4a6bcab35e8")
+	)
+	(text "View from the top of board A: J3 pin 1 is top left."
+		(exclude_from_sim no)
+		(at 274.07 63.5 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "96a05c5e-32cc-548f-9267-5ae3cb2d37ea")
+	)
+	(text "J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: 1=L1, 2=L8, 3=L2, 4=L7\n5=L3, 6=L6, 7=L4, 8=L5\nMirrored (J4 on B.Cu of board B): J3 pin n mates\nJ4 pin n+1 (n odd) / n-1 (n even): J3.1-J4.2, J3.2-J4.1, J3.3-J4.4, J3.4-J4.3, ...\n(tree_common.mate_table). No supply, no ground."
+		(exclude_from_sim no)
+		(at 238.76 71.12 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "a040209d-75dd-54be-80f9-7398640b238c")
+	)
+	(text "pin 1"
+		(exclude_from_sim no)
+		(at 271.27 42.67 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "d3230123-a3ee-5e43-8aed-3373b8f091dd")
 	)
 	(text "J3 to board B (D3, D14)"
 		(exclude_from_sim no)
@@ -929,29 +965,18 @@
 			)
 			(justify left top)
 		)
-		(uuid "b23daee3-a6cd-55b2-9f07-dcd23a730b16")
-	)
-	(text "pin 1 v"
-		(exclude_from_sim no)
-		(at 274.07 43.56 0)
-		(effects
-			(font
-				(size 1 1)
-			)
-			(justify left top)
-		)
-		(uuid "d3230123-a3ee-5e43-8aed-3373b8f091dd")
-	)
-	(text "J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: 1=L1, 2=L8, 3=L2, 4=L7\n5=L3, 6=L6, 7=L4, 8=L5\nMirrored (J4 on B.Cu of board B): J3 pin n mates\nJ4 pin n+1 (n odd) / n-1 (n even): J3.1-J4.2, J3.2-J4.1, J3.3-J4.4, J3.4-J4.3, ...\n(tree_common.mate_table). No supply, no ground."
-		(exclude_from_sim no)
-		(at 238.76 71.12 0)
-		(effects
-			(font
-				(size 1 1)
-			)
-			(justify left top)
-		)
 		(uuid "d7f5c92b-c7e9-5a31-a0fe-d789d99bb42b")
+	)
+	(text "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board A: R on a+6, G on a+5, B on a+1\n(tree_common.LED_MATRIX).\nLED -> (R, G, B cathode line):\nD9 (anode L1) -> R L7, G L6, B L2\nD10 (anode L2) -> R L8, G L7, B L3\nD11 (anode L3) -> R L1, G L8, B L4\nD12 (anode L4) -> R L2, G L1, B L5\nD13 (anode L5) -> R L3, G L2, B L6\nD14 (anode L6) -> R L4, G L3, B L7\nD15 (anode L7) -> R L5, G L4, B L8\nD16 (anode L8) -> R L6, G L5, B L1"
+		(exclude_from_sim no)
+		(at 83.82 119.38 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "e920e102-9a0e-51b6-a5eb-bbf8dea4415f")
 	)
 	(wire
 		(pts
@@ -965,7 +990,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 68.58) (xy 35.56 68.58)
+			(xy 25.4 72.39) (xy 35.56 72.39)
 		)
 		(stroke
 			(width 0)
@@ -975,7 +1000,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 99.06) (xy 35.56 99.06)
+			(xy 25.4 107.95) (xy 35.56 107.95)
 		)
 		(stroke
 			(width 0)
@@ -985,7 +1010,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 91.44) (xy 35.56 91.44)
+			(xy 25.4 99.06) (xy 35.56 99.06)
 		)
 		(stroke
 			(width 0)
@@ -995,7 +1020,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 68.58) (xy 50.8 68.58)
+			(xy 43.18 72.39) (xy 50.8 72.39)
 		)
 		(stroke
 			(width 0)
@@ -1025,7 +1050,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 53.34) (xy 50.8 53.34)
+			(xy 43.18 54.61) (xy 50.8 54.61)
 		)
 		(stroke
 			(width 0)
@@ -1035,7 +1060,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 99.06) (xy 50.8 99.06)
+			(xy 43.18 107.95) (xy 50.8 107.95)
 		)
 		(stroke
 			(width 0)
@@ -1105,7 +1130,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 83.82) (xy 50.8 83.82)
+			(xy 43.18 90.17) (xy 50.8 90.17)
 		)
 		(stroke
 			(width 0)
@@ -1115,7 +1140,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 60.96) (xy 35.56 60.96)
+			(xy 25.4 63.5) (xy 35.56 63.5)
 		)
 		(stroke
 			(width 0)
@@ -1155,7 +1180,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 76.2) (xy 50.8 76.2)
+			(xy 43.18 81.28) (xy 50.8 81.28)
 		)
 		(stroke
 			(width 0)
@@ -1175,7 +1200,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 76.2) (xy 35.56 76.2)
+			(xy 25.4 81.28) (xy 35.56 81.28)
 		)
 		(stroke
 			(width 0)
@@ -1195,7 +1220,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 53.34) (xy 35.56 53.34)
+			(xy 25.4 54.61) (xy 35.56 54.61)
 		)
 		(stroke
 			(width 0)
@@ -1225,7 +1250,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 91.44) (xy 50.8 91.44)
+			(xy 43.18 99.06) (xy 50.8 99.06)
 		)
 		(stroke
 			(width 0)
@@ -1375,7 +1400,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 60.96) (xy 50.8 60.96)
+			(xy 43.18 63.5) (xy 50.8 63.5)
 		)
 		(stroke
 			(width 0)
@@ -1455,7 +1480,7 @@
 	)
 	(wire
 		(pts
-			(xy 25.4 83.82) (xy 35.56 83.82)
+			(xy 25.4 90.17) (xy 35.56 90.17)
 		)
 		(stroke
 			(width 0)
@@ -1514,7 +1539,7 @@
 		(uuid "ff718488-fb8c-57d0-bef6-31730cb6884b")
 	)
 	(label "LED_L7"
-		(at 50.8 91.44 0)
+		(at 50.8 99.06 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1554,7 +1579,7 @@
 		(uuid "2873a8f2-9fb6-5dcd-bb7d-4f7f36a94bb2")
 	)
 	(label "LED_L4"
-		(at 50.8 68.58 0)
+		(at 50.8 72.39 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1594,7 +1619,7 @@
 		(uuid "464105a4-4e0d-57a3-a5ca-7951f4756398")
 	)
 	(label "LED_L3"
-		(at 50.8 60.96 0)
+		(at 50.8 63.5 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1714,7 +1739,7 @@
 		(uuid "8d357fcd-f0c2-583b-9d17-2579cfbddb50")
 	)
 	(label "LED_L2"
-		(at 50.8 53.34 0)
+		(at 50.8 54.61 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1764,7 +1789,7 @@
 		(uuid "943843d0-f74f-5fa1-9411-2d9bd65f5464")
 	)
 	(label "LED_L5"
-		(at 50.8 76.2 0)
+		(at 50.8 81.28 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1774,7 +1799,7 @@
 		(uuid "ab57fb0b-39ac-5520-8fba-fcc8f8d67953")
 	)
 	(label "LED_L8"
-		(at 50.8 99.06 0)
+		(at 50.8 107.95 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1864,7 +1889,7 @@
 		(uuid "c62808eb-5e38-5eb6-8f29-2e63e3dc50dc")
 	)
 	(label "LED_L6"
-		(at 50.8 83.82 0)
+		(at 50.8 90.17 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1995,7 +2020,7 @@
 	)
 	(hierarchical_label "LED_L4_MCU"
 		(shape input)
-		(at 25.4 68.58 180)
+		(at 25.4 72.39 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2006,7 +2031,7 @@
 	)
 	(hierarchical_label "LED_L3_MCU"
 		(shape input)
-		(at 25.4 60.96 180)
+		(at 25.4 63.5 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2017,7 +2042,7 @@
 	)
 	(hierarchical_label "LED_L7_MCU"
 		(shape input)
-		(at 25.4 91.44 180)
+		(at 25.4 99.06 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2028,7 +2053,7 @@
 	)
 	(hierarchical_label "LED_L6_MCU"
 		(shape input)
-		(at 25.4 83.82 180)
+		(at 25.4 90.17 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2039,7 +2064,7 @@
 	)
 	(hierarchical_label "LED_L2_MCU"
 		(shape input)
-		(at 25.4 53.34 180)
+		(at 25.4 54.61 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2050,7 +2075,7 @@
 	)
 	(hierarchical_label "LED_L5_MCU"
 		(shape input)
-		(at 25.4 76.2 180)
+		(at 25.4 81.28 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2072,7 +2097,7 @@
 	)
 	(hierarchical_label "LED_L8_MCU"
 		(shape input)
-		(at 25.4 99.06 180)
+		(at 25.4 107.95 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2083,7 +2108,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 60.96 90)
+		(at 39.37 63.5 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2093,7 +2118,7 @@
 		(dnp no)
 		(uuid "02e23964-e2a7-56d6-a4cd-d42d1c7f68fd")
 		(property "Reference" "R3"
-			(at 39.37 55.76 270)
+			(at 39.37 58.3 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2103,7 +2128,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 58.06 270)
+			(at 39.37 60.6 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2113,7 +2138,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 60.96 90)
+			(at 37.592 63.5 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2124,7 +2149,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 60.96 0)
+			(at 39.37 63.5 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2134,7 +2159,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 60.96 0)
+			(at 39.37 63.5 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2144,7 +2169,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 66.0399 0)
+			(at 41.91 68.5799 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2172,7 +2197,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 83.82 90)
+		(at 39.37 90.17 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2182,7 +2207,7 @@
 		(dnp no)
 		(uuid "030413ef-d9a9-585b-9f0c-56d6cf932e02")
 		(property "Reference" "R6"
-			(at 39.37 78.62 270)
+			(at 39.37 84.97 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2192,7 +2217,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 80.92 270)
+			(at 39.37 87.27 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2202,7 +2227,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 83.82 90)
+			(at 37.592 90.17 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2213,7 +2238,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 83.82 0)
+			(at 39.37 90.17 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2223,7 +2248,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 83.82 0)
+			(at 39.37 90.17 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2233,7 +2258,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 88.8999 0)
+			(at 41.91 95.2499 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2261,7 +2286,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 99.06 90)
+		(at 39.37 107.95 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2271,7 +2296,7 @@
 		(dnp no)
 		(uuid "07f0a04a-43fb-50dc-a9a6-d7abf9666595")
 		(property "Reference" "R8"
-			(at 39.37 93.86 270)
+			(at 39.37 102.75 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2281,7 +2306,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 96.16 270)
+			(at 39.37 105.05 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2291,7 +2316,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 99.06 90)
+			(at 37.592 107.95 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2302,7 +2327,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 99.06 0)
+			(at 39.37 107.95 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2312,7 +2337,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 99.06 0)
+			(at 39.37 107.95 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2322,7 +2347,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 104.1399 0)
+			(at 41.91 113.0299 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2748,7 +2773,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 68.58 90)
+		(at 39.37 72.39 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2758,7 +2783,7 @@
 		(dnp no)
 		(uuid "62acb67b-40b5-5c82-8bd0-215b21456a72")
 		(property "Reference" "R4"
-			(at 39.37 63.38 270)
+			(at 39.37 67.19 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2768,7 +2793,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 65.68 270)
+			(at 39.37 69.49 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2778,7 +2803,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 68.58 90)
+			(at 37.592 72.39 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2789,7 +2814,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 68.58 0)
+			(at 39.37 72.39 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2799,7 +2824,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 68.58 0)
+			(at 39.37 72.39 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2809,7 +2834,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 73.6599 0)
+			(at 41.91 77.4699 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2837,7 +2862,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 91.44 90)
+		(at 39.37 99.06 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2847,7 +2872,7 @@
 		(dnp no)
 		(uuid "6905bba8-a533-5bce-a2f3-78355484adc8")
 		(property "Reference" "R7"
-			(at 39.37 86.24 270)
+			(at 39.37 93.86 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2857,7 +2882,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 88.54 270)
+			(at 39.37 96.16 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2867,7 +2892,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 91.44 90)
+			(at 37.592 99.06 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2878,7 +2903,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 91.44 0)
+			(at 39.37 99.06 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2888,7 +2913,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 91.44 0)
+			(at 39.37 99.06 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2898,7 +2923,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 96.5199 0)
+			(at 41.91 104.1399 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3023,7 +3048,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 53.34 90)
+		(at 39.37 54.61 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3033,7 +3058,7 @@
 		(dnp no)
 		(uuid "873102ac-cf5a-5d19-a037-a20765f9abc0")
 		(property "Reference" "R2"
-			(at 39.37 48.14 270)
+			(at 39.37 49.41 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3043,7 +3068,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 50.44 270)
+			(at 39.37 51.71 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3053,7 +3078,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 53.34 90)
+			(at 37.592 54.61 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3064,7 +3089,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 53.34 0)
+			(at 39.37 54.61 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3074,7 +3099,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 53.34 0)
+			(at 39.37 54.61 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3084,7 +3109,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 58.4199 0)
+			(at 41.91 59.6899 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3209,7 +3234,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 39.37 76.2 90)
+		(at 39.37 81.28 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3219,7 +3244,7 @@
 		(dnp no)
 		(uuid "ac267639-1db3-596a-b8c6-39590551e3f9")
 		(property "Reference" "R5"
-			(at 39.37 71 270)
+			(at 39.37 76.08 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3229,7 +3254,7 @@
 			)
 		)
 		(property "Value" "22R"
-			(at 39.37 73.3 270)
+			(at 39.37 78.38 270)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3239,7 +3264,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 37.592 76.2 90)
+			(at 37.592 81.28 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3250,7 +3275,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 39.37 76.2 0)
+			(at 39.37 81.28 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3260,7 +3285,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 39.37 76.2 0)
+			(at 39.37 81.28 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3270,7 +3295,7 @@
 			)
 		)
 		(property "LCSC" "C25092"
-			(at 41.91 81.2799 0)
+			(at 41.91 86.3599 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

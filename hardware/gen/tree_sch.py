@@ -1,6 +1,7 @@
 """Shared helpers for the tree-a / tree-b schematic generators (on top of schkit.py).
 
-- setup(): title-block defaults (date of the run, rev 'generated': no git hash, so a rebuild does not churn the files), uuid seed per board, project symbol library.
+- setup(): title-block defaults (no date and rev 'generated': neither the run date nor a git hash, so a rebuild on another day is byte-identical), uuid seed per board, project symbol library.
+- wrap(): wraps note text at about 90 characters; led_table(): the 'LED -> (R, G, B cathode line)' table of one board from tree_common.LED_MATRIX.
 - Draw: schkit.Sheet with stub helpers (pin -> short wire -> label / power symbol), PWR_FLAG, DNP marking.
 - write_project(): <board>.kicad_pro (ERC settings + net classes from board.yaml) and the library tables.
 - check(): ERC (all severities), net-intent check, netlist.csv (KiCad's netlist for tree_split_check.py), review_checks.py, one PNG per sheet in hardware/out/review/<board>/.
@@ -11,7 +12,7 @@ Run by the board generators (tree_a.py, tree_b.py), not on its own.
 from __future__ import annotations
 
 import csv
-import datetime
+import textwrap
 import json
 import os
 import re
@@ -39,14 +40,42 @@ POWER_LIB = {"GND": "power:GND", "VDD": "power:VDD", "VBUS": "power:VBUS"}   # o
 
 def setup(project: str, title: str) -> None:
     schkit.DEFAULTS.update({"project": project, "title": title, "company": "TREE-01 ornament",
-                            "date": datetime.date.today().isoformat(), "rev": "generated", "uid_seed": project})
+                            "date": "", "rev": "generated", "uid_seed": project})
     schkit._uid[0] = 0
     Sheet.pwr_count = 0
     get_symbol_cache().add_library_path(str(LIB_SYM))
 
 
+def wrap(body: str, width: int = 90) -> str:
+    """Wrap each line of a note at about `width` characters (explicit newlines kept)."""
+    return "\n".join("\n".join(textwrap.wrap(ln, width, break_long_words=False, break_on_hyphens=False)) or "" for ln in body.split("\n"))
+
+
+def led_table(tc, board: str) -> str:
+    """One line per LED of the board: anode line and the cathode line of each colour (pad 1 R, 2 G, 4 B), from LED_MATRIX."""
+    return "\n".join(f"{ref} (anode L{d['anode']}) -> R L{d['R']}, G L{d['G']}, B L{d['B']}"
+                     for ref, d in tc.LED_MATRIX.items() if d["board"] == board)
+
+
+def triangle(x: float, y: float, rot: int = 270, size: float = 0.9) -> str:
+    """Filled red marker triangle as a schematic graphic (S-expression), tip at (x, y) cells; rot 270 = tip down."""
+    import uuid as _uuid
+    mm = lambda v: round(v * 2.54, 2)  # noqa: E731
+    dx, dy = {270: (0, 1), 90: (0, -1), 0: (1, 0), 180: (-1, 0)}[rot]
+    px, py = -dy, dx
+    pts = [(x, y), (x - dx * size * 1.2 + px * size * 0.5, y - dy * size * 1.2 + py * size * 0.5),
+           (x - dx * size * 1.2 - px * size * 0.5, y - dy * size * 1.2 - py * size * 0.5)]
+    u = str(_uuid.uuid5(_uuid.NAMESPACE_URL, f"marker/{x}/{y}/{rot}"))
+    xy = " ".join(f"(xy {mm(a)} {mm(b)})" for a, b in pts + [pts[0]])
+    return (f'(polyline (pts {xy}) (stroke (width 0.2) (type solid) (color 200 0 0 1)) '
+            f'(fill (type color) (color 200 0 0 1)) (uuid "{u}"))')
+
+
 class Draw(Sheet):
     flags = 0
+
+    def text(self, x, y, body, size=1.27, bold=False):
+        super().text(x, y, wrap(body), size, bold)
 
     def end(self, ref: str, pin: str, n: float):
         x, y = self.at(ref, pin)
@@ -73,16 +102,21 @@ class Draw(Sheet):
 
     FLAG_VALUE_AT = {0: (0, -3.6, "center"), 180: (1.6, 1.4, "left"), 90: (-4.0, -0.6, "right"), 270: (4.0, -0.6, "left")}
 
-    def pflag(self, x, y, rot=0):
+    def pflag(self, x, y, rot=0, note=None):
         """PWR_FLAG with its pin at (x, y) (cells): the net is supplied from outside the sheet's power pins (cell, USB).
-        Its value 'PWR_FLAG' is shown so the diamond does not read as an orphaned part (review RR-B)."""
+        note=(dx, dy): the symbol's value text is hidden and a note 'PWR_FLAG = ERC marker' stands at (x+dx, y+dy) cells, so the
+        diamond does not read as an orphaned part (review RR-B) and the flag sits on a short stub off the rail wire (round 2)."""
         Draw.flags += 1
         ref = f"#FLG{Draw.flags:02d}"
         self.sch.components.add("power:PWR_FLAG", ref, "PWR_FLAG", (schkit.mm(x), schkit.mm(y)), rotation=rot)
         self.refs.append(ref)
         self.rots[ref] = rot
         self.pins.add((schkit.mm(x), schkit.mm(y)))
-        self.tags[ref] = {"Reference": "hide", "Value": self.FLAG_VALUE_AT[rot]}
+        if note:
+            self.tags[ref] = {"Reference": "hide", "Value": "hide"}
+            self.text(x + note[0], y + note[1], "PWR_FLAG =\nERC marker", 1.0)
+        else:
+            self.tags[ref] = {"Reference": "hide", "Value": self.FLAG_VALUE_AT[rot]}
 
     def nc(self, ref, pins):
         self.no_connect(ref, [str(p) for p in pins])

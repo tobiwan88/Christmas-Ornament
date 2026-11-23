@@ -6,7 +6,6 @@
 	(paper "A3")
 	(title_block
 		(title "tree-a: charger")
-		(date "2026-11-23")
 		(rev "generated")
 		(company "TREE-01 ornament")
 		(comment 1 "Sheet: charger")
@@ -1475,8 +1474,8 @@
 		)
 	)
 	(rectangle
-		(start 10.16 33.02)
-		(end 101.6 119.38)
+		(start 107.95 33.02)
+		(end 264.16 124.46)
 		(stroke
 			(width 0.3)
 			(type dash)
@@ -1486,11 +1485,11 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "5df8a4cc-3daf-520b-af1b-0aac6f12ad4e")
+		(uuid "35903a42-3419-5ce0-ad2e-7a0c971ce975")
 	)
 	(rectangle
-		(start 101.6 33.02)
-		(end 264.16 119.38)
+		(start 10.16 33.02)
+		(end 107.95 124.46)
 		(stroke
 			(width 0.3)
 			(type dash)
@@ -1500,22 +1499,11 @@
 			(type color)
 			(color 255 255 255 0.35)
 		)
-		(uuid "c33765b8-debf-5a4b-a09b-608d563600d7")
-	)
-	(text "CC1/CC2 5.1k Rd: 5 V sink. Shell SH to GND.\nNo TVS on VBUS (DS-B4): no Basic/Preferred 5 V\nTVS in SOD-323/523/SOT-23 at JLC (2026-11-23)."
-		(exclude_from_sim no)
-		(at 12.7 104.14 0)
-		(effects
-			(font
-				(size 1.1 1.1)
-			)
-			(justify left top)
-		)
-		(uuid "04933af4-2035-5dec-a7e1-1e99b1ca915e")
+		(uuid "82fe006a-a5b6-5bd1-904f-ddce263b8b38")
 	)
 	(text "U3 MCP73831-2 charger, 100 mA (DS20001984H)"
 		(exclude_from_sim no)
-		(at 102.87 34.04 0)
+		(at 109.22 34.04 0)
 		(effects
 			(font
 				(size 1.5 1.5)
@@ -1523,18 +1511,29 @@
 			)
 			(justify left top)
 		)
-		(uuid "811c4bc2-3254-567a-9dba-1ed6006d472b")
+		(uuid "087379dc-99dd-5403-b3e2-4ede90c5c880")
 	)
-	(text "PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers 100k/120k: <= 3.0 V at VBUS 5.25 V (D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\nSEL low (VDD 3.0 V). U3 VBAT and C31 on VIN (D21): charge current flows through Q1\n(source to drain, tree_charge_path.py); without a cell U3 feeds VIN directly.\nR43/R45 fitted on A and B: with R42/R44 DNP (variant A) they hold VBUS_DET/CHG_STAT\nlow (no floating SENSE wake, D21). Other parts here DNP in order 1 (D10); J1/U3 overlap BT1 (D15)."
+	(text "CC1/CC2 5.1k Rd: 5 V sink. Shell SH to GND.\nNo TVS on VBUS (DS-B4): no Basic/Preferred 5 V\nTVS in SOD-323/523/SOT-23 at JLC (2026-11-23)."
 		(exclude_from_sim no)
-		(at 104.14 106.68 0)
+		(at 12.7 106.68 0)
 		(effects
 			(font
 				(size 1.1 1.1)
 			)
 			(justify left top)
 		)
-		(uuid "82fe006a-a5b6-5bd1-904f-ddce263b8b38")
+		(uuid "36650601-e79b-5dae-b3a9-22d71d668087")
+	)
+	(text "PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers 100k/120k: <= 3.0 V at VBUS 5.25 V (D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\nSEL low (VDD 3.0 V). U3 VBAT and C31 on VIN (D21): charge current flows through Q1\n(source to drain, tree_charge_path.py); without a cell U3 feeds VIN directly.\nR43/R45 fitted on A and B: with R42/R44 DNP (variant A) they hold VBUS_DET/CHG_STAT\nlow (no floating SENSE wake, D21). Other parts here DNP in order 1 (D10); J1/U3 overlap\nBT1 (D15)."
+		(exclude_from_sim no)
+		(at 109.22 105.41 0)
+		(effects
+			(font
+				(size 1.1 1.1)
+			)
+			(justify left top)
+		)
+		(uuid "63272554-ece9-5eca-a551-c5f81d71e89e")
 	)
 	(text "J1 USB-C power only (HC-TYPE-C-6P-01A)"
 		(exclude_from_sim no)
@@ -1546,77 +1545,60 @@
 			)
 			(justify left top)
 		)
-		(uuid "f0951b88-6fda-5ed0-96f0-47b509161034")
+		(uuid "dfc94fa7-1175-5461-8e82-8bf9a5e96d8f")
 	)
-	(junction
-		(at 208.28 73.66)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "21d058e2-22b1-523f-862a-cb63b863c8b8")
-	)
-	(junction
-		(at 137.16 68.58)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "6afba618-cec5-5538-8139-98a01c510619")
-	)
-	(junction
-		(at 66.04 68.58)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "881e7518-4131-5b34-9826-68440f6f40ad")
-	)
-	(junction
-		(at 111.76 78.74)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "bd1ad31f-2a16-5fd6-9007-1e859e86b7df")
+	(text "PWR_FLAG =\nERC marker"
+		(exclude_from_sim no)
+		(at 78.49 73.91 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "f0b2a131-b8e7-5e42-985d-9b384f928766")
 	)
 	(junction
 		(at 111.76 68.58)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "e633a4bc-ee9b-5930-b0d6-d86ba1e9b181")
+		(uuid "21d058e2-22b1-523f-862a-cb63b863c8b8")
 	)
-	(wire
-		(pts
-			(xy 160.02 78.74) (xy 167.64 78.74)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "07805a4e-d48b-5074-9fd1-52145599345a")
+	(junction
+		(at 210.82 93.98)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "3df969f4-6a37-5856-92a4-b29d2f9daf55")
 	)
-	(wire
-		(pts
-			(xy 111.76 78.74) (xy 111.76 81.28)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "195dc900-4138-51b0-ae9c-5866e1dc03c8")
+	(junction
+		(at 76.2 68.58)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "6afba618-cec5-5538-8139-98a01c510619")
 	)
-	(wire
-		(pts
-			(xy 193.04 78.74) (xy 193.04 93.98)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "42148edb-21bb-5846-8fcd-480b40de2802")
+	(junction
+		(at 137.16 68.58)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "908336dd-df92-57c4-be34-6ba29cfdc15e")
 	)
-	(wire
-		(pts
-			(xy 187.96 78.74) (xy 193.04 78.74)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4923a436-2f50-56e3-aa2f-b4c6f2a57594")
+	(junction
+		(at 111.76 78.74)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9e502760-fd66-5728-b544-cee5da9c4e2d")
+	)
+	(junction
+		(at 208.28 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "b67b8cd1-1b7b-5bb9-80d2-20f8a86d3986")
+	)
+	(junction
+		(at 66.04 68.58)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "bd1ad31f-2a16-5fd6-9007-1e859e86b7df")
 	)
 	(wire
 		(pts
@@ -1626,11 +1608,51 @@
 			(width 0)
 			(type default)
 		)
+		(uuid "07805a4e-d48b-5074-9fd1-52145599345a")
+	)
+	(wire
+		(pts
+			(xy 111.76 76.2) (xy 111.76 78.74)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "195dc900-4138-51b0-ae9c-5866e1dc03c8")
+	)
+	(wire
+		(pts
+			(xy 187.96 78.74) (xy 193.04 78.74)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "42148edb-21bb-5846-8fcd-480b40de2802")
+	)
+	(wire
+		(pts
+			(xy 208.28 73.66) (xy 233.68 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4923a436-2f50-56e3-aa2f-b4c6f2a57594")
+	)
+	(wire
+		(pts
+			(xy 111.76 78.74) (xy 111.76 81.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
 		(uuid "7b447094-d4bf-5009-83cb-73480dcca6d8")
 	)
 	(wire
 		(pts
-			(xy 187.96 73.66) (xy 208.28 73.66)
+			(xy 160.02 78.74) (xy 167.64 78.74)
 		)
 		(stroke
 			(width 0)
@@ -1650,6 +1672,16 @@
 	)
 	(wire
 		(pts
+			(xy 205.74 93.98) (xy 210.82 93.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "881e7518-4131-5b34-9826-68440f6f40ad")
+	)
+	(wire
+		(pts
 			(xy 66.04 68.58) (xy 111.76 68.58)
 		)
 		(stroke
@@ -1660,7 +1692,7 @@
 	)
 	(wire
 		(pts
-			(xy 111.76 76.2) (xy 111.76 78.74)
+			(xy 55.88 83.82) (xy 68.58 83.82)
 		)
 		(stroke
 			(width 0)
@@ -1670,7 +1702,7 @@
 	)
 	(wire
 		(pts
-			(xy 55.88 83.82) (xy 68.58 83.82)
+			(xy 55.88 81.28) (xy 86.36 81.28)
 		)
 		(stroke
 			(width 0)
@@ -1680,7 +1712,7 @@
 	)
 	(wire
 		(pts
-			(xy 55.88 81.28) (xy 86.36 81.28)
+			(xy 76.2 68.58) (xy 76.2 73.66)
 		)
 		(stroke
 			(width 0)
@@ -1700,7 +1732,7 @@
 	)
 	(wire
 		(pts
-			(xy 208.28 73.66) (xy 233.68 73.66)
+			(xy 187.96 73.66) (xy 208.28 73.66)
 		)
 		(stroke
 			(width 0)
@@ -1710,7 +1742,7 @@
 	)
 	(wire
 		(pts
-			(xy 193.04 93.98) (xy 198.12 93.98)
+			(xy 193.04 78.74) (xy 193.04 93.98)
 		)
 		(stroke
 			(width 0)
@@ -1730,13 +1762,23 @@
 	)
 	(wire
 		(pts
-			(xy 205.74 93.98) (xy 218.44 93.98)
+			(xy 193.04 93.98) (xy 198.12 93.98)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "de25147d-041a-5af9-9333-ad95ef254eb3")
+	)
+	(wire
+		(pts
+			(xy 210.82 93.98) (xy 218.44 93.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e633a4bc-ee9b-5930-b0d6-d86ba1e9b181")
 	)
 	(wire
 		(pts
@@ -1756,7 +1798,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "3df969f4-6a37-5856-92a4-b29d2f9daf55")
+		(uuid "04933af4-2035-5dec-a7e1-1e99b1ca915e")
 	)
 	(label "CC2"
 		(at 57.15 83.82 0)
@@ -1766,7 +1808,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "908336dd-df92-57c4-be34-6ba29cfdc15e")
+		(uuid "5df8a4cc-3daf-520b-af1b-0aac6f12ad4e")
 	)
 	(label "CC1"
 		(at 72.39 81.28 0)
@@ -1776,7 +1818,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "9e502760-fd66-5728-b544-cee5da9c4e2d")
+		(uuid "7ae4ffdf-f6c7-510c-bfe2-4ab59a449b6d")
 	)
 	(label "STAT"
 		(at 188.47 78.74 0)
@@ -1786,7 +1828,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "f0b2a131-b8e7-5e42-985d-9b384f928766")
+		(uuid "c33765b8-debf-5a4b-a09b-608d563600d7")
 	)
 	(hierarchical_label "CHG_STAT"
 		(shape output)
@@ -1797,7 +1839,7 @@
 			)
 			(justify left)
 		)
-		(uuid "7ae4ffdf-f6c7-510c-bfe2-4ab59a449b6d")
+		(uuid "811c4bc2-3254-567a-9dba-1ed6006d472b")
 	)
 	(hierarchical_label "VBUS_DET"
 		(shape output)
@@ -1808,7 +1850,7 @@
 			)
 			(justify left)
 		)
-		(uuid "b67b8cd1-1b7b-5bb9-80d2-20f8a86d3986")
+		(uuid "f0951b88-6fda-5ed0-96f0-47b509161034")
 	)
 	(symbol
 		(lib_id "power:GND")
@@ -1887,7 +1929,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 205.74 97.79 0)
+		(at 210.82 97.79 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1897,7 +1939,7 @@
 		(dnp no)
 		(uuid "1b5d33a8-f9b8-5b39-96be-6ef25986ae5a")
 		(property "Reference" "R45"
-			(at 207.94 96.49 0)
+			(at 213.02 96.49 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1908,7 +1950,7 @@
 			)
 		)
 		(property "Value" "120k"
-			(at 207.94 99.09 0)
+			(at 213.02 99.09 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1919,7 +1961,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 203.962 97.79 90)
+			(at 209.042 97.79 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1930,7 +1972,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 205.74 97.79 0)
+			(at 210.82 97.79 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1940,7 +1982,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 205.74 97.79 0)
+			(at 210.82 97.79 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1950,7 +1992,7 @@
 			)
 		)
 		(property "LCSC" "C25750"
-			(at 208.28 102.8699 0)
+			(at 213.36 102.8699 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2534,7 +2576,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 205.74 101.6 0)
+		(at 210.82 101.6 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2544,7 +2586,7 @@
 		(dnp no)
 		(uuid "4ed0671b-3135-5158-bae0-a04149d4a046")
 		(property "Reference" "#PWR27"
-			(at 205.74 95.25 0)
+			(at 210.82 95.25 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2556,7 +2598,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 205.74 106.68 0)
+			(at 210.82 106.68 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2566,7 +2608,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 205.74 101.6 0)
+			(at 210.82 101.6 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2576,7 +2618,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 205.74 101.6 0)
+			(at 210.82 101.6 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2586,7 +2628,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 205.74 101.6 0)
+			(at 210.82 101.6 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2609,7 +2651,7 @@
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
-		(at 66.04 63.5 180)
+		(at 76.2 73.66 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2619,7 +2661,7 @@
 		(dnp no)
 		(uuid "4fdd0fda-55ff-5333-acec-3dd709863660")
 		(property "Reference" "#FLG03"
-			(at 66.04 61.595 180)
+			(at 76.2 71.755 180)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2631,18 +2673,18 @@
 			)
 		)
 		(property "Value" "PWR_FLAG"
-			(at 67.64 64.9 0)
+			(at 76.2 78.74 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
 			)
 		)
 		(property "Footprint" ""
-			(at 66.04 63.5 0)
+			(at 76.2 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2652,7 +2694,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 66.04 63.5 0)
+			(at 76.2 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2662,7 +2704,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 66.04 63.5 0)
+			(at 76.2 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3407,7 +3449,7 @@
 		(dnp yes)
 		(uuid "b224c40a-ce51-5c7e-98f1-713ebbf29cb5")
 		(property "Reference" "R31"
-			(at 65.98 88.83 0)
+			(at 65.58 93.23 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3418,7 +3460,7 @@
 			)
 		)
 		(property "Value" "5.1k DNP:C25905"
-			(at 65.98 91.03 0)
+			(at 65.58 95.43 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
