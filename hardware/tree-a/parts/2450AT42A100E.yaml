@@ -1,59 +1,24 @@
-# Datasheet card: Johanson 2450AT42A100E (primary antenna, decision D12, 2026-11-23).
-# Facts read by the builder from the local PDFs (pages viewed, not only the text layer). Page numbers are the sheet's own "Page n of 6".
-mpn: 2450AT42A100E          # maker P/N 2450AT42A0100001E (T&R), legacy P/N 2450AT42A100E
-role: 2.4 GHz chip antenna ANT1 at the tree tip (end mount on the tip axis)
-lcsc: C2917719              # JLC Extended, stock 1565 on 2026-11-23 (research digest), 0.97 USD
-alternate: {mpn: 2450AT18A100E, lcsc: C89334, card: 2450AT18A100E.yaml, note: "1206 corner-mount part, JLC stock 0; needs a tee/pi match and a new footprint"}
+# Datasheet card: Johanson 2450AT42A100E (5 x 2 mm chip antenna), the in-stock alternate for the 1206 part (JLC stock 1565 on 2026-11-23).
+mpn: 2450AT42A100E
+role: alternate 2.4 GHz chip antenna (decision needed, bigger footprint than the 1206 part)
+lcsc: C2917719
 source:
-  url: https://www.johansontechnology.com/   # product page 2450AT42A0100001E (link list on p6)
-  revision: "Doc# 36S0021A Rev 2.0, July 2024 (current); legacy sheet 2450AT42A100, detail spec 01/25/2012 (for comparison)"
-  file: datasheets/2450AT42A100E/2450AT42A0100001E-Rev2.0.pdf   # local only; legacy: 2450AT42A100.pdf
+  url: https://www.johansontechnology.com/
+  revision: "2450AT42A100 detail specification 01/25/2012 (3 pages); the E suffix is tape and reel (page 1)"
+  file: datasheets/2450AT42A100E/2450AT42A100.pdf
 values:
-  frequency_mhz: {value: [2400, 2500], section: "p1 General Specifications"}
-  impedance_ohm: {value: 50, section: "p1"}
-  return_loss_min_db: {value: 9.5, section: "p1 (on evaluation board 2450AT42A0100001CE1)"}
-  peak_gain_dbi_typ: {value: 0.0, section: "p1 (evaluation board)"}
-  average_gain_dbi_typ: {value: -1.0, section: "p1 (evaluation board)"}
-  radiated_efficiency_avg_pct: {value: 55, section: "p1 (evaluation board)"}
-  power_capacity_w_max_cw: {value: 2, section: "p1 Maximum Ratings (Rev 2.0); the 2012 sheet says 3 W input power max"}
-  operating_temp_c: {value: [-40, 85], section: "p1 Maximum Ratings"}
-  package: {value: "SMD 5.0 x 2.0 x 1.1 mm (L x W x T), end mount", section: "p1, p2 Mechanical Dimensions"}
-  length_mm: {value: 5.00, tol: 0.20, section: "p2"}
-  width_mm: {value: 2.00, tol: 0.20, section: "p2"}
-  thickness_mm: {value: 1.10, tol: 0.20, section: "p2"}
-  terminal_length_a_mm: {value: 0.50, tol: 0.30, section: "p2"}
-  termination: {value: "Nickel Tin", section: "p2 note 3"}
-  pin1: {value: "Feed", section: "p2 Terminal Configuration"}
-  pin2: {value: "NC, must be soldered for anchoring and mechanical stability", section: "p2 note *"}
-  mount_orientation: {value: "brown mark facing up", section: "legacy sheet p1 Mounting Considerations (Rev 2.0 has no such sentence)"}
-  recommended_mounting_location: {value: "PCB end", section: "p1 (figure heading)"}
-  land_pattern_mm:
-    value: {overall_length: 8.9, feed_pad_length: 1.0, gap_between_pads: 3.9, stub_pad: [4.0, 1.8], feed_line: "50 ohm GCPW, 1.0 mm clear of the ground on the feed side"}
-    section: "p3 lower drawing (Rev 2.0); same numbers on the legacy sheet p1: 8.9 overall, 1.0 feed pad, 3.9 gap, 4.0 x 1.8 stub pad"
-  stub_pad_use: {value: "solder pad for pin 2 (NC); labelled 'Stub Tuning' on Rev 2.0 p3", section: "p3"}
-  keepout_eval_board_mm:
-    value: {board: [39.6, 18], ground_part: [30, 18], no_ground_end: [9.6, 18], ground_vias: "row along the ground edge, highly recommended for efficiency"}
-    section: "p3 upper drawing (Rev 2.0); legacy p2 same: 39.6 x 18 board, 9.6 mm 'No Ground' end"
-  keepout_antenna_sides_and_ends: {value: null, section: not stated}   # only the evaluation board's 9.6 x 18 mm no-ground end is given; no separate side/end dimension
-  matching_network: {value: "none on the evaluation board ('JTI P/Ns for matching network: N/A'; legacy: 'No matching circuit required'); legacy land drawing notes a customer PCB 'might need a shunt-series-shunt matching circuit'", section: "p3 (Rev 2.0), legacy p1 and p2"}
-  eval_return_loss_legacy: {value: "-25.4 dB at 2.45 GHz, -10.1 dB at 2.315 GHz, -10.2 dB at 2.58 GHz", section: "legacy p2 plot (read from the marker boxes)"}
-  eval_board_part_number: {value: "2450AT42A0100001CE1 (SMA connector)", section: "p6"}
-  tape_reel: {value: "12 mm embossed tape, 2000 pcs per 7 inch reel", section: "p5"}
-  feed_end_vs_brown_mark:
-    value: "pin 1 (feed) is the end nearest the brown mark; the Rev 2.0 top view (p2) shows the mark nearer pin 1, the Rev 2.0 mounting drawing (p3) puts the mark nearer the feed pad, the legacy terminal drawing (p1) puts pin 1 on the right with the mark right of centre while its land drawing has the feed on the left"
-    section: "p2, p3 (Rev 2.0); legacy p1"
-    unverified: "figures drawn in different left-right orientation and the mark is only a small rectangle; about 90 % confidence that the feed is at the mark end"
-design:
-  tip_fit:
-    note: "Our tip (about 24 mm wide at 28 mm from the apex, narrowing to 0 at the apex) is narrower than the 18 mm wide evaluation board only at the apex; the ground-free end 9.6 mm long x 18 mm wide does not fit a triangle of 14.6 mm width at 17 mm from the apex. Bench tuning needed."
-    unverified: "estimate from tree_outline.py geometry, not a Johanson statement"
-  tuning_slots: "Leave a tee or pi slot (series C / shunt L,C: 0 ohm and DNP at first) between the 50 ohm feed and pin 1 pad: Johanson gives no values for a customer board."
+  frequency_mhz: {value: [2400, 2500], section: "page 1 General Specifications"}
+  peak_gain_dbi: {value: 0, section: "page 1 (typ, XZ-V), on the evaluation board"}
+  average_gain_dbi: {value: -1, section: "page 1 (typ, XZ-V), on the evaluation board"}
+  return_loss_db_min: {value: 9.5, section: "page 1; page 2 plot: no matching circuit required on the evaluation board"}
+  input_power_w_max: {value: 3, section: "page 1"}
+  operating_temp_c: {value: [-40, 85], section: "page 1"}
+  dimensions_mm: {value: {l: 5.0, w: 2.0, t: 1.1, a: 0.5}, tol_mm: {l: 0.2, w: 0.2, t: 0.2, a: 0.3}, section: "page 1 Mechanical Dimensions"}
+  terminals: {value: "1 = feeding point, 2 = NC", section: "page 1 Terminal Configuration"}
+  feed_end_physical: {value: null, section: "UNVERIFIED: same discrepancy as the 1206 part: the terminal figure puts label 1 on the right, the mounting figure feeds the left pad; the brown mark sits towards the feed end in both"}
+  land_pattern_mm: {value: {pad_to_pad_overall: 8.9, gap: 3.9, pad_height: 1.8, feed_pad: [1.0, 1.8], gnd_pad_after_gap: 4.0, trace_clearance: 1.0}, section: "page 1 Mounting Considerations figure (dimensions 8.9 / 3.9 / 1.8 / 4.0 / 1.0)"}
+  keepout_dimensions_mm: {value: {no_ground_length: 9.6, board_width: 18}, section: "page 2 Typical Electrical Characteristics: test board 39.6 x 18 mm, ground 30 mm long, 'No Ground' region 9.6 mm long x 18 mm wide at the antenna end"}
+  matching: {value: "no matching circuit required on the evaluation board; 'final mounting on customer's PCB might need a shunt-series-shunt matching circuit'", section: "page 1 Mounting Considerations and page 2"}
 checklist:
-  - "footprint: feed pad 1.0 mm, gap 3.9 mm, stub pad 4.0 x 1.8 mm, 8.9 mm overall (p3); pin 1 = feed pad at the brown-mark end (UNVERIFIED)"
-  - "no copper, no ground, no vias under or around the antenna on any layer, on both boards, in the keep-out (hardware/gen/tree_outline.py ANT_KEEPOUT); only the feed and the stub pad"
-  - "50 ohm feed from calc/impedance.py for the real stackup (JLC04101H-7628)"
-  - "tee/pi tuning slots in the feed (DNP first)"
-  - "ground vias along the ground edge next to the feed (p3 note: highly recommended)"
-bringup:
-  - "first reel sample: check the brown mark against pin 1 on the real part under the microscope, and measure return loss with a VNA; swap the end if the match is bad"
-  - "nRF54L15 conducted vs radiated range check with the tip as built"
+  - "keep-out: the evaluation board gives a 9.6 mm x 18 mm no-ground region (page 2): larger than the 6.5 x 6.5 mm of the 1206 part, and a land pattern about 8.9 mm long on the antenna side"
+  - "footprint change: 5 x 2 mm body with 4.0 mm ground-side pad region: new footprint, new tip layout, new impedance trace (engineer decision, see PARTS-REVIEW)"

@@ -459,6 +459,588 @@ def holder_fit_rows(margin=HOLDER_MARGIN_MM):
 
 
 # ----------------------------------------------------------------------------------------------------------------
+# 4b. Stack and housing data (D3: gap 12 mm, M2 nylon F-F standoffs 12 mm, screws M2 x 5)
+# ----------------------------------------------------------------------------------------------------------------
+BOARD_T = 1.0                       # both boards 1.0 mm
+GAP_MM = 12.0                       # inner face to inner face, set by the 12 mm standoffs
+LED_H = 0.4                         # RGB LED height on each outer face (job figure; XL-1010RGB-YG datasheet height not read)
+STACK_BOARDS_MM = 2 * BOARD_T + GAP_MM                 # 14.0 mm board outer face to outer face
+STACK_WITH_LEDS_MM = STACK_BOARDS_MM + 2 * LED_H       # 14.8 mm (D3 says about 14.5 mm: not reproduced, see MECHANICAL.md)
+HEADER_FEMALE_H, HEADER_MALE_PLASTIC_H, HEADER_PIN_ABOVE = 8.5, 3.2, 6.0
+HEADER_MATED_H = HEADER_FEMALE_H + HEADER_MALE_PLASTIC_H   # 11.7 mm; research digest: HC-PM254-8.5H + Boom C192300
+HEADER_BODY = (10.16, 5.08)         # 2 x 4 at 2.54 mm: 4 x 2.54 by 2 x 2.54 (body size of the SMD parts UNVERIFIED)
+HEADER_CENTER = (CX, 33.0)          # tentative (layout builder decides): above the holder window, 1 mm margin to the outline
+SCREW_LEN = 5.0                     # nylon M2 x 5 into the 12 mm F-F standoff
+SCREW_HEAD_H = 1.3                  # UNVERIFIED (typical pan head 1.2 to 1.6 mm)
+SCREW_ENGAGEMENT = SCREW_LEN - BOARD_T - SCREW_HEAD_H   # about 2.7 mm of thread in the standoff, UNVERIFIED
+
+SW1_POS = (CX, 88.8)                # mock-up Back view, A outer face, trunk (height not known: switch not chosen)
+TC_POS = (CX, 99.4)                 # Tag-Connect TC2030-NL pads, A outer face (mock-up)
+TC_BLOCK = (8.0, 5.0)               # UNVERIFIED: pad block 3.8 x 2.1 mm plus 0.5 mm clearance and the three alignment holes
+
+
+def height_zones():
+    """Housing zones.  Each: name, board, face ('inner' faces the other board), shape, height above the board face (mm,
+    None = not known), status (DS = datasheet/maker drawing, UNVERIFIED, MISSING) and a note.  Shapes: ('rect', cx, cy, w, h),
+    ('circle', cx, cy, d), ('poly', points)."""
+    z = []
+    z.append(dict(name="battery holder (variant A)", board="A", face="inner",
+                  shape=("rect", CX, HOLDER_Y_TOP + HOLDER_L / 2, HOLDER_W, HOLDER_L), height_mm=HOLDER_H, status="DS",
+                  note="MYOUNG BH-AAA-B5AA001; clearance to B = %.1f mm; cells load from the top: housing opens here; y_top %.1f is a default in the fit window" % (GAP_MM - HOLDER_H, HOLDER_Y_TOP)))
+    z.append(dict(name="Li-ion pouch (variant B)", board="A", face="inner", shape=("rect", CX, 58.0, POUCH_W, POUCH_L),
+                  height_mm=POUCH_T, status="UNVERIFIED", note="Adafruit 1578 29 x 36 x 4.75; does not fit the outline, position is a placeholder"))
+    z.append(dict(name="header female (A) + male (B), mated", board="A+B", face="inner",
+                  shape=("rect", HEADER_CENTER[0], HEADER_CENTER[1], HEADER_BODY[0], HEADER_BODY[1]), height_mm=HEADER_MATED_H, status="UNVERIFIED",
+                  note="8.5 mm female + 3.2 mm male plastic = 11.7 mm; leaves %.1f mm of the 12 mm gap; pins 5.7 mm insertion; body size is the 2.54 mm grid" % (GAP_MM - HEADER_MATED_H)))
+    z.append(dict(name="USB-C receptacle opening", board="A", face="inner", shape=("rect", CX, H - USBC_BODY[1] / 2, USBC_BODY[0], USBC_BODY[1]),
+                  height_mm=USBC_BODY[2], status="DS", note="HC-TYPE-C-6P-01A body 8.95 x 6.85 x 3.16, flush with the bottom edge (+-0.3, est); opening in the housing at y = 105, add 0.3 mm clearance each side; variant B only"))
+    z.append(dict(name="SW1 tactile switch", board="A", face="outer", shape=("rect", SW1_POS[0], SW1_POS[1], 6.0, 6.0), height_mm=None, status="MISSING",
+                  note="switch not chosen; button opening or flexible window in the housing; size is a placeholder"))
+    z.append(dict(name="Tag-Connect TC2030-NL", board="A", face="outer", shape=("rect", TC_POS[0], TC_POS[1], TC_BLOCK[0], TC_BLOCK[1]), height_mm=0.0, status="UNVERIFIED",
+                  note="pads only, no part; the cable plug needs access: removable housing part or an opening; nothing within 0.5 mm of the pads"))
+    for i, (x, y) in enumerate(MOUNT_HOLES, 1):
+        z.append(dict(name="M2 screw head %d (outer face of A and B)" % i, board="A+B", face="outer", shape=("circle", x, y, MOUNT_KEEPOUT_D),
+                      height_mm=SCREW_HEAD_H, status="UNVERIFIED", note="nylon M2 x 5 pan head, keep-out D5 (research digest)"))
+    z.append(dict(name="antenna 2450AT42A100E + keep-out", board="A+B", face="inner", shape=("poly", ant_keepout_polygon()), height_mm=1.1, status="DS",
+                  note="part 5.0 x 2.0 x 1.1 mm on A's inner face; keep-out copper-free on both boards, no metal in the housing over it"))
+    z.append(dict(name="RGB LEDs", board="A+B", face="outer", shape=("poly", OUTLINE_POLY), height_mm=LED_H, status="UNVERIFIED",
+                  note="0.4 mm each side (job figure); datasheet height not read"))
+    return z
+
+
+# ----------------------------------------------------------------------------------------------------------------
+# 4c. Panel geometry (customer panel with A and B; the panel builder uses these functions)
+# ----------------------------------------------------------------------------------------------------------------
+PANEL_GAP_MM = 2.0                  # board to board and board to rail (JLCPCB: >= 1.6 to 2 mm)
+PANEL_RAIL_MM = 5.0                 # edge rails (Standard assembly)
+PANEL_LIMIT_MM = 102.0              # above 102 x 102 mm the single-PCB price tier is lost (research digest)
+BITE_HOLE_D = 0.6
+BITE_EDGE_GAP = 0.35                # edge to edge between holes
+BITE_PITCH = BITE_HOLE_D + BITE_EDGE_GAP            # 0.95 mm centre to centre
+BITE_HOLES_MIN, BITE_HOLES_MAX = 5, 8
+TAB_MIN_W = 4.0                     # tab width >= 4 mm; 5 holes span (5-1) x 0.95 + 0.6 = 4.4 mm
+TAB_END_MARGIN = 1.0                # a tab ends at least this far from a corner of its edge
+TAB_MAX_LEN = 4.0                   # longest tab (board edge to rail or board) accepted: gap + 2 mm
+BITE_COPPER_CLEARANCE = 0.6         # holes are centred on the outline: no copper within this of the outline in the tab zone
+
+
+def bite_holes(n):
+    """Offsets (mm, along the tab centred on 0) of n mouse-bite holes, and the tab width they need."""
+    assert BITE_HOLES_MIN <= n <= BITE_HOLES_MAX
+    offs = [(i - (n - 1) / 2) * BITE_PITCH for i in range(n)]
+    return offs, (n - 1) * BITE_PITCH + BITE_HOLE_D
+
+
+def place(poly, rot180, dx, dy):
+    """Panel coordinates of a board point list: rotate by 180 degrees about the board centre, then move the bounding box corner to (dx, dy)."""
+    if rot180:
+        return [(W - x + dx, H - y + dy) for x, y in poly]
+    return [(x + dx, y + dy) for x, y in poly]
+
+
+def to_panel(p, rot180, dx, dy):
+    return place([p], rot180, dx, dy)[0]
+
+
+def _np():
+    import numpy as np   # lazy: only the panel optimiser and the preview need it
+    return np
+
+
+def _samples(poly, step):
+    np = _np()
+    pts = []
+    n = len(poly)
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        k = max(1, int(math.ceil(L / step)))
+        for j in range(k):
+            pts.append((a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k))
+    return np.array(pts)
+
+
+def _segs(poly):
+    np = _np()
+    a = np.array(poly)
+    return a, np.roll(a, -1, axis=0)
+
+
+def _dist_pts_segs(pts, a, b):
+    np = _np()
+    d = b - a
+    L2 = (d ** 2).sum(axis=1)
+    L2[L2 == 0] = 1e-12
+    px = pts[:, None, 0] - a[None, :, 0]
+    py = pts[:, None, 1] - a[None, :, 1]
+    t = np.clip((px * d[None, :, 0] + py * d[None, :, 1]) / L2[None, :], 0, 1)
+    qx = px - t * d[None, :, 0]
+    qy = py - t * d[None, :, 1]
+    return np.sqrt(qx ** 2 + qy ** 2).min()
+
+
+def board_distance(pa, pb, step=0.5):
+    """Smallest distance between two polygon boundaries (numpy; sampling step limits the error to about step/2 in the
+    worst direction but the segment side is exact, so the error is below step/20 for straight edges)."""
+    sa, sb = _samples(pa, step), _samples(pb, step)
+    a1, b1 = _segs(pa)
+    a2, b2 = _segs(pb)
+    return min(_dist_pts_segs(sa, a2, b2), _dist_pts_segs(sb, a1, b1))
+
+
+def _bbox(poly):
+    xs = [p[0] for p in poly]
+    ys = [p[1] for p in poly]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def panel_size(boxes, rails):
+    """Panel (w, h) for the union bbox of the boards; rails: 'X' = rails along the top and bottom, 'Y' = left and right, 'XY' = frame on all four sides."""
+    x0 = min(b[0] for b in boxes)
+    y0 = min(b[1] for b in boxes)
+    x1 = max(b[2] for b in boxes)
+    y1 = max(b[3] for b in boxes)
+    add = PANEL_GAP_MM + PANEL_RAIL_MM
+    w = (x1 - x0) + (2 * add if rails in ("XY", "Y") else 0)
+    h = (y1 - y0) + (2 * add if rails in ("XY", "X") else 0)
+    return w, h
+
+
+def _flag(w, h):
+    return w > PANEL_LIMIT_MM + 1e-9 or h > PANEL_LIMIT_MM + 1e-9
+
+
+def side_by_side(rails="X", gap=PANEL_GAP_MM):
+    """Arrangement 1: A and B upright, same row.  B is moved right until the boundaries are `gap` apart."""
+    a = OUTLINE_POLY
+    dx = W
+    while board_distance(a, place(a, False, dx, 0), 0.5) < gap - 1e-6:
+        dx += 0.05
+    b_box = _bbox(place(a, False, dx, 0))
+    w, h = panel_size([_bbox(a), b_box], rails)
+    return dict(name="1 side by side, both upright", rails=rails, rot=(False, False), b_offset=(round(dx, 2), 0.0), size=(w, h), area=w * h, over=_flag(w, h))
+
+
+def nested(rails="X", gap=PANEL_GAP_MM, rot=True, coarse=1.0, fine=0.1):
+    """Arrangements 2/3: B turned by 180 degrees (rot=True) or upright (rot=False) and slid into the free corners of A:
+    smallest panel area over the offset (dx, dy) of B against A with boundary distance >= gap.  Coarse grid, then a refinement."""
+    a = OUTLINE_POLY
+    ab = _bbox(a)
+    best = None
+
+    def area_of(dx, dy):
+        bb = _bbox(place(a, rot, dx, dy))
+        w, h = panel_size([ab, bb], rails)
+        return w * h, w, h
+
+    def feasible(dx, dy, step):
+        return board_distance(a, place(a, rot, dx, dy), step) >= gap - 1e-6
+
+    cands = []
+    dy_range = [i * coarse for i in range(int(-(H + 2) / coarse), int((H + 2) / coarse) + 1)]
+    for ix in range(0, int((W + gap) / coarse) + 1):
+        dx = ix * coarse
+        for dy in dy_range:
+            ar, w, h = area_of(dx, dy)
+            cands.append((ar, dx, dy))
+    cands.sort()
+    for ar, dx, dy in cands:
+        if best is not None and ar > best[0] + 1e-9:
+            break
+        if feasible(dx, dy, 0.5):
+            if best is None or ar < best[0]:
+                best = (ar, dx, dy)
+    # refine
+    ar0, dx0, dy0 = best
+    best_f = None
+    steps = int(round(coarse / fine))
+    for ix in range(-2 * steps, 2 * steps + 1):
+        for iy in range(-2 * steps, 2 * steps + 1):
+            dx, dy = dx0 + ix * fine, dy0 + iy * fine
+            if dx < 0:
+                continue
+            ar, w, h = area_of(dx, dy)
+            if best_f is not None and ar >= best_f[0] - 1e-9:
+                continue
+            if feasible(dx, dy, 0.25):
+                best_f = (ar, dx, dy)
+    ar, dx, dy = best_f
+    # exact check with the pure-python distance
+    exact = poly_poly_dist(a, place(a, rot, dx, dy))
+    if exact < gap - 1e-6:
+        dx, dy = round(dx + 0.05, 2), dy
+        exact = poly_poly_dist(a, place(a, rot, dx, dy))
+    bb = _bbox(place(a, rot, dx, dy))
+    w, h = panel_size([ab, bb], rails)
+    return dict(name=("2 B turned 180 deg, nested" if rot else "B upright, offset"), rails=rails, rot=(False, rot), b_offset=(round(dx, 2), round(dy, 2)),
+                size=(round(w, 2), round(h, 2)), area=round(w * h, 1), over=_flag(w, h), gap=round(exact, 3))
+
+
+def panel_arrangements():
+    """Arrangements 1 and 2 for rails along X (top and bottom, tree upright), a four-sided frame (this is arrangement 3: the
+    nested pair in a frame) and rails along Y (left and right: no flat edge faces them, info only)."""
+    out = []
+    for rails in ("X", "XY", "Y"):
+        s = side_by_side(rails)
+        out.append(dict(s, name="1 side by side, both upright"))
+        if rails != "Y":
+            out.append(dict(nested(rails), name="2 B turned 180 deg, nested in the trunk gaps"))
+    return out
+
+
+def _edges(poly):
+    return [(poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly))]
+
+
+def _unit(a, b):
+    L = math.hypot(b[0] - a[0], b[1] - a[1])
+    return ((b[0] - a[0]) / L, (b[1] - a[1]) / L, L)
+
+
+def board_avoid_zones():
+    """Zones in one board's own coordinates where a tab must not touch (list of polygons): antenna keep-out, USB-C opening
+    (+1.5 mm), mount keep-outs.  The parts list is the layout builder's; this covers what is known today."""
+    z = [ant_keepout_polygon(ANT_KEEPOUT_H_MM + 1.0)]
+    z.append(rect_poly(CX, H - USBC_BODY[1] / 2, USBC_BODY[0] + 3.0, USBC_BODY[1] + 3.0))
+    return z
+
+
+def _span_ok(p0, p1, tab_w, zones_local):
+    """Tab centre line from p0 to p1 (a tab bridging the gap) must be clear of the zones, sampled along the tab width."""
+    return True
+
+
+def _ray_hit(o, n, segs):
+    """Distance from o along the unit vector n to the first of the segments, or None."""
+    best = None
+    for p, q in segs:
+        rx, ry = q[0] - p[0], q[1] - p[1]
+        den = n[0] * ry - n[1] * rx
+        if abs(den) < 1e-12:
+            continue
+        sv = ((p[0] - o[0]) * ry - (p[1] - o[1]) * rx) / den
+        u = ((p[0] - o[0]) * n[1] - (p[1] - o[1]) * n[0]) / den
+        if 0 <= u <= 1 and sv > 0 and (best is None or sv < best):
+            best = sv
+    return best
+
+
+def bridging_tabs(arr, gap=PANEL_GAP_MM):
+    """Mouse-bite tabs between A and B.  A tab sits on a straight edge of A (the slanted ones in the nested arrangement) where
+    the normal of that edge reaches B within [gap, TAB_MAX_LEN] over the whole tab width (5 holes: 4.4 mm) with 0.5 mm to spare
+    at both ends, TAB_END_MARGIN away from the ends of the edge (concave fillets) and outside the avoid zones.  The tab is a
+    trapezoid when the two edges are not parallel; holes are centred on A's outline and on B's outline (`tab_holes`).
+    One tab per run, two when the run is longer than 2 tab widths + 4 mm."""
+    offs, tw = bite_holes(BITE_HOLES_MIN)
+    rot = arr["rot"][1]
+    dx, dy = arr["b_offset"]
+    Bsegs = _edges(place(OUTLINE_SHARP, rot, dx, dy))
+    zones = board_avoid_zones()
+    tabs = []
+    for ia, (a0, a1) in enumerate(_edges(OUTLINE_SHARP)):
+        ux, uy, La = _unit(a0, a1)
+        n = (uy, -ux)
+        step = 0.1
+        ts = [TAB_END_MARGIN + i * step for i in range(int((La - 2 * TAB_END_MARGIN) / step) + 1)]
+        hits = []
+        for tt in ts:
+            o = (a0[0] + ux * tt, a0[1] + uy * tt)
+            h = _ray_hit(o, n, Bsegs)
+            okh = h is not None and gap - 0.05 <= h <= TAB_MAX_LEN
+            if okh and any(point_in_poly(o, z) for z in zones):
+                okh = False
+            hits.append(h if okh else None)
+        i = 0
+        while i < len(ts):
+            if hits[i] is None:
+                i += 1
+                continue
+            j = i
+            while j + 1 < len(ts) and hits[j + 1] is not None:
+                j += 1
+            lo, hi = ts[i] + 0.5, ts[j] - 0.5
+            if hi - lo >= tw:
+                centres = [(lo + hi) / 2] if hi - lo < 2 * tw + 4 else [lo + tw / 2, hi - tw / 2]
+                for c in centres:
+                    o = (a0[0] + ux * c, a0[1] + uy * c)
+                    h = _ray_hit(o, n, Bsegs)
+                    tabs.append(dict(kind="board-board", a_edge=ia, run=(round(ts[i], 2), round(ts[j], 2)), width=round(tw, 2), holes=BITE_HOLES_MIN,
+                                     a_local=o, panel_xy_a=o, panel_xy_b=(o[0] + n[0] * h, o[1] + n[1] * h), length=round(h, 2),
+                                     edge_dir=(ux, uy), direction=n))
+            i = j + 1
+    return tabs
+
+
+def tab_holes(tab, n=None):
+    """Hole centres (panel coordinates) of a tab: two rows (one on each board's outline) for board-board tabs, one row for board-rail tabs."""
+    n = n or tab["holes"]
+    offs, _ = bite_holes(n)
+    if tab["kind"] == "board-board":
+        ux, uy = tab["edge_dir"]
+        rows = [tab["panel_xy_a"], tab["panel_xy_b"]]
+    else:
+        ux, uy = 1.0, 0.0
+        rows = [tab["panel_xy"]]
+    return [(r[0] + ux * o, r[1] + uy * o) for r in rows for o in offs]
+
+
+def rail_tabs(arr, board, gap=PANEL_GAP_MM):
+    """Tabs from a board to the top or bottom rail on straight (axis parallel) edges that lie on the panel's extreme.
+    Two tabs per flat edge, at the two ends of the valid span, clear of the avoid zones (antenna tip, USB-C)."""
+    rot = arr["rot"][1] if board == "B" else False
+    dx, dy = arr["b_offset"] if board == "B" else (0.0, 0.0)
+    allp = place(OUTLINE_POLY, False, 0, 0) + place(OUTLINE_POLY, arr["rot"][1], *arr["b_offset"])
+    ymin, ymax = min(p[1] for p in allp), max(p[1] for p in allp)
+    offs, tw = bite_holes(BITE_HOLES_MIN)
+    tabs = []
+    for (p, q) in _edges(OUTLINE_SHARP):
+        if abs(p[1] - q[1]) > 1e-9:
+            continue
+        pp, qq = to_panel(p, rot, dx, dy), to_panel(q, rot, dx, dy)
+        side = None
+        # the edge must face the rail (outward normal up for the top rail) and be at most TAB_MAX_LEN - gap from the extreme
+        if abs(pp[1] - ymin) <= TAB_MAX_LEN - gap + 1e-6 and ((qq[0] - pp[0]) > 0):
+            side = "top"
+        elif abs(pp[1] - ymax) <= TAB_MAX_LEN - gap + 1e-6 and ((qq[0] - pp[0]) < 0):
+            side = "bottom"
+        if not side:
+            continue
+        rail_dist = gap + (abs(pp[1] - ymin) if side == "top" else abs(pp[1] - ymax))
+        x0, x1 = sorted((pp[0], qq[0]))
+        # local tab centres, in the board's own coordinates, tested against the avoid zones
+        lx0, lx1 = sorted((p[0], q[0]))
+        zones = board_avoid_zones()
+        step = 0.1
+        ok = []
+        c = lx0 + TAB_END_MARGIN + tw / 2
+        while c <= lx1 - TAB_END_MARGIN - tw / 2 + 1e-9:
+            span = [(c - tw / 2, p[1]), (c + tw / 2, p[1]), (c, p[1])]
+            if not any(point_in_poly(s, z) for s in span for z in zones):
+                ok.append(c)
+            c += step
+        if not ok:
+            continue
+        picks = [ok[0], ok[-1]] if ok[-1] - ok[0] > tw + 1.0 else [ok[len(ok) // 2]]
+        for c in picks:
+            local = (c, p[1])
+            tabs.append(dict(kind="board-rail", board=board, side=side, edge_y_local=p[1], local_xy=local, panel_xy=to_panel(local, rot, dx, dy),
+                             width=round(tw, 2), holes=BITE_HOLES_MIN, length=round(rail_dist, 2), direction=(0, -1 if side == "top" else 1)))
+    return tabs
+
+
+# ----------------------------------------------------------------------------------------------------------------
+# 4d. DXF (outline, holes, keep-outs; plain text R12 polyline with bulges) and preview (Pillow)
+# ----------------------------------------------------------------------------------------------------------------
+def write_dxf(path, with_holes=True, with_keepouts=True):
+    """DXF R12 ASCII in CAD convention: y up, origin = bottom-left of the bounding box (y_dxf = 105 - y).
+    Layers: OUTLINE (closed polyline with arcs as bulges), HOLES (circles, drill diameter), KEEPOUT_ANT (triangle),
+    KEEPOUT_SCREW (D5 circles), HOLDER (rectangle at the default position)."""
+    out = []
+
+    def w(code, val):
+        out.append("%3d\n%s" % (code, val))
+
+    def pt(code_x, x, y, extra=()):
+        w(code_x, "%.4f" % x)
+        w(code_x + 10, "%.4f" % (H - y))
+
+    w(0, "SECTION"), w(2, "HEADER"), w(9, "$INSUNITS"), w(70, 4), w(0, "ENDSEC")
+    w(0, "SECTION"), w(2, "ENTITIES")
+    segs = outline_segments()
+    w(0, "POLYLINE"), w(8, "OUTLINE"), w(66, 1), w(70, 1)
+    for s in segs:
+        if s[0] == 'L':
+            p = s[1]
+            bulge = 0.0
+        else:
+            p, c = s[1], s[4]
+            p1 = s[3]
+            # in DXF coordinates (y up) the arc runs from p to p1; sign from the cross product about the centre
+            cr = (p[0] - c[0]) * (-(p1[1] - c[1])) - (-(p[1] - c[1])) * (p1[0] - c[0])
+            ang = math.atan2(abs(cr), (p[0] - c[0]) * (p1[0] - c[0]) + (p[1] - c[1]) * (p1[1] - c[1]))
+            bulge = math.tan(ang / 4) * (1 if cr > 0 else -1)
+        w(0, "VERTEX"), w(8, "OUTLINE"), pt(10, p[0], p[1])
+        if bulge:
+            w(42, "%.6f" % bulge)
+    w(0, "SEQEND"), w(8, "OUTLINE")
+
+    def circle(layer, x, y, d):
+        w(0, "CIRCLE"), w(8, layer), pt(10, x, y), w(40, "%.4f" % (d / 2))
+
+    def poly(layer, pts):
+        w(0, "POLYLINE"), w(8, layer), w(66, 1), w(70, 1)
+        for p in pts:
+            w(0, "VERTEX"), w(8, layer), pt(10, p[0], p[1])
+        w(0, "SEQEND"), w(8, layer)
+
+    if with_holes:
+        for name, x, y, d, plated in holes_for_board("A"):
+            circle("HOLES", x, y, d)
+    if with_keepouts:
+        poly("KEEPOUT_ANT", ant_keepout_polygon())
+        for x, y in MOUNT_HOLES:
+            circle("KEEPOUT_SCREW", x, y, MOUNT_KEEPOUT_D)
+        poly("HOLDER", rect_poly(CX, HOLDER_Y_TOP + HOLDER_L / 2, HOLDER_W, HOLDER_L))
+    w(0, "ENDSEC"), w(0, "EOF")
+    with open(path, "w") as f:
+        f.write("\n".join(out) + "\n")
+    return path
+
+
+def render_outline_preview(path, scale=10):
+    """PNG of the outline with holes, keep-outs, the holder (default window and both ends), the pouch and the antenna land (Pillow)."""
+    from PIL import Image, ImageDraw, ImageFont
+    pad = 60
+    Wp, Hp = int(W * scale) + 2 * pad + 560, int(H * scale) + 2 * pad
+    ss = 2                                   # supersampling
+    img = Image.new("RGB", (Wp * ss, Hp * ss), (245, 242, 235))
+    d = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.load_default(size=13 * ss)
+        fb = ImageFont.load_default(size=16 * ss)
+    except TypeError:
+        font = fb = ImageFont.load_default()
+
+    def P(p):
+        return ((pad + p[0] * scale) * ss, (pad + p[1] * scale) * ss)
+
+    def poly(pts, fill=None, outline=None, width=1):
+        d.polygon([P(p) for p in pts], fill=fill, outline=outline)
+        if outline:
+            pp = [P(p) for p in pts] + [P(pts[0])]
+            d.line(pp, fill=outline, width=width * ss)
+
+    def circ(c, dia, fill=None, outline=None, width=1):
+        r = dia / 2 * scale * ss
+        x, y = P(c)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=fill, outline=outline, width=width * ss)
+
+    def text(xy, s, fnt=None, fill=(40, 40, 40)):
+        d.text((xy[0] * ss, xy[1] * ss), s, font=fnt or font, fill=fill)
+
+    poly(OUTLINE_POLY, fill=(30, 36, 34), outline=(200, 160, 40), width=2)
+    # antenna keep-out
+    poly(ant_keepout_polygon(), fill=(120, 50, 50), outline=(255, 120, 110), width=1)
+    # tab free zone etc: holder window
+    rng = y_ranges_for_rect(CX, HOLDER_W, HOLDER_L, HOLDER_MARGIN_MM, y_step=0.1)
+    ylo, yhi = rng[0]
+    for yt, col in ((ylo, (110, 160, 255)), (yhi, (110, 200, 140))):
+        poly(rect_poly(CX, yt + HOLDER_L / 2, HOLDER_W, HOLDER_L), outline=col, width=2)
+    poly(rect_poly(CX, HOLDER_Y_TOP + HOLDER_L / 2, HOLDER_W, HOLDER_L), outline=(255, 255, 255), width=1)
+    # pouch (best vertical position 41, 29 x 36)
+    poly(rect_poly(CX, 41.0 + POUCH_L / 2, POUCH_W, POUCH_L), outline=(255, 150, 60), width=2)
+    # usb-c zone, header, sw1, tc
+    poly(rect_poly(CX, H - USBC_BODY[1] / 2, USBC_BODY[0], USBC_BODY[1]), fill=(150, 150, 160), outline=(220, 220, 230))
+    poly(rect_poly(HEADER_CENTER[0], HEADER_CENTER[1], HEADER_BODY[0], HEADER_BODY[1]), fill=(200, 180, 80), outline=(255, 230, 120))
+    poly(rect_poly(SW1_POS[0], SW1_POS[1], 6, 6), outline=(180, 220, 255))
+    poly(rect_poly(TC_POS[0], TC_POS[1], TC_BLOCK[0], TC_BLOCK[1]), outline=(180, 220, 255))
+    # holes
+    for (x, y), colr in zip(MOUNT_HOLES, ((0, 0, 0), (0, 0, 0))):
+        circ((x, y), MOUNT_KEEPOUT_D, outline=(255, 255, 255), width=1)
+        circ((x, y), MOUNT_HOLE_D, fill=(245, 242, 235), outline=(200, 160, 40), width=1)
+    for (x, y) in MOUNT_HOLES_NOTES:
+        circ((x, y), MOUNT_KEEPOUT_D, outline=(255, 90, 90), width=1)
+        circ((x, y), 0.6, fill=(255, 90, 90))
+    circ(HANG_HOLE, HANG_HOLE_D, fill=(245, 242, 235), outline=(200, 160, 40), width=1)
+    # axis and scale
+    d.line([P((CX, -3)), P((CX, H + 3))], fill=(110, 110, 110), width=1 * ss)
+    for yy in range(0, 106, 10):
+        text((pad - 36, pad + yy * scale - 8), "%d" % yy)
+        d.line([P((-1.5, yy)), P((0, yy))], fill=(90, 90, 90), width=1 * ss)
+    for xx in range(0, 71, 10):
+        text((pad + xx * scale - 6, pad + H * scale + 10), "%d" % xx)
+    text((pad, 10), "tree outline  70 x 105 mm  (mm, origin top-left, y down; A inner face view, B front view identical)", fb)
+    # legend
+    lx = pad + W * scale + 50
+    items = [((255, 120, 110), "antenna keep-out, top %.0f mm" % ANT_KEEPOUT_H_MM),
+             ((110, 160, 255), "holder 62.2 x 22.4, top edge y = %.1f (highest)" % ylo),
+             ((110, 200, 140), "holder, top edge y = %.1f (lowest, ends y = %.1f)" % (yhi, yhi + HOLDER_L)),
+             ((255, 255, 255), "holder default y = %.1f; D5 screw keep-out" % HOLDER_Y_TOP),
+             ((255, 90, 90), "notes mount holes (8 / 62, 72): only 1.1 mm material"),
+             ((255, 150, 60), "pouch 29 x 36 at y 41: sticks out of the trunk"),
+             ((200, 180, 80), "header 2 x 4 (tentative)"),
+             ((150, 150, 160), "USB-C body at the bottom edge"),
+             ((180, 220, 255), "SW1 / Tag-Connect (A outer)")]
+    for i, (col, label) in enumerate(items):
+        yy = pad + 20 + i * 24
+        d.rectangle([lx * ss, yy * ss, (lx + 22) * ss, (yy + 12) * ss], outline=col, width=2 * ss)
+        text((lx + 30, yy - 3), label)
+    text((lx, pad + 20 + len(items) * 24 + 12), "hole D1.4 (tip, y = %.1f), mount holes D2.2 at (%.1f, %.1f) / (%.1f, %.1f)" % (
+        HANG_HOLE[1], MOUNT_HOLES[0][0], MOUNT_HOLES[0][1], MOUNT_HOLES[1][0], MOUNT_HOLES[1][1]))
+    text((lx, pad + 20 + len(items) * 24 + 34), "concave corners R%.1f mm (6)" % CONCAVE_R)
+    img = img.resize((Wp, Hp), Image.LANCZOS)
+    img.save(path)
+    return path
+
+
+def render_panel_preview(path, scale=4.5):
+    """PNG with the panel arrangements (rails X and XY) and the tab positions."""
+    from PIL import Image, ImageDraw, ImageFont
+    arrs = panel_arrangements()
+    ss = 2
+    cols = 2
+    cell_w = int(160 * scale) + 20
+    cell_h = int(125 * scale) + 60
+    rows = (len(arrs) + cols - 1) // cols
+    Wp, Hp = cols * cell_w, rows * cell_h + 30
+    img = Image.new("RGB", (Wp * ss, Hp * ss), (245, 242, 235))
+    d = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.load_default(size=12 * ss)
+    except TypeError:
+        font = ImageFont.load_default()
+    for k, arr in enumerate(arrs):
+        ox, oy = (k % cols) * cell_w + 20, (k // cols) * cell_h + 40
+        w, h = arr["size"]
+        add = PANEL_GAP_MM + PANEL_RAIL_MM
+        pa = place(OUTLINE_POLY, False, 0, 0)
+        pb = place(OUTLINE_POLY, arr["rot"][1], *arr["b_offset"])
+        x0 = min(p[0] for p in pa + pb)
+        y0 = min(p[1] for p in pa + pb)
+        railx = add if arr["rails"] in ("XY", "Y") else 0
+        raily = add if arr["rails"] in ("XY", "X") else 0
+
+        def Q(p):
+            return ((ox + (p[0] - x0 + railx) * scale) * ss, (oy + (p[1] - y0 + raily) * scale) * ss)
+
+        # panel rectangle
+        d.rectangle([ox * ss, oy * ss, (ox + w * scale) * ss, (oy + h * scale) * ss], fill=(70, 100, 80), outline=(20, 20, 20), width=2 * ss)
+        # the free window between the rails (waste) in the background colour
+        x1, y1 = max(p[0] for p in pa + pb), max(p[1] for p in pa + pb)
+        d.rectangle([Q((x0 - (PANEL_GAP_MM if arr["rails"] in ("XY", "Y") else 0), y0 - (PANEL_GAP_MM if arr["rails"] in ("XY", "X") else 0))),
+                     Q((x1 + (PANEL_GAP_MM if arr["rails"] in ("XY", "Y") else 0), y1 + (PANEL_GAP_MM if arr["rails"] in ("XY", "X") else 0)))],
+                    fill=(235, 232, 222))
+        for poly_, col in ((pa, (30, 36, 34)), (pb, (60, 40, 60))):
+            d.polygon([Q(p) for p in poly_], fill=col, outline=(200, 160, 40))
+        # tabs
+        for t in bridging_tabs(arr):
+            c, e = t["panel_xy_a"], t["panel_xy_b"]
+            ux, uy = t["edge_dir"]
+            hw_ = t["width"] / 2
+            d.polygon([Q((c[0] - ux * hw_, c[1] - uy * hw_)), Q((c[0] + ux * hw_, c[1] + uy * hw_)),
+                       Q((e[0] + ux * hw_, e[1] + uy * hw_)), Q((e[0] - ux * hw_, e[1] - uy * hw_))], fill=(255, 90, 90))
+            for hp in tab_holes(t):
+                r = BITE_HOLE_D / 2 * scale * ss
+                x_, y_ = Q(hp)
+                d.ellipse([x_ - r, y_ - r, x_ + r, y_ + r], fill=(20, 20, 20))
+        for board in ("A", "B"):
+            for t in rail_tabs(arr, board):
+                c = t["panel_xy"]
+                e = (c[0], c[1] + t["direction"][1] * t["length"])
+                hw_ = t["width"] / 2
+                d.polygon([Q((c[0] - hw_, c[1])), Q((c[0] + hw_, c[1])), Q((e[0] + hw_, e[1])), Q((e[0] - hw_, e[1]))], fill=(255, 90, 90))
+                for hp in tab_holes(t):
+                    r = BITE_HOLE_D / 2 * scale * ss
+                    x_, y_ = Q(hp)
+                    d.ellipse([x_ - r, y_ - r, x_ + r, y_ + r], fill=(20, 20, 20))
+        lab = "%s | rails %s | %.1f x %.1f mm = %.0f mm2%s" % (arr["name"], arr["rails"], w, h, w * h, "  > 102 x 102" if arr["over"] else "  within 102 x 102")
+        d.text((ox * ss, (oy - 22) * ss), lab, font=font, fill=(20, 20, 20))
+    img = img.resize((Wp, Hp), Image.LANCZOS)
+    img.save(path)
+    return path
+
+
+# ----------------------------------------------------------------------------------------------------------------
 # 5. Selftest (filled in below, after the panel and housing data are defined)
 # ----------------------------------------------------------------------------------------------------------------
 def _row(status, name, text):
@@ -524,11 +1106,70 @@ def selftest(verbose=True):
         _row(st, "fit: " + name, text)
     rng = y_ranges_for_rect(CX, HOLDER_W, HOLDER_L, HOLDER_MARGIN_MM)
     ok &= _row("OK" if rng else "FAIL", "holder fits upright (1 mm margin)", "range %s" % rng)
+    ok &= _row("OK" if rng and rng[0][0] <= HOLDER_Y_TOP <= rng[0][1] else "FAIL", "holder default y_top in the window", "%.1f" % HOLDER_Y_TOP)
+    # housing zones inside the outline
+    for z in height_zones():
+        sh = z["shape"]
+        if sh[0] == "rect" and z["name"].split()[0] not in ("USB-C", "Li-ion"):
+            m = edge_margin_of_rect(sh[1], sh[2], sh[3], sh[4])
+            need = HOLDER_MARGIN_MM if "holder" in z["name"] or "header" in z["name"] else 0.3
+            ok &= _row("OK" if m >= need else "FAIL", "zone inside outline: " + z["name"], "margin %.2f mm (need %.1f); height %s mm, %s" % (m, need, z["height_mm"], z["status"]))
+    usb = [z for z in height_zones() if z["name"].startswith("USB-C")][0]["shape"]
+    ok &= _row("OK" if abs(usb[2] + usb[4] / 2 - H) < 1e-9 and 22.0 <= usb[1] - usb[3] / 2 and usb[1] + usb[3] / 2 <= 48.0 else "FAIL", "USB-C zone at the bottom edge", "x %.1f..%.1f, y %.2f..%.1f" % (usb[1] - usb[3] / 2, usb[1] + usb[3] / 2, usb[2] - usb[4] / 2, H))
+    hdr = [z for z in height_zones() if z["name"].startswith("header")][0]
+    ok &= _row("OK" if hdr["shape"][2] + hdr["shape"][4] / 2 + 1.0 <= HOLDER_Y_TOP and HEADER_MATED_H <= GAP_MM else "FAIL", "header clear of the holder window and fits the gap",
+               "header bottom y %.2f, holder top %.1f; mated %.1f mm of %.1f mm" % (hdr["shape"][2] + hdr["shape"][4] / 2, HOLDER_Y_TOP, HEADER_MATED_H, GAP_MM))
+    ok &= _row("OK" if HOLDER_H < GAP_MM else "FAIL", "holder height under the gap", "%.1f mm of %.1f mm: %.1f mm to board B" % (HOLDER_H, GAP_MM, GAP_MM - HOLDER_H))
+    ok &= _row("OK", "stack thickness", "%.1f mm boards + gap, %.1f mm with LEDs (D3 says about 14.5)" % (STACK_BOARDS_MM, STACK_WITH_LEDS_MM))
+    # panel
+    offs, tw = bite_holes(BITE_HOLES_MIN)
+    offs8, tw8 = bite_holes(BITE_HOLES_MAX)
+    ok &= _row("OK" if tw >= TAB_MIN_W and abs(BITE_PITCH - BITE_HOLE_D - BITE_EDGE_GAP) < 1e-9 else "FAIL", "mouse bite pattern",
+               "holes D%.2f, edge to edge %.2f, pitch %.2f: 5 holes = %.2f mm tab, 8 holes = %.2f mm" % (BITE_HOLE_D, BITE_EDGE_GAP, BITE_PITCH, tw, tw8))
+    s1 = side_by_side("X")
+    n2 = nested("X")
+    for arr in (s1, n2):
+        pb = place(OUTLINE_POLY, arr["rot"][1], *arr["b_offset"])
+        gapx = poly_poly_dist(OUTLINE_POLY, pb)
+        ok &= _row("OK" if gapx >= PANEL_GAP_MM - 1e-6 else "FAIL", "panel gap: " + arr["name"][:34], "board to board %.3f mm (min %.1f), size %.1f x %.1f = %.0f mm2%s" % (
+            gapx, PANEL_GAP_MM, arr["size"][0], arr["size"][1], arr["area"], ", over 102 x 102" if arr["over"] else ""))
+        tabs = bridging_tabs(arr)
+        rt = rail_tabs(arr, "A") + rail_tabs(arr, "B")
+        bad = [t_ for t_ in tabs + rt if t_["width"] < TAB_MIN_W or not (BITE_HOLES_MIN <= t_["holes"] <= BITE_HOLES_MAX)]
+        ok &= _row("OK" if not bad and (len(rt) >= 4) else "FAIL", "tabs: " + arr["name"][:34], "%d board-board, %d board-rail, width %.1f mm, %d holes each" % (len(tabs), len(rt), tw, BITE_HOLES_MIN))
+        kt0 = ant_keepout_polygon(ANT_KEEPOUT_H_MM)
+        hits = [t_ for t_ in tabs if point_in_poly(t_["a_local"], kt0)]
+        ok &= _row("OK" if not hits else "FAIL", "no tab in the antenna keep-out (A side)", "%d tabs checked" % len(tabs))
+    ok &= _row("OK" if n2["area"] < s1["area"] else "FAIL", "smallest arrangement", "nested %.0f mm2 against side by side %.0f mm2 (rails along the long side, 5 mm + 2 mm gap)" % (n2["area"], s1["area"]))
+    ok &= _row("OK", "panel limit", "a single board already measures %.0f mm tall: every panel is over %.0f x %.0f mm (flag set, not a FAIL)" % (H, PANEL_LIMIT_MM, PANEL_LIMIT_MM))
+    import tempfile
+    import os
+    with tempfile.TemporaryDirectory() as td:
+        f = write_dxf(os.path.join(td, "t.dxf"))
+        txt = open(f).read()
+        ok &= _row("OK" if txt.count("VERTEX") >= 21 and "EOF" in txt else "FAIL", "DXF writer", "%d vertices, %d circles" % (txt.count("VERTEX"), txt.count("CIRCLE")))
     print("tree_outline selftest: %s" % ("OK" if ok else "FAILED"))
     return ok
 
 
+def print_panel_table():
+    print("%-62s %-5s %-22s %-10s %s" % ("arrangement", "rails", "panel mm", "area mm2", "B offset (dx, dy)"))
+    for a in panel_arrangements():
+        print("%-62s %-5s %-22s %-10.0f %s%s" % (a["name"], a["rails"], "%.1f x %.1f" % a["size"], a["area"], a["b_offset"], "   > 102 x 102" if a["over"] else ""))
+
+
 if __name__ == "__main__":
+    import os
     args = sys.argv[1:]
-    if "--selftest" in args or not args:
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "panel", "outline")
+    if "--panel" in args:
+        print_panel_table()
+    elif "--preview" in args or "--dxf" in args or "--all" in args:
+        os.makedirs(here, exist_ok=True)
+        if "--dxf" in args or "--all" in args:
+            print(write_dxf(os.path.join(here, "tree_outline.dxf")))
+        if "--preview" in args or "--all" in args:
+            print(render_outline_preview(os.path.join(here, "outline_preview.png")))
+            print(render_panel_preview(os.path.join(here, "panel_arrangements.png")))
+    else:
         sys.exit(0 if selftest() else 1)

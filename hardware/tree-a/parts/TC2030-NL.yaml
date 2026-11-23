@@ -1,0 +1,21 @@
+# Datasheet card: Tag-Connect TC2030-IDC-NL footprint (no-leg, pads and three alignment holes). The footprint carries no part to assemble.
+mpn: TC2030-NL
+role: SWD programming footprint on the outer face of board A (trunk); cable TC2030-CTX (Cortex pinout) on the programmer side
+lcsc: null                  # footprint only, no fab part number (hand-plugged cable, not on the BOM)
+source:
+  url: https://www.tag-connect.com/
+  revision: "footprint drawing TC2030-IDC-NL-FP Rev B (12/05/19); cable drawing TC2030-IDC-NL Rev B; TC2030-CTX leaflet"
+  file: datasheets/TC2030-NL/TC2030-IDC-NL-Datasheet-Rev-B.pdf (+ TC2030-CTX_1.pdf)
+values:
+  contact_pads_mm: {value: {count: 6, diameter: 0.787, tolerance: 0.076, grid: "3 columns x 2 rows, pitch 1.27 x 1.27", paste: none}, section: "footprint drawing sheet 1: 'conductive contact pads, no solder paste', pad dia .0310 in = 0.787 mm"}
+  alignment_holes_mm: {value: {count: 3, diameter: 0.991, tolerance: 0.076, plated: false, x_span_between_left_hole_and_right_holes: 5.080}, section: "footprint drawing sheet 1: non-plated thru alignment pin holes, dia .0390 in = 0.991 mm; dimension .2000 in = 5.080 mm; 1.016 and 0.635 mm offsets"}
+  hole_positions: {value: "one hole left of the pad grid, two holes right of it (one level with each pad row); exact coordinates must be taken from the drawing when the footprint is generated (dimension arrows 5.080 / 1.270 / 1.270 / 1.016 / 0.635 mm)", section: "footprint drawing sheet 1 (figure)", unverified: "positions read from the figure; the generator author overlays the drawing"}
+  keep_out: {value: "no tracks or vias in the shaded KEEP OUT area between the pad rows; no other track or signal within 0.020 in (0.508 mm) of any contact pad", section: "footprint drawing notes 1 and 2"}
+  paste_rule: {value: "no solder paste on the contact pads; no hole in the stencil layer; else make the pads through-hole with a finished hole <= 0.008 in", section: "footprint drawing note 3"}
+  bom_note: {value: "specify DNL (do not load) in the BOM", section: "footprint drawing note 4"}
+  cortex_pinout_ctx: {value: {1: "VCC", 2: "SWDIO / TMS", 3: "nRESET", 4: "SWCLK / TCK", 5: "GND (also GNDDetect)", 6: "SWO / TDO"}, section: "TC2030-CTX leaflet, Connections table"}
+  contact_pin_compressed_height_mm: {value: 3.175, section: "cable drawing sheet 2 'contact pins compressed' .125 in"}
+checklist:
+  - "pin map vs nRF54L15: 1 VDD, 2 SWDIO (pin 25), 3 nRESET (pin 30), 4 SWCLK (pin 26), 5 GND, 6 SWO (P2.07, optional): the nRF card pins 25, 26, 30 and P2.07 SWO"
+  - "layout notes -> keep-out rule area between the pad rows and 0.508 mm around the pads on the outer face; no paste layer; the three NPTH holes are on the outer-face edge of the trunk"
+  - "the cable footprint sits on the outer face of board A, the gap behind it (board B side) is free: contact pins compress 3.175 mm"

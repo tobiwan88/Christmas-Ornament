@@ -1,0 +1,27 @@
+# Datasheet card: MYOUNG BH-AAA-B5AA001 (2 x AAA SMT battery holder, 180-degree type, PA9T housing, phosphor-bronze Au-plated terminals). Decision D4.
+mpn: BH-AAA-B5AA001
+role: variant A cell holder, two AAA cells in series (SMT, JLC-assembled)
+lcsc: C964881
+source:
+  url: https://www.meiyangdz.com/
+  revision: "drawing MY-CP-0144 REV A/0, dated 2018-09-09 (1 sheet, LCSC copy); web address printed in the title block"
+  file: datasheets/BH-AAA-B5AA001/BH-AAA-B5AA001_lcsc.pdf
+values:
+  outline_mm: {value: {l: 62.20, w: 22.4, h_total: 11.3, cell_wall_height: 5.0}, tol_mm: 0.3, section: "drawing top view and section: 62.20 +-0.3, 22.4, 11.3"}
+  terminals: {value: "four SMT tabs, two at each end; tab pitch 11.00 mm across the two cells; tab width 5.10 mm (top view)", section: "drawing top view (5.10, 11.00)"}
+  pcb_layout_bottom_view_mm: {value: {pad_centre_distance_x: 55.75, pad_pitch_y: 11.00, pad_size_x: 7.45, pad_size_y: 6.10, hole_x_from_centre: 23.45, hole_y_from_centre: 10.45}, section: "PCB Layout Diagram (bottom view): 55.75, 7.45, 6.10, 11.00, 10.45, 23.45; pad box read from the hatched areas"}
+  locating_hole_mm: {value: {pcb_hole_dia: 1.80, holder_peg_dia: 1.30, count: 1}, section: "PCB Layout Diagram (hole dia 1.80) and top view (peg dia 1.30): one peg at (-23.45, +-10.45) from the centre at the left end"}
+  center_marking: {value: "422-SMT / 422-THM printed in a 18.3 x 15.3 mm box in the middle of the bottom (Keystone-style numbering)", section: "PCB Layout Diagram"}
+  cell_polarity: {value: "top view: upper cell '- ... +' (minus at the left end, plus at the right end); lower cell '+ ... -' (plus at the left end, minus at the right end): the two cells are anti-parallel (SMT 180 degree type)", section: "top view markings on the cell cavities and the 3D view"}
+  series_wiring: {value: "join the two RIGHT-end tabs (upper cell +, lower cell -) on the PCB; the pack output is the two LEFT-end tabs: lower-left = pack +, upper-left = pack -. Mapping of the footprint pad names to this top-view position is UNVERIFIED (the layout diagram is a bottom view)", section: "derived from the polarity markings", unverified: "confirm with the footprint/3D model and a continuity test with two cells on the first board"}
+  contact_resistance_mohm_max: {value: 30, section: "drawing note 2a"}
+  insulation_resistance_mohm_min: {value: 1000, section: "drawing note 2b"}
+  dielectric_voltage: {value: "500 V AC for one second", section: "drawing note 2c"}
+  operating_temp_c: {value: [-25, 85], section: "drawing note 2d"}
+  plating: {value: "A = Au 1 u inch", section: "ordering information (B5AA001: housing 5A PA9T black, plating A gold)"}
+  cell_loading: {value: "cells load from the top of the housing (face toward board B when stacked): the printed housing must open to change cells", section: "drawing (open top)"}
+  current_rating: {value: null, section: "not stated"}
+checklist:
+  - "series wiring and polarity: see series_wiring (UNVERIFIED pad mapping); the reverse-polarity MOSFET (D7) protects a wrongly inserted cell"
+  - "locating peg: one NPTH hole 1.80 mm at (-23.45, +-10.45) from the holder centre; footprint must carry it (the holder cannot be placed rotated 180 degrees without the hole moving)"
+  - "mechanical: 62.20 x 22.4 x 11.3 mm in a 12 mm gap (D3): 0.7 mm clearance minus the board and tab height (tab foot 0.9 mm per the side view); 3D review in MECHANICAL.md"

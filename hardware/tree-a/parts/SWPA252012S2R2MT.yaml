@@ -1,0 +1,27 @@
+# Datasheet card: Sunlord SWPA252012S2R2MT (2.2 uH shielded wire-wound power inductor, 2.5 x 2.0 x 1.2 mm, JLC "1008").
+mpn: SWPA252012S2R2MT
+role: TPS63900 inductor L (2.2 uH only), 100 mA input-limit setting
+lcsc: C23894
+source:
+  url: https://www.sunlordinc.com/
+  revision: "Sunlord SWPA series catalog (20 pages), specification table 'Revised 2023/06/01', catalog cover 2023/9/21; image-only PDF, read from page images"
+  file: datasheets/SWPA252012S2R2MT/SWPA252012S2R2MT_lcsc.pdf
+values:
+  inductance_uh: {value: 2.2, tol_pct: 20, test: "@100 kHz, 1 V", section: "page 3 SWPA252012S series table"}
+  dcr_ohm: {value: {max: 0.216, typ: 0.166}, section: "page 3 table"}
+  isat_a: {value: 1.85, section: "page 3 table, saturation current Isat 'Max' column 1.85 A (typ column 2.07 A); the lower figure is used", note: "the printed Max < Typ ordering is odd: the conservative 1.85 A is taken"}
+  isat_typ_a: {value: 2.07, section: "page 3 table, Isat typ"}
+  irms_a: {value: {max: 1.15, typ: 1.25}, section: "page 3 table, heat rating current Irms"}
+  isat_definition: {value: null, section: "not stated on the pages read (pages 1-4): current at which L drops by a stated percentage not printed"}
+  srf_mhz_min: {value: 69, section: "page 3 table"}
+  operating_temp_c: {value: [-40, 125], section: "page 1 (including self-heating)"}
+  dimensions_mm: {value: {a: 2.5, b: 2.0, c_max: 1.2, d: 2.0, e: 0.8}, tol_mm: {a: 0.1, b: 0.1, d: 0.2, e: 0.2}, section: "page 2 shape and dimensions, SWPA252012S, Fig. 1"}
+  land_pattern_mm: {value: {a_gap: 0.80, b_pad_width: 0.85, c_pad_length: 2.0}, section: "page 2 recommended land pattern, typical values"}
+  tps63900_requirement: {value: "Isat >= 1 A for the <= 100 mA setting; peak current limit in that setting 0.15-0.51 A (TPS63900 card 6.5)", section: "TPS63900 card 6.3"}
+  margin_vs_requirement: {value: "1.85 A / 1.0 A = 1.85 x; 1.85 A / 0.51 A max peak limit = 3.6 x", section: "calculation (calc/tree_power.py)"}
+  derating_note: {value: "TPS63900 Table 8-1 footnote: effective inductance can vary +20 % / -30 % with tolerance and current; +-20 % part + saturation: stays inside the 2.2 uH 'effective' assumption of the TI table", section: "TPS63900 card"}
+alternate: {mpn: WPN201610H2R2MT, lcsc: C97005, card: WPN201610H2R2MT.yaml}
+checklist:
+  - "saturation above the peak current: Isat 1.85 A vs 0.51 A max peak limit (100 mA setting) and vs 1 A requirement (TPS63900 6.3)"
+  - "DCR 0.216 ohm max: conduction loss at 4 mA average input current is negligible (calc/tree_power.py prints I^2 R)"
+  - "footprint: 1008-class land from page 2; Sunlord body is 2.5 x 2.0, not the 1.6 x 0.8 of a 0603; compare with the fab footprint (fit check)"

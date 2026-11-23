@@ -1,0 +1,26 @@
+# Datasheet card: Sunlord MPL2012S4R7MHT (4.7 uH multilayer power inductor, 0805 2.0 x 1.25 x 0.9 mm). nRF DC/DC inductor L1 (decision: 0805, not the 0603 of the reference).
+mpn: MPL2012S4R7MHT
+role: nRF54L15 DC/DC inductor L1 between DCC (46) and DECD (45)
+lcsc: C63166
+source:
+  url: https://www.sunlordinc.com/
+  revision: "Sunlord MPL series data sheet, 4 pages, 'Revised 2011/03/15'"
+  file: datasheets/MPL2012S4R7MHT/MPL2012S4R7MHT_lcsc.pdf
+values:
+  inductance_uh: {value: 4.7, tol_pct: 20, test: "1 MHz", section: "page 2 MPL2012 type table, MPL2012S4R7[]HT"}
+  dcr_ohm: {value: 0.25, tol_pct: 25, section: "page 2 table (max about 0.31 ohm)"}
+  rated_current_ma: {value: 800, section: "page 2 table, Ir: 'DC current causes temperature rise of 40 C from 20 C ambient' (page 3 note): a HEATING rating, NOT a saturation current"}
+  isat_ma: {value: null, section: "not tabulated. Inductance vs DC current graph (page 3, MPL 2012 series 4R7 H curve): flat to about 100 mA, then falls; about -30 % at roughly 250-300 mA (graph read, EST)"}
+  isat_estimate_ma: {value: 250, section: "page 3 inductance vs DC current graph, 4R7 H curve, EST from the image"}
+  srf_mhz_min: {value: 30, section: "page 2 table"}
+  thickness_mm: {value: 0.9, tol_mm: 0.1, section: "page 1/2 type H"}
+  dimensions_mm: {value: {l: 2.0, w: 1.25, t: 0.9, a: 0.5}, tol_mm: {l_plus: 0.3, l_minus: 0.1, w: 0.2, t: 0.1, a: 0.3}, section: "page 1 shape and dimensions (2012)"}
+  operating_temp_c: {value: [-40, 85], section: "page 1"}
+  land_pattern_mm: {value: null, section: "not stated in this document (no recommended land pattern); use the fab footprint or an 0805 chip-inductor land"}
+  nordic_reference_l1: {value: "4.7 uH, +-20 %, 120 mA, 0.65 ohm, 0603", section: "nRF reference BOM v0.8 L1"}
+  nrf_dcdc_peak_current: {value: null, section: "not stated in the material read (PS PDF not obtained): UNVERIFIED"}
+  comparison_with_reference: {value: "inductance 4.7 uH equals the reference; DCR 0.25 (max 0.31) vs 0.65 ohm of the reference: lower loss; rated 800 mA (heating) vs 120 mA of the reference; saturation estimated about 250 mA vs the reference's 120 mA rating (the reference's 120 mA is its own rating of unknown definition): not limiting by the numbers available, UNVERIFIED because the nRF peak coil current is not known", section: "calculation"}
+checklist:
+  - "footprint is 0805 (2.0 x 1.25 mm), not 0603 (reference): change from the reference layout is the engineer's decision (stock of the 0603 LLBHB1608KKT4R7MG C7216321 is 0)"
+  - "L1 within 2.2-2.5 mm of DCC pin 46 (reference layout measured distance); with a 0805 body the distance grows by about 0.8 mm: layout note for critical.yaml"
+  - "bring-up: DC/DC current/efficiency on the first board with the 0805 part against a 0603 reference inductor if available"

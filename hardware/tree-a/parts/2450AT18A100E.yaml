@@ -1,24 +1,31 @@
-# Datasheet card: Johanson 2450AT18A100E, ALTERNATE antenna (primary since D12 is 2450AT42A100E).
+# Datasheet card: Johanson 2450AT18A100E (1206 chip antenna). The local PDF is the -AEC variant sheet (P/N 2450AT18A100E-AEC, "Detail Specification
+# 12/22/2017", Ver 1.0): the plain -E part is assumed identical (suffix E = tape and reel only, page 4); that assumption is UNVERIFIED.
 mpn: 2450AT18A100E
-role: ALTERNATE 2.4 GHz chip antenna (1206, corner mount); needs a tee/pi match and a new footprint
-lcsc: C89334                # JLC stock 0 on 2026-11-23
-alternate_of: 2450AT42A100E
+role: 2.4 GHz chip antenna at the tree tip (primary choice; JLC stock 0 on 2026-11-23)
+lcsc: C89334
 source:
   url: https://www.johansontechnology.com/
-  revision: "Doc# 36S0021A Rev 4.0 (2024, part 2450AT18A0100001E) read from the text layer of the local copy; the first copy, Ver 1.0 12/22/2017, is the -AEC variant (2450AT18A100E-AEC)"
-  file: datasheets/2450AT18A100E/2450AT18A100E.pdf   # Ver 1.0 -AEC; Rev 4.0 in datasheets/2450AT42A100E/johanson-notes/
+  revision: "2450AT18A100E-AEC detail specification 12/22/2017, Ver 1.0 (4 pages)"
+  file: datasheets/2450AT18A100E/2450AT18A100E.pdf
 values:
-  package: {value: "SMD EIA 1206, 3.2 x 1.6 x 1.3 mm, corner mount", section: "Rev 4.0 p1, p2"}
-  pin1: {value: "Feed", section: "Rev 4.0 p2"}
-  pin2: {value: "NC, must be soldered", section: "Rev 4.0 p2"}
-  land_pattern_mm: {value: {overall: 4.2, gap: 2.6, pad_width: 1.6}, section: "Ver 1.0 p1 (-AEC variant)", unverified: "from the AEC variant sheet, not re-read against Rev 4.0 figures"}
-  power_capacity_w_max_cw: {value: 3, section: "Rev 4.0 p1 (Ver 1.0 -AEC says 2 W)"}
-  radiated_efficiency_avg_pct: {value: 74, section: "Rev 4.0 p1 (evaluation board, with matching network)"}
-  peak_gain_dbi_typ: {value: 1.5, section: "Rev 4.0 p1 (Ver 1.0 -AEC: 0.5)"}
-  keepout_eval_board_mm: {value: {no_ground: [6.5, 6.5], board: [39.5, 13.5]}, section: "Rev 4.0 p3 / Ver 1.0 p1", unverified: "only the evaluation board is given; no separate keep-out dimension"}
-  matching_network_eval: {value: "1.0 pF / 2.7 nH / 3.9 nH, valid only on Johanson's evaluation board", section: "Ver 1.0 p1"}
-  feed_end_vs_marking: {value: null, section: "figures disagree", unverified: "which end is the feed is unclear in Ver 1.0 p1"}
-  lcsc_variant: {value: null, section: not stated, unverified: "whether C89334 is the AEC or the plain variant is not read from the fab listing"}
+  frequency_mhz: {value: [2400, 2500], section: "page 1 General Specifications"}
+  peak_gain_dbi: {value: 0.5, section: "page 1 General Specifications (typ, XZ-V), measured on the evaluation board"}
+  average_gain_dbi: {value: -0.5, section: "page 1 General Specifications (typ, XZ-V), measured on the evaluation board"}
+  return_loss_db_min: {value: 9.5, section: "page 1 General Specifications, with the evaluation-board matching network"}
+  impedance_ohm: {value: 50, section: "page 1 General Specifications"}
+  input_power_w_max: {value: 2, section: "page 1 General Specifications (CW)"}
+  operating_temp_c: {value: [-40, 125], section: "page 1 General Specifications"}
+  dimensions_mm: {value: {l: 3.2, w: 1.6, t: 1.3, a: 0.5}, tol_mm: {l: 0.2, w: 0.2, t_plus: 0.1, t_minus: 0.2, a: 0.3}, section: "page 1 Mechanical Dimensions"}
+  terminals: {value: "1 = feeding point, 2 = NC", section: "page 1 Terminal Configuration"}
+  feed_end_physical: {value: null, section: "UNVERIFIED: the figures on page 1 disagree on which end is terminal 1. Terminal figure: label 2 left, label 1 right, brown mark just right of centre. Mounting figure (a)/(b): the 50 ohm feed line joins the LEFT pad and the brown mark sits left of centre. The body drawing above shows the mark right of centre. Mount with the mark facing up (page 1). Ask Johanson which end is terminal 1, or measure the first board with a VNA."}
+  land_pattern_mm: {value: {pad_width_along_body: "see drawing", overall_length: 4.2, gap_between_pads: 2.6, pad_height: 1.6}, section: "page 1 Mounting Considerations a), dimensions 4.2 / 2.6 / 1.6"}
+  matching_network_on_eval_board: {value: {shunt_c_pf: 1.0, series_l_nh: 3.9, shunt_l_nh: 2.7, layout_mm: {a: 1.9, b: 0.4}}, section: "page 1 Mounting Considerations b); valid only on the Johanson evaluation board 2450AT18A100-EB1SMA (46 x 20 mm, page 2), 'the matching values on client's PCB will be different'"}
+  keepout_dimensions_mm: {value: null, section: "not stated for a customer PCB. Only the evaluation board has a 'No Ground' corner of 6.5 x 6.5 mm (page 2) on a 39.5 x 13.5+6.5 mm board with 19 mm 50 ohm feed line"}
+  ground_clearance_rule: {value: null, section: "not stated"}
+  required_pi_network: {value: "leave slots for a pi (shunt-series-shunt) network (note on page 1)", section: "page 1 note"}
+  tuning_service: {value: "Johanson antenna layout review / tuning service (page 4 links)", section: "page 4"}
 checklist:
-  - "needs a shunt-series-shunt (pi) or tee match: slots in the feed, values by VNA, none are valid from the datasheet"
-  - "new footprint (1206 land 4.2 / 2.6 / 1.6) and a different keep-out"
+  - "feed pad ambiguity UNVERIFIED (feed_end_physical above): list in the bring-up list; first board built with the pi pads placed so a 0 ohm link can feed either end is NOT possible (one fixed feed track), so decide the orientation from Johanson's answer before the layout gate"
+  - "keep-out: no dimension in the datasheet; engineer decision R5.3 'about 17 mm' keep-out is from the notes, not from Johanson; follow the evaluation board 6.5 x 6.5 mm no-ground corner as the minimum (page 2) and place the antenna at a board edge/corner"
+  - "layout notes -> critical.yaml: pi-match pads between ANT port and antenna; 50 ohm microstrip from calc/impedance.py"
+alternate: {mpn: 2450AT42A100E, lcsc: C2917719, card: 2450AT42A100E.yaml}

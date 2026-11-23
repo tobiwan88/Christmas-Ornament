@@ -1,0 +1,21 @@
+# Datasheet card: Sunlord WPN201610H2R2MT (2.2 uH, 2.0 x 1.6 x 1.0 mm), alternate for the TPS63900 inductor (JLC "0806", C97005).
+mpn: WPN201610H2R2MT
+role: alternate TPS63900 inductor (smaller, 1.0 mm high)
+lcsc: C97005
+source:
+  url: https://www.sunlordinc.com/
+  revision: "Sunlord WPN series catalog (11 pages), table 'Revised 2023/06/01'; image-only PDF read from page images"
+  file: datasheets/WPN201610H2R2MT/WPN201610H2R2MT_lcsc.pdf
+values:
+  inductance_uh: {value: 2.2, tol_pct: 20, test: "@1 MHz, 1 V", section: "page 2 WPN201610H series table"}
+  dcr_ohm: {value: {max: 0.170, typ: 0.142}, section: "page 2 table"}
+  isat_a: {value: 1.90, section: "page 2 table, Isat 'Max' column (typ column 2.15 A)"}
+  isat_typ_a: {value: 2.15, section: "page 2 table"}
+  irms_a: {value: {max: 1.45, typ: 1.70}, section: "page 2 table"}
+  srf_mhz_min: {value: 39, section: "page 2 table"}
+  dimensions_mm: {value: {a: 2.0, b: 1.6, c_max: 1.0, d: 1.5, e: 0.6}, tol_mm: 0.2, section: "page 2 shape table, WPN201610H/HS"}
+  land_pattern_mm: {value: {a_gap: 0.7, b_pad_width: 0.7, c_pad_length: 1.7}, section: "page 2 recommended land pattern"}
+  comparison: {value: "vs C23894: Isat 1.90 vs 1.85 A, DCR 0.170 vs 0.216 ohm max: both meet Isat >= 1 A; smaller footprint 2.0 x 1.6; test frequency 1 MHz vs 100 kHz, so the two inductance figures are not directly comparable", section: "calculation"}
+checklist:
+  - "Isat >= 1 A for the <= 100 mA setting (TPS63900 6.3): 1.90 A OK"
+  - "alternate only: if used, footprint changes to 0806-class pads (0.7 x 1.7, gap 0.7)"
