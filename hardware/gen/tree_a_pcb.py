@@ -146,7 +146,7 @@ def floorplan(P):
     P.put("L2", ux, uy - 1.93 - 1.29 - 0.03, 0.0)       # LX1 left, LX2 right, above the IC
     P.put("C20", ux - 1.54 - 0.78 - 0.05, uy, 270.0)    # Cin, pad 1 (VIN) up at pin 10
     P.put("C21", ux + 1.54 + 1.02 + 0.05, uy, 270.0)    # Cout, pad 1 (VDD) up at pin 6
-    yb = uy + 1.93 + 0.97 + 0.03
+    yb = uy + 1.93 + 0.97 + 0.30                         # 0.27 below the courtyard touch: clear of U2's pin-1 silk mark
     for k, ref in enumerate(("R23", "R20", "R21", "R22")):   # SEL pull-down, CFG1, CFG2, CFG3 under pins 2-5
         P.put(ref, ux - 1.575 + 1.05 * k, yb, 270.0)
     # ---- 5. variant B (DNP in order 1, D10): J2 and U3 under the holder (D15 rule), passives in the right wing ----------
@@ -405,11 +405,17 @@ def render(pcb: Path):
     subprocess.run([kpy, str(HW / "tools" / "board_geom.py"), str(pcb), str(gj)], check=True, capture_output=True)
     subprocess.run([sys.executable, str(HW / "tools" / "render_review.py"), str(gj), str(OUT_REVIEW),
                     "tip=22,4,48,40", "wingL=8,38,30,78", "trunk=20,72,50,105", "wingR=40,38,62,78"], check=True)
+    filled = OUT_REVIEW / "filled" / pcb.name             # filled copy for the plots (the board file stays unfilled)
+    filled.parent.mkdir(exist_ok=True)
+    shutil.copy(pcb, filled)
+    shutil.copy(pcb.with_suffix(".kicad_pro"), filled.with_suffix(".kicad_pro"))
+    subprocess.run([kpy, "-c", "import pcbnew,sys; b=pcbnew.LoadBoard(sys.argv[1]); pcbnew.ZONE_FILLER(b).Fill(b.Zones()); "
+                    "b.Save(sys.argv[1])", str(filled)], capture_output=True)
     for layers, nm in (("F.Cu,F.Silkscreen,F.Courtyard,Edge.Cuts,F.Fab", "F"), ("B.Cu,B.Silkscreen,B.Courtyard,Edge.Cuts,B.Fab", "B"),
                        ("In1.Cu,Edge.Cuts", "In1"), ("In2.Cu,Edge.Cuts", "In2")):
         svg = OUT_REVIEW / f"layer_{nm}.svg"
         subprocess.run(["kicad-cli", "pcb", "export", "svg", "--layers", layers, "--mode-single", "--fit-page-to-board",
-                        "--exclude-drawing-sheet", "-o", str(svg), str(pcb)], capture_output=True)
+                        "--exclude-drawing-sheet", "-o", str(svg), str(filled)], capture_output=True)
         if svg.exists():
             try:
                 import pymupdf
@@ -494,6 +500,9 @@ def stage2(job_file):
         fp.SetPath(pcbnew.KIID_PATH(c["path"]))
         if c["lcsc"]:
             fp.SetField("LCSC", c["lcsc"])
+            f = fp.GetField("LCSC")
+            f.SetVisible(False)                       # data field, not silk
+            f.SetLayer(pcbnew.F_Fab)
         fp.SetDNP(c["dnp"])
         fp.SetExcludedFromBOM(c["no_bom"])
         if c["dnp"] or not c["lcsc"]:
@@ -505,12 +514,17 @@ def stage2(job_file):
                 pad.SetNet(nets[n])
         fps[ref] = fp
 
+    # KiCad 10 quirk (bisected with saves): without a save at this point the final file writes drilled pads as "*.Cu"
+    # only (no mask opening on J1's slots, BT1 / TC1 holes); a first save here makes "*.Cu" "*.Mask" persist.
+    tmp = job["pcb"] + ".first.kicad_pcb"
+    board.Save(tmp)
+    os.remove(tmp)
     # ---- board-only holes (no schematic symbol): hanging hole and M2 holes, NPTH (tree_outline)
     for i, (hname, x, y, d, plated) in enumerate(G.holes(), start=1):
         fp = pcbnew.FOOTPRINT(board)
         fp.SetReference(f"H{i}")
         fp.SetValue(hname)
-        fp.SetFPID(pcbnew.LIB_ID("tree", f"Hole_NPTH_{d}mm"))
+        fp.SetFPID(pcbnew.LIB_ID("", f"Hole_NPTH_{d}mm"))      # no library nickname: a board-only item, nothing to compare
         fp.SetBoardOnly(True)
         fp.SetExcludedFromBOM(True)
         fp.SetExcludedFromPosFiles(True)
@@ -608,6 +622,8 @@ def stage2(job_file):
         t.SetMirrored(True)
         board.Add(t)
 
+    # no zone fill in the board file (DRC refills in memory; render() fills a scratch copy): keeps the file small and
+    # the drilled-pad mask layers out of the filler's path
     board.Save(job["pcb"])
     print(f"{NAME}.kicad_pcb: {len(fps)} footprints + {len(G.holes())} holes, {len(nets)} nets")
     for r in sorted(placed, key=lambda r: (re.sub(r"\d", "", r), int(re.sub(r"\D", "", r)))):

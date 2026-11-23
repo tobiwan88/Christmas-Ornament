@@ -225,7 +225,9 @@ def holder():
         f.pad(num, x, y, 7.45, 6.10)
     f.pad("", -23.45, -10.45, 1.8, 1.8, kind="np", drill=1.8)
     f.body(62.2, 22.4)
-    for sx, sy, t in ((-36.0, 5.5, "+"), (-36.0, -5.5, "-")):
+    # polarity marks inboard of pads 1/2 (x -22.0, under the body: seen at assembly and inspection). At x -36 they sat
+    # 4.9 mm outside the body, in the layout's resistor strips next to the header (silk overlap, gate 4)
+    for sx, sy, t in ((-22.0, 5.5, "+"), (-22.0, -5.5, "-")):
         f.line(sx - 0.8, sy, sx + 0.8, sy, w=0.2)
         if t == "+":
             f.line(sx, sy - 0.8, sx, sy + 0.8, w=0.2)

@@ -1,12 +1,2 @@
 type,ref,reason
 footprint_symbol_mismatch,NT1,"D25: the layout uses tree:NetTie-2_SMD_Bridge0.2mm because the schematic's NetTie-2_SMD_Pad0.5mm (1.5 x 0.5 mm) does not fit the 0.20 mm gap at U1 pad 32 (build_footprints row). Clears when tree_a.py sets the NT1 footprint field (engineer, gate 3 change)"
-lib_footprint_issues,H1,"board-only NPTH hanging hole made by gen/tree_a_pcb.py from tree_outline (no library footprint by design)"
-lib_footprint_issues,H2,"board-only NPTH M2 hole made by gen/tree_a_pcb.py from tree_outline (no library footprint by design)"
-lib_footprint_issues,H3,"board-only NPTH M2 hole made by gen/tree_a_pcb.py from tree_outline (no library footprint by design)"
-lib_footprint_mismatch,BT1,"generator loads the footprint from hardware/lib/tree.pretty on every build (no stale copy possible); KiCad 10 flags the three footprints with drilled / NPTH holes after rotation or flip. Cause not isolated: UNVERIFIED, re-check after routing"
-lib_footprint_mismatch,J1,"same as BT1 (loaded fresh from tree.pretty each build; slotted PTH pads, rot 90)"
-lib_footprint_mismatch,TC1,"same as BT1 (loaded fresh from KiCad Connector library each build; NPTH alignment holes, flipped to B.Cu)"
-silk_over_copper,F.Cu,"gate 4 (placement, no routing): library silk of dense 0402 / QFN parts touches neighbour pads; tools/silk_fix.py runs after routing (its docstring), the fab clips silk at mask openings. Re-check at gate 5"
-silk_over_copper,B.Cu,"as F.Cu row (LED and TC2030 library silk on the outer face)"
-silk_overlap,*,"gate 4: silk-to-silk of neighbouring library outlines in the dense U1 / RF / resistor strips (KiCad lists no items for these); cleanup after routing with tools/silk_fix.py. Re-check at gate 5"
-silk_edge_clearance,Edge.Cuts,"gate 4: library silk of X1, R8, D12 and the holder near the tier corners within 0.15 mm of the edge; clipped by tools/silk_fix.py after routing. Re-check at gate 5"
