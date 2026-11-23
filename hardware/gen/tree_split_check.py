@@ -7,7 +7,9 @@ ERC and net-intent check) and <board>/bom.csv (+ tree-a/bom-variant-b.csv). Prov
   3. J3 (A) and J4 (B) mate by position: for every row of tree_common.mate_table() the J3 pin and the J4 pin carry the same
      line, and that line is the one in the table (pin map of both headers as built);
   4. designators are unique over both boards (netlists and BOMs);
-  5. board B carries only the eight lines LED_L1..LED_L8 (no supply, no ground), and both headers carry all eight.
+  5. board B carries only the eight lines LED_L1..LED_L8 (no supply, no ground), and both headers carry all eight;
+  6. tree_common.mate_fault_rows(): a 180 degree turn, a mirror-x / mirror-y footprint and a one-row shift each show up as
+     swapped or open lines, with the max number of dies in parallel per firmware slot.
 Rows: OK / FAIL; ends with `tree_split_check: OK|FAILED`; exit 1 on FAIL or a missing file (run the generators first).
 Usage: python3 -I hardware/gen/tree_split_check.py [--selftest]
 """
@@ -72,6 +74,7 @@ def rows(data: dict) -> list:
     for p3, p4, n3, n4 in tc.mate_table():
         g3, g4 = j3.get(str(p3)), j4.get(str(p4))
         row(g3 == n3 and g4 == n4 and g3 == g4, f"J3.{p3} <-> J4.{p4} carry one line", f"{g3} / {g4} (table {n3} / {n4})")
+    out.extend(tc.mate_fault_rows())                          # mating faults (rot180, mirror-x/-y, row shift) are detected
     row(sorted(j3.values()) == sorted(tc.LINE_NETS) and sorted(j4.values()) == sorted(tc.LINE_NETS),
         "J3 and J4 each carry LED_L1..LED_L8 once", f"J3 {sorted(j3.values())}, J4 {sorted(j4.values())}")
     # 4. unique designators

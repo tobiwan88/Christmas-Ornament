@@ -1945,7 +1945,7 @@
 					)
 				)
 			)
-			(property "Description" "BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin assignment table (HTML; UNVERIFIED against the PDF) and nRF54L15-QFAA reference schematic v0.8 (04.02.2025) for supply, RF and debug pins; card hardware/tree-a/parts/nRF54L15-QFAA.yaml"
+			(property "Description" "BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin assignment table (HTML) confirmed against the nRF54L15-QFAA reference schematic v0.8 (04.02.2025); nRF54L10 same table (UNVERIFIED for the L10); card hardware/tree-a/parts/nRF54L15-QFAA.yaml"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -2912,7 +2912,7 @@
 		)
 		(uuid "8bd30c53-f6ee-56d9-adca-958082d2eb3a")
 	)
-	(text "No external load caps on X1 / X2 (internal INTCAP): firmware must set INTCAP from CL\n(X2 8 pF, X1 9 pF = the LFXO maximum of 6-9 pF: start-up test at 1.7-3.6 V, PARTS-REVIEW 7).\nUnused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\nVSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\nReset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: PS HTML summary (UNVERIFIED)."
+	(text "No external load caps on X1 / X2 (internal INTCAP): firmware must set INTCAP from CL\n(X2 8 pF, X1 9 pF = the LFXO maximum of 6-9 pF: start-up test at 1.7-3.6 V, PARTS-REVIEW 7).\nUnused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\nVSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\nReset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: Nordic reference schematic v0.8 (L10: same table, UNVERIFIED)."
 		(exclude_from_sim no)
 		(at 231.14 213.36 0)
 		(effects

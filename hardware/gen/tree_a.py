@@ -479,7 +479,7 @@ def mcu_sheet():
                    "(X2 8 pF, X1 9 pF = the LFXO maximum of 6-9 pF: start-up test at 1.7-3.6 V, PARTS-REVIEW 7).\n"
                    "Unused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\n"
                    "VSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\n"
-                   "Reset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: PS HTML summary (UNVERIFIED).", 1.1)
+                   "Reset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: Nordic reference schematic v0.8 (L10: same table, UNVERIFIED).", 1.1)
     s.frame(bx + 10, by - 6, bx + 30, by + 11, "SW1 (outer face), R10")
     s.text(bx + 10.5, by + 7, "P1.09 internal pull-up, wake from\nSystem OFF. R10 1k limits ESD current\ninto the pin (D21).", 1.0)
     return s

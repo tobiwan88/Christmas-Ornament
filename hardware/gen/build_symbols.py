@@ -47,8 +47,8 @@ def text(s, x, y, size=1.27):
 
 
 # ------------------------------------------------------------------ nRF54L15-QFAA (QFN48 6 x 6, pin 49 = exposed pad)
-# Pin table: card parts/nRF54L15-QFAA.yaml `pins` (PS HTML summary; supply/RF/debug pins confirmed on the Nordic
-# reference schematic v0.8). Same table for nRF54L10/L05 (decision D2; UNVERIFIED: PS HTML summary).
+# Pin table: card parts/nRF54L15-QFAA.yaml `pins` (PS HTML summary), confirmed against the Nordic nRF54L15-QFAA reference
+# schematic v0.8 (review 2026-11-23, DS-C3). Same table for nRF54L10/L05 (decision D2; UNVERIFIED for the L10 itself).
 NRF_LEFT = {0: ("46", "DCC", "passive"), 3: ("45", "DECD", "passive"), 8: ("43", "DECA", "passive"),
             9: ("33", "DECRF", "passive"), 15: ("34", "XC1", "passive"), 18: ("35", "XC2", "passive"),
             20: ("1", "P1.00/XL1", "passive"), 23: ("2", "P1.01/XL2", "passive"), 26: ("26", "SWDCLK", "input"),
@@ -82,8 +82,8 @@ def nrf54l15():
         pins.append(_pin(kind, round(-5.08 + 5.08 * i, 2), -NRF_TOP_Y, 90, name, num))
     body = [rect(-15.24, 45.72, 15.24, -45.72)]
     descr = ("BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin "
-             "assignment table (HTML; UNVERIFIED against the PDF) and nRF54L15-QFAA reference schematic v0.8 (04.02.2025) for "
-             "supply, RF and debug pins; card hardware/tree-a/parts/nRF54L15-QFAA.yaml")
+             "assignment table (HTML) confirmed against the nRF54L15-QFAA reference schematic v0.8 (04.02.2025); nRF54L10 same "
+             "table (UNVERIFIED for the L10); card hardware/tree-a/parts/nRF54L15-QFAA.yaml")
     return _sym("nRF54L15-QFAA", "U", "nRF54L15-QFAA", "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias",
                 "https://docs.nordicsemi.com/bundle/ps_nrf54l15/", descr, body, pins, (-15.24, 52.07), (-15.24, -52.07))
 

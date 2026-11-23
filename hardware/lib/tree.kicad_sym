@@ -4,7 +4,7 @@
 		(property "Value" "nRF54L15-QFAA" (at -15.24 -52.07 0) (effects (font (size 1.27 1.27)) (justify left)))
 		(property "Footprint" "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(property "Datasheet" "https://docs.nordicsemi.com/bundle/ps_nrf54l15/" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin assignment table (HTML; UNVERIFIED against the PDF) and nRF54L15-QFAA reference schematic v0.8 (04.02.2025) for supply, RF and debug pins; card hardware/tree-a/parts/nRF54L15-QFAA.yaml" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "BLE SoC QFN48 6x6 P0.4, pin 49 exposed pad VSS. Source: Nordic nRF54L15/L10/L05 Datasheet v1.0 (Sept 2025) pin assignment table (HTML) confirmed against the nRF54L15-QFAA reference schematic v0.8 (04.02.2025); nRF54L10 same table (UNVERIFIED for the L10); card hardware/tree-a/parts/nRF54L15-QFAA.yaml" (at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(symbol "nRF54L15-QFAA_0_1"
 			(rectangle (start -15.24 45.72) (end 15.24 -45.72) (stroke (width 0.254) (type default)) (fill (type background)))
 		)
