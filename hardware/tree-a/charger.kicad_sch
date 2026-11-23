@@ -1398,7 +1398,7 @@
 		)
 		(uuid "c33765b8-debf-5a4b-a09b-608d563600d7")
 	)
-	(text "CC1/CC2 5.1k Rd: 5 V sink. No ESD/fuse\n(power only, card asks none).\nShell SH to GND."
+	(text "CC1/CC2 5.1k Rd: 5 V sink. Shell SH to GND.\nNo TVS on VBUS (DS-B4): no Basic/Preferred 5 V\nTVS in SOD-323/523/SOT-23 at JLC (2026-11-23)."
 		(exclude_from_sim no)
 		(at 12.7 104.14 0)
 		(effects

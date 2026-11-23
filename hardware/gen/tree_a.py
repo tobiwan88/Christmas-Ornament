@@ -96,6 +96,7 @@ P("X2", "Device:Crystal_GND24", "32MHz", "Crystal:Crystal_SMD_2016-4Pin_2.0x1.6m
 P("X1", "Device:Crystal", "32.768kHz", "Crystal:Crystal_SMD_2012-2Pin_2.0x1.2mm", "C510776", "Extended",
   "32.768kHz ABS06-32.768KHZ-9-1-T (SMD2012-2P)", "LFXO, CL 9 pF, no external load caps")
 P("R9", "Device:R", "1k", R0402, "C11702", "Basic", "1k 1% (0402)", "nRESET series (ref R1)")
+P("R10", "Device:R", "1k", R0402, "C11702", "Basic", "1k 1% (0402)", "BTN_SW1 series, ESD current limit (D21, DS-C5)")
 P("C13", "Device:C", "3.9pF", C0402, "C313081", "Extended", "3.9pF C0G (0402)", "nRESET filter (ref C13)")
 P("TC1", "Connector:Conn_ARM_SWD_TagConnect_TC2030-NL", "TC2030-NL", "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "",
   "n/a", "TC2030-NL footprint (pads)", "SWD pads, outer face, no part (DNL)", "DNL")
@@ -174,7 +175,7 @@ NETS: dict[str, list] = {
     "XL1": [("U1", "1"), ("X1", "1")], "XL2": [("U1", "2"), ("X1", "2")],
     "nRESET": [("U1", "30"), ("C13", "1"), ("R9", "2")], "nRESET_TC": [("R9", "1"), ("TC1", "3")],
     "SWDIO": [("U1", "25"), ("TC1", "2")], "SWDCLK": [("U1", "26"), ("TC1", "4")], "SWO": [("U1", "18"), ("TC1", "6")],
-    "BTN_SW1": [("U1", "37"), ("SW1", "1")],
+    "BTN_SW1": [("U1", "37"), ("R10", "1")], "BTN_SW1_PAD": [("R10", "2"), ("SW1", "1")],
     "VBUS_DET": [("U1", "38"), ("R42", "2"), ("R43", "1")], "CHG_STAT": [("U1", "23"), ("R44", "2"), ("R45", "1")],
     "VBUS": [("J1", "A9"), ("J1", "B9"), ("U3", "4"), ("C30", "1"), ("R42", "1")],
     "CC1": [("J1", "A5"), ("R30", "1")], "CC2": [("J1", "B5"), ("R31", "1")], "PROG": [("U3", "5"), ("R32", "1")],
@@ -359,7 +360,8 @@ def charger_sheet():
     s.label("CHG_STAT", 86, 37, 0, kind="hier", shape="output")
     s.pwr("R45", "2", "GND")
     s.frame(4, 13, 40, 47, "J1 USB-C power only (HC-TYPE-C-6P-01A)")
-    s.text(5, 41, "CC1/CC2 5.1k Rd: 5 V sink. No ESD/fuse\n(power only, card asks none).\nShell SH to GND.", 1.1)
+    s.text(5, 41, "CC1/CC2 5.1k Rd: 5 V sink. Shell SH to GND.\nNo TVS on VBUS (DS-B4): no Basic/Preferred 5 V\n"
+                  "TVS in SOD-323/523/SOT-23 at JLC (2026-11-23).", 1.1)
     s.frame(40, 13, 104, 47, "U3 MCP73831-2 charger, 100 mA (DS20001984H)")
     s.text(41, 42, f"PROG R32 10k: IREG 100 mA (5.1.2). C30/C31 4.7uF (3.1, 3.2).\nDividers {_RT}/{_RB}: <= 3.0 V at VBUS 5.25 V "
                    "(D13, tree_pin_divider.py).\nCHG_STAT: low = charging, high = done, Hi-Z reads low. Read both with\n"
@@ -448,16 +450,20 @@ def mcu_sheet():
     for e in tc.PIN_PLAN:
         pin, net = str(e["pin"]), e["net"]
         if net in ("BTN_SW1",):
-            s.lab("U1", pin, net, 2, kind="local")
+            continue                     # wired to R10 / SW1 below
         elif e["kind"] in ("led", "out", "ain", "in"):
             s.lab("U1", pin, net, 2, kind="hier", shape=shape[e["kind"]])
     s.lab("U1", "31", "ANT_PA", 2, kind="hier", shape="output")
     s.nc("U1", NC["U1"])
-    # SW1
-    s.part("SW1", 120, 47, rot=270)
+    # SW1 beside its pin (37): U1.37 -> R10 1k -> SW1 -> GND
+    (bx, by), _ = s.end("U1", "37", 0)
+    s.part("R10", bx + 13.5, by, rot=90)
+    s.wire(("U1", "37"), ("R10", "1"))
+    above(s, "BTN_SW1", bx + 2.5, by)
+    s.part("SW1", bx + 21, by + 2, rot=270)
     s.tag("SW1", reference=(4.0, -0.6), value=(4.0, 1.6))
-    s.wire(("SW1", "1"), (116, 45))
-    s.label("BTN_SW1", 116, 45, 180, kind="local")
+    s.wire(("R10", "2"), ("SW1", "1"))
+    above(s, "BTN_SW1_PAD", bx + 15.3, by)
     s.pwr("SW1", "2", "GND")
     # frames and notes
     s.frame(44, 22, 73.5, 37.5, "VDD decoupling (reference config 1)")
@@ -472,8 +478,8 @@ def mcu_sheet():
                    "Unused GPIO: no-connect. P2.02 reserved (VBAT_DIV_EN), P2.01 spare (D13: EN not on a GPIO).\n"
                    "VSS_PA (pin 32) reaches GND only through NT1 at the exposed pad (Nordic note on C6).\n"
                    "Reset: R9 1k (reference R1) + C13 3.9pF at pin 30. Pin numbers: PS HTML summary (UNVERIFIED).", 1.1)
-    s.frame(108, 40, 128, 54, "SW1 (outer face)")
-    s.text(109, 50.5, "P1.09 internal pull-up,\nwake from System OFF.", 1.0)
+    s.frame(bx + 10, by - 6, bx + 30, by + 11, "SW1 (outer face), R10")
+    s.text(bx + 10.5, by + 7, "P1.09 internal pull-up, wake from\nSystem OFF. R10 1k limits ESD current\ninto the pin (D21).", 1.0)
     return s
 
 

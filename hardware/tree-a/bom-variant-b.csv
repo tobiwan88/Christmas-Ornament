@@ -22,7 +22,7 @@ HC-PM254-8.5H-2x4PS (SMD 2x4 2.54),J3,PinSocket_2x04_SMD_HC-PM254-8.5H,1,C223739
 3.5nH LQP03HQ3N5B02D (0201),"L4,L5",L_0201_0603Metric,2,C3911055,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RF series (ref L3); RF series (ref L4)
 SI2301CDS-T1-GE3 (SOT-23),Q1,SOT-23,1,C10487,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","reverse-polarity P-FET, drain to cell + (D7)"
 22R 1% (0402),"R1,R2,R3,R4,R5,R6,R7,R8",R_0402_1005Metric,8,C25092,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",line resistor LED_L1 (D13); line resistor LED_L2 (D13); line resistor LED_L3 (D13); line resistor LED_L4 (D13); line resistor LED_L5 (D13); line resistor LED_L6 (D13); line resistor LED_L7 (D13); line resistor LED_L8 (D13)
-1k 1% (0402),R9,R_0402_1005Metric,1,C11702,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",nRESET series (ref R1)
+1k 1% (0402),"R9,R10",R_0402_1005Metric,2,C11702,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","nRESET series (ref R1); BTN_SW1 series, ESD current limit (D21, DS-C5)"
 511R 1% 100ppm (0402),R20,R_0402_1005Metric,1,C25124,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RCFG1: VO(2) 3.5 V (Table 7-2)
 10.5k 1% 100ppm (0402),R21,R_0402_1005Metric,1,C25850,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RCFG2: 100 mA input limit (Table 7-2)
 13.3k 1% 100ppm (0402),R22,R_0402_1005Metric,1,C122547,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RCFG3: VO(1) 3.0 V (Table 7-3)
