@@ -40,6 +40,9 @@ layout:
   max_board_mm: [50, 50]
   temp_rise_c: 10
 
-alternates: {}                          # LCSC: {lcsc: C..., note: "what else must change"}
+alternates:                             # primary LCSC: {lcsc: alternate, note: "what else must change"}
+  C2917719:                             # ANT1 primary: Johanson 2450AT42A100E (5 x 2 mm), decision D12
+    lcsc: C89334                        # alternate: Johanson 2450AT18A100E (1206), JLC stock 0 on 2026-11-23
+    note: "ANT1 alternate: different footprint (1206 land 4.2 / 2.6 / 1.6 instead of 8.9 / 3.9 / 4.0 x 1.8), needs a tee or pi match (values by VNA), different keep-out; parts/2450AT18A100E.yaml"
 power: []                               # regulators for calc/buck.py
 design: {}                              # inputs of calc/power_budget.py and calc/rail_switch.py: each {value, source}
