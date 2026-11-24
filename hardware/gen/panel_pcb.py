@@ -303,9 +303,15 @@ def _rotate_child_angles(fp, xf):
             if c[0] == "pad":
                 at[1:] = [at[1], at[2], fmt(xf.ang(a))] + tail
             else:
-                drawn = a if "unlocked" in tail else keep_upright(a)
+                # keep-upright off: KiCad 10 writes a child (unlocked yes); older files an atom inside (at ...)
+                ul = child(c, "unlocked")
+                was_unlocked = "unlocked" in tail or (ul is not None and len(ul) > 1 and ul[1] == "yes")
+                drawn = a if was_unlocked else keep_upright(a)
                 tail = [t for t in tail if t != "unlocked"]
-                at[1:] = [at[1], at[2], fmt(xf.ang(drawn))] + tail + ["unlocked"]
+                at[1:] = [at[1], at[2], fmt(xf.ang(drawn))] + tail
+                if ul is not None:
+                    c.remove(ul)
+                c.insert(c.index(at) + 1, ["unlocked", "yes"])
 
 
 def _remap(n, key, netmap):
@@ -1102,7 +1108,7 @@ def dru_text(A, B, nets_a, nets_b_panel, tabs):
     for key, b, nets in (("A", A, nets_a), ("B", B, nets_b_panel)):
         src = b["path"].with_suffix(".kicad_dru")
         txt = src.read_text() if src.exists() else ""
-        out.append("\n# ---- board %s (%s) ----" % (key, src.relative_to(ROOT)))
+        out.append("\n# ---- board %s (hardware/%s/%s) ----" % (key, src.parent.name, src.name))
         for rule in _rules(txt):
             name, body = rule
             m = re.search(r'\(condition\s+"((?:[^"\\]|\\.)*)"\)', body)
@@ -1699,6 +1705,8 @@ def selftest():
     row(abs(p[0] - (35 + 44.8 + 20)) < 1e-9 and abs(p[1] - (105 + 1 + 27)) < 1e-9 and max(map(abs, sub(xf.local(*p), (35.0, 0.0)))) < 1e-9,
         "rigid transform B (turn 180 + move)", "tip (135, 50) -> (%.2f, %.2f), local %s" % (p[0], p[1], xf.local(*p)))
     row(xf.ang(90) == -90 and xf.ang(-90) == 90 and xf.ang(0) == 180, "angle +180 normalised", "90 -> %s, -90 -> %s, 0 -> %s" % (xf.ang(90), xf.ang(-90), xf.ang(0)))
+    ku = [keep_upright(a) for a in (0, 90, -90, 180, 135, 270)]
+    row(ku == [0, 90, 90, 0, -45, 90], "keep-upright angles (KiCad text)", "0, 90, -90, 180, 135, 270 -> %s" % ku)
     # 3 mouse-bite row: 5 holes D0.6 at 0.95 pitch span 4.4 mm, edge gap 0.35
     offs, span = T.bite_holes(5)
     row(abs(span - 4.4) < 1e-9 and abs((offs[1] - offs[0]) - BITE_D - 0.35) < 1e-9, "mouse-bite row 5 x D0.6", "span %.2f mm, pitch %.2f" % (span, offs[1] - offs[0]))

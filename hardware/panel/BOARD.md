@@ -138,7 +138,8 @@ assembled bottom part (A's D9-D16, B's J4): bottom-side CPL rows are not handled
 - A panel with two different designs is a different order line in JLC's counting (panel fee): ask before ordering (ORDER.md section 3/8).
 - The slanted tab edges are not parallel: the bridges are trapezoids; the hole row on B follows B's edge, not A's.
 - KiCad keeps footprint texts upright: a text turned 180 degrees is drawn readable again and its ink moves (8 silk_overlap warnings on
-  B's LEDs). The panel writes B's footprint texts at their drawn angle + 180 with keep-upright off (`unlocked`), a rigid copy.
+  B's LEDs). The panel writes B's footprint texts at their drawn angle + 180 with keep-upright off (KiCad 10: child node `(unlocked yes)`;
+  older files: an `unlocked` atom inside `(at ...)`), a rigid copy. The keep-upright range (-90, 90] is assumed (proved by DRC for 0/180 only).
 - KiCad adds missing Datasheet / Description properties with random uuids on save: the generator writes them (repeatable file).
 - A temp build must keep the `../lib` relation of `fp-lib-table`, or every tree: footprint shows lib_footprint_issues.
 - Pours of the boards run to 0.3 mm from the edge; without the keep-out bands they fill between the bite holes (copper at 0.27 mm from
