@@ -81,7 +81,7 @@ P("R45", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)",
 # MCU (card nRF54L15-QFAA; Nordic reference schematic v0.8 config 1)
 P("U1", "tree:nRF54L15-QFAA", "nRF54L10-QFAA", "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias", "C44800139",
   "Extended", "nRF54L10-QFAA-R7 (QFN-48 6x6)", "BLE SoC (D2); alternate nRF54L15-QFAA-R C42458750, same footprint")
-P("C3", "Device:C", "10uF", "Capacitor_SMD:C_0603_1608Metric", "C19702", "Basic", "10uF 10V X5R (0603)", "VDD bulk at pins 47/48 (ref C3)")
+P("C3", "Device:C", "10uF", C0402, "C15525", "Basic", "10uF 6.3V X5R (0402)", "VDD bulk at pins 47/48 (ref C3; 0402 as the Nordic reference, gate 4)")
 for _r, _n in (("C10", "VDD 47/48"), ("C7", "VDD pin 10"), ("C8", "VDD pin 22"), ("C4", "VDD pin 36")):
     P(_r, "Device:C", "100nF", C0402, "C1525", "Basic", "100nF 50V X7R (0402)", _n)
 P("L1", "Device:L", "4.7uH", "Inductor_SMD:L_0805_2012Metric", "C63166", "Extended", "4.7uH MPL2012S4R7MHT (0805)", "nRF DC/DC DCC-DECD (ref L1)")
@@ -103,14 +103,12 @@ P("TC1", "Connector:Conn_ARM_SWD_TagConnect_TC2030-NL", "TC2030-NL", "Connector:
 PARTS["TC1"]["dnp_note"] = "DNL: footprint only, Tag-Connect cable"
 P("SW1", "Switch:SW_Push", "SW_Push", "tree:SW_HX_3x4x2-2P-1.6N", "C49234124", "Extended", "HX 3x4x2-2P-1.6N (SMD 4x3)", "tact switch, outer face")
 P("NT1", "Device:NetTie_2", "NetTie", "tree:NetTie-2_SMD_Bridge0.2mm", "", "n/a", "net tie", "VSS_PA to GND at the exposed pad", "NONE")
-P("NT2", "Device:NetTie_2", "NetTie", "NetTie:NetTie-2_SMD_Pad0.5mm", "", "n/a", "net tie",
-  "GND_C9 (C9 ground return) to GND on the bottom layer (D21, DS-C1)", "NONE")
 # RF (Nordic reference network; designators shifted: ref L2/L3/L4 = L3/L4/L5 here, ref R1 = R9)
 P("L3", "Device:L", "2.7nH", L0201, "C7216765", "Extended", "2.7nH LQP03HQ2N7B02D (0201)", "RF series (ref L2)")
 P("L4", "Device:L", "3.5nH", L0201, "C3911055", "Extended", "3.5nH LQP03HQ3N5B02D (0201)", "RF series (ref L3)")
 P("L5", "Device:L", "3.5nH", L0201, "C3911055", "Extended", "3.5nH LQP03HQ3N5B02D (0201)", "RF series (ref L4)")
 P("C6", "Device:C", "1.5pF", C0201, "C435397", "Extended", "1.5pF C0G +-0.05pF (0201)", "RF shunt, ground only via VSS_PA")
-P("C9", "Device:C", "2.0pF", C0201, "C668326", "Extended", "2.0pF C0G +-0.05pF (0201)", "RF shunt, ground on the bottom layer only")
+P("C9", "Device:C", "2.0pF", C0201, "C668326", "Extended", "2.0pF C0G +-0.05pF (0201)", "RF shunt, GND via at the pad (KNOWN deviation: Nordic says bottom layer only)")
 P("C11", "Device:C", "0.3pF", C0201, "C161289", "Extended", "0.3pF C0G (0201)", "RF shunt at the 50 ohm node")
 P("C50", "Device:C", "C", C0402, "", "n/a", "tuning slot (0402)", "pi shunt, antenna side of R50: bench-tune with a VNA", "DNP")
 P("R50", "Device:R", "0R", R0402, "C17168", "Basic", "0R (0402)", "pi series slot: bench-tune with a VNA")
@@ -157,7 +155,7 @@ def sheet_parts() -> dict:
 GND_PINS = [("BT1", "2"), ("J2", "2"), ("Q1", "1"), ("C20", "2"), ("R41", "2"), ("C14", "2"), ("R23", "2"), ("R20", "2"), ("R21", "2"),
             ("R22", "2"), ("U2", "8"), ("U2", "11"), ("C21", "2"), ("U1", "44"), ("U1", "49"), ("NT1", "2"),
             ("C3", "2"), ("C10", "2"), ("C7", "2"), ("C8", "2"), ("C4", "2"), ("C1", "2"), ("C2", "2"), ("C12", "2"),
-            ("C5", "2"), ("X2", "2"), ("X2", "4"), ("C13", "2"), ("TC1", "5"), ("SW1", "2"), ("NT2", "2"), ("C11", "2"),
+            ("C5", "2"), ("X2", "2"), ("X2", "4"), ("C13", "2"), ("TC1", "5"), ("SW1", "2"), ("C9", "2"), ("C11", "2"),
             ("C50", "2"), ("C51", "2"), ("J1", "A12"), ("J1", "B12"), ("J1", "SH"), ("R30", "2"), ("R31", "2"), ("U3", "2"),
             ("C30", "2"), ("R32", "2"), ("R43", "2"), ("R45", "2"), ("C31", "2")]
 NETS: dict[str, list] = {
@@ -183,7 +181,7 @@ NETS: dict[str, list] = {
     "CC1": [("J1", "A5"), ("R30", "1")], "CC2": [("J1", "B5"), ("R31", "1")], "PROG": [("U3", "5"), ("R32", "1")],
     "STAT": [("U3", "1"), ("R44", "1")],
     "ANT_PA": [("U1", "31"), ("L3", "1")], "VSS_PA": [("U1", "32"), ("C6", "2"), ("NT1", "1")],
-    "RF_N1": [("L3", "2"), ("C6", "1"), ("L4", "1")], "RF_N2": [("L4", "2"), ("C9", "1"), ("L5", "1")], "GND_C9": [("C9", "2"), ("NT2", "1")],
+    "RF_N1": [("L3", "2"), ("C6", "1"), ("L4", "1")], "RF_N2": [("L4", "2"), ("C9", "1"), ("L5", "1")],
     "RF_50": [("L5", "2"), ("C11", "1"), ("C50", "1"), ("R50", "1")], "ANT_FEED": [("R50", "2"), ("C51", "1"), ("ANT1", "1")],
 }
 for _e in tc.PIN_PLAN:
@@ -536,19 +534,13 @@ def rf_sheet():
     s.label("VSS_PA", 20, 35, 270, kind="hier")
     for r in ("C11", "C50", "C51"):
         s.pwr(r, "2", "GND")
-    # C9 ground return: own net GND_C9, tied to GND by NT2 (layout: bottom-layer return only, DS-C1)
-    s.part("NT2", 32, y + 4)
-    s.tags["NT2"] = {"Reference": (0, -1.8, "center"), "Value": "hide"}
-    s.wire(("C9", "2"), (29, y + 4), ("NT2", "1"))
-    s.wire((29, y + 4), (27, y + 4))
-    s.label("GND_C9", 27, y + 4, 180, kind="local")
-    (nx, ny), _ = s.end("NT2", "2", 1)
-    s.wire(("NT2", "2"), (nx, ny), (nx, ny + 2))
-    s.rail("GND", nx, ny + 2, 270)
+    # C9 ground: straight to GND with its own via into In1 at the pad (engineer, gate 4: NT2 / GND_C9 dropped; KNOWN
+    # deviation from Nordic's 'bottom layer only' note, critical.yaml known entry)
+    s.pwr("C9", "2", "GND")
     s.nc("ANT1", ["2"])
     s.frame(6, 22, 42, 48, "Nordic reference network (QFAA config 1, v0.8)")
     s.text(7, 39, "Ref L2/L3/L4 = L3/L4/L5 here. C6 ground only via\nVSS_PA (pin 32, NT1 at the exposed pad, top layer).\n"
-                  "C9 ground: net GND_C9 via NT2, bottom layer only (layout rule).\nPlace the network next to ANT (pin 31).", 1.1)
+                  "C9 ground: GND via at the pad (KNOWN deviation from\nNordic: bottom layer only).\nPlace the network next to ANT (pin 31).", 1.1)
     s.frame(42, 22, 72, 48, "Pi tuning slot + ANT1 (D12)")
     s.text(43, 39, "R50 0R fitted, C50/C51 DNP:\nvalues by VNA on the built board.\nANT1 pin 1 = feed at the mark end\n"
                    "(UNVERIFIED, 90 %); pin 2 = stub\npad, soldered, no net.", 1.1)
@@ -663,7 +655,7 @@ def build_root(sheet_uuids: dict) -> Path:
         (39, 18, f"{variant_text('BT1')}\n{variant_text('J2')}\n(both on this sheet) -> BAT -> Q1 -> VIN\n-> U2 TPS63900 -> VDD; VBAT_SENSE"),
         (75, 30, "U1 nRF54L10 (BOM, D2;\nsymbol nRF54L15-QFAA, same pins)\nDC/DC, HFXO 32 MHz, LFXO 32.768 kHz\n"
                  "SWD pads TC1, SW1 + R10"),
-        (121, 18, "Nordic network L3-L5, C6, C9 (GND_C9 via NT2),\nC11; pi slot C50 / R50 / C51; ANT1"),
+        (121, 18, "Nordic network L3-L5, C6, C9 (GND via at the pad),\nC11; pi slot C50 / R50 / C51; ANT1"),
         (121, 46, "R1-R8 22R, D9-D16 XL-1010RGB-YG,\nheader J3 to board B"),
         (6, 72, f"Variant A (order 1, D10): {fit_a_only} fitted; DNP: {dnp_b}. Both variants: {never} DNP (tuning slots), "
                 f"{dnl} footprint only.\n"
