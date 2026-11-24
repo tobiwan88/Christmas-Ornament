@@ -103,6 +103,13 @@ P("TC1", "Connector:Conn_ARM_SWD_TagConnect_TC2030-NL", "TC2030-NL", "Connector:
   "n/a", "TC2030-NL footprint (pads)", "SWD pads, outer face, no part (DNL)", "DNL")
 PARTS["TC1"]["dnp_note"] = "DNL: footprint only, Tag-Connect cable"
 P("SW1", "Switch:SW_Push", "SW_Push", "tree:SW_HX_3x4x2-2P-1.6N", "C49234124", "Extended", "HX 3x4x2-2P-1.6N (SMD 4x3)", "tact switch, outer face")
+MOUNT_REFS = ["MH1", "MH2"]        # D31: plated M2 holes with a GND ring on both faces (board-only parts, not in the BOM or the
+#                                    position file); board B has MH3/MH4, so designators stay unique over both boards
+for _ref in MOUNT_REFS:
+    P(_ref, "Mechanical:MountingHole_Pad", "MountingHole_Pad", "tree:MountingHole_2.2mm_M2_Pad", "", "n/a",
+      "M2 mount hole + GND ring", "plated hole with a 4.4 mm GND ring on both faces; brass standoff ties board B's GND (D31)",
+      "NONE")
+    PARTS[_ref]["role"] = "M2 mount hole"
 P("NT1", "Device:NetTie_2", "NetTie", "tree:NetTie-2_SMD_Bridge0.2mm", "", "n/a", "net tie", "VSS_PA to GND at the exposed pad", "NONE")
 # RF (Nordic reference network; designators shifted: ref L2/L3/L4 = L3/L4/L5 here, ref R1 = R9)
 P("L3", "Device:L", "2.7nH", L0201, "C7216765", "Extended", "2.7nH LQP03HQ2N7B02D (0201)", "RF series (ref L2)")
@@ -135,7 +142,8 @@ def variant_text(ref: str) -> str:
     """'J2 pouch: fitted in B, DNP in A' style note from the variant table (never typed by hand)."""
     v = PARTS[ref]["var"]
     fit = {"AB": "fitted in A and B", "A": "fitted in A, not placed in B", "B": "fitted in B, DNP in A",
-           "DNP": "DNP in A and B", "DNL": "footprint only", "NONE": "net tie"}[v]
+           "DNP": "DNP in A and B", "DNL": "footprint only",
+           "NONE": "board-only footprint" if ref in MOUNT_REFS else "net tie"}[v]
     return f"{ref} {PARTS[ref].get('role', PARTS[ref]['val'])}: {fit}"
 DNP_ORDER1 = VARB | {r for r, p in PARTS.items() if p["var"] == "DNP"}
 
@@ -158,7 +166,8 @@ GND_PINS = [("BT1", "2"), ("J2", "2"), ("Q1", "1"), ("C20", "2"), ("R41", "2"), 
             ("C3", "2"), ("C10", "2"), ("C7", "2"), ("C8", "2"), ("C4", "2"), ("C1", "2"), ("C2", "2"), ("C12", "2"),
             ("C5", "2"), ("X2", "2"), ("X2", "4"), ("C13", "2"), ("TC1", "5"), ("SW1", "2"), ("C9", "2"), ("C11", "2"),
             ("C50", "2"), ("C51", "2"), ("J1", "A12"), ("J1", "B12"), ("J1", "SH"), ("R30", "2"), ("R31", "2"), ("U3", "2"),
-            ("C30", "2"), ("R32", "2"), ("R43", "2"), ("R45", "2"), ("C31", "2")]
+            ("C30", "2"), ("R32", "2"), ("R43", "2"), ("R45", "2"), ("C31", "2"),
+            ("MH1", "1"), ("MH2", "1")]     # D31: plated M2 mounts, GND to board B through the brass standoffs
 NETS: dict[str, list] = {
     "GND": GND_PINS,
     "BAT": [("BT1", "1"), ("J2", "1"), ("Q1", "3")],
@@ -582,6 +591,15 @@ def leds_sheet():
     s.text(94, 28, f"J3 female 2x4 SMD 8.5 mm, inner face.\nPin=line: {', '.join(pl[:4])}\n{', '.join(pl[4:])}\n"
                    f"Mirrored (J4 on B.Cu of board B): J3 pin n mates\nJ4 pin n+1 (n odd) / n-1 (n even): {mates}, ...\n"
                    "(tree_common.mate_table). No supply, no ground.", 1.0)
+    s.frame(92, 48, 130, 66, "Ground to board B (D31): M2 mount holes with a GND ring")
+    for ref, x in ((MOUNT_REFS[0], 100), (MOUNT_REFS[1], 116)):
+        s.part(ref, x, 52)
+        s.tag(ref, reference=(2.8, -2.0), value=(2.8, 0.5))
+        s.wire((ref, "1"), (x, 55), (x, 56))
+        s.rail("GND", x, 56, 270)
+    s.text(94, 61.0, "MH1 / MH2: plated 2.2 mm holes at the M2 positions of both boards (tree_outline.MOUNT_HOLES), 4.4 mm\n"
+                     "ring on both faces. Brass standoffs (12.0 mm) carry GND to board B's MH3 / MH4 (inner face ring =\n"
+                     "contact). Not assembled, not in the BOM or the position file.", 1.0)
     s.raw.append(ts.triangle(px / 2.54, py / 2.54 - 0.7, 270))          # pin 1 marker over pin 1, after the frames so their tint does not cover it (round 2)
     return s
 

@@ -2,7 +2,8 @@
 """Layout generator of board A (tree-a), gate 4 placement: hardware/tree-a/tree-a.kicad_pcb from the schematic netlist.
 
 What it builds (single source; never edit the .kicad_pcb):
-  - outline, hanging hole and the two M2 holes from gen/tree_geometry.py (which takes them from gen/tree_outline.py)
+  - outline, hanging hole (NPTH H1) and the two M2 positions from gen/tree_geometry.py (tree_outline.py); the M2 holes are
+    the plated GND mounts MH1 / MH2 (D31, tree:MountingHole_2.2mm_M2_Pad, ring on both faces) from the schematic
   - 4-layer stackup JLC04101H-7628 1.0 mm from board.yaml `stackup` (injected into the board setup as text: pcbnew's
     SWIG has no stackup API); net classes and fab rules into tree-a.kicad_pro (tools/write_project.py), the custom DRC
     file rules/tree-a.kicad_dru copied next to the board
@@ -69,6 +70,7 @@ ANT_XY = (35.0, 11.65)        # rot 90: stub pad y 5.7..9.7 at the tip side, fee
 BT1_ROT = 270.0               # pads 1 (BAT) and 2 (GND) at the top end, next to the power stage; peg hole (45.45, 47.65)
 J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: the bottom edge is blocked by BT1's pads
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
+MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
@@ -87,6 +89,8 @@ def floorplan(P):
     P.put("BT1", bx, by, BT1_ROT)
     P.put("J1", *J1_XY, 90.0)
     P.put("SW1", *TO.SW1_POS, 0.0, "B.Cu")
+    for ref, (hname, x, y, _d, _pl) in zip(MOUNT_REF.values(), [h for h in G.holes() if h[0] in MOUNT_REF]):
+        P.put(ref, x, y, 0.0)                # D31: plated M2 mounts with a GND ring on both faces (tree_outline positions)
     P.put("TC1", *TC1_XY, 180.0, "B.Cu")    # rot 180 (gate 4): the SWD row 2/4/6 faces U1 (escape proof: SWDIO was walled in)
     # ---- 2. U1 (rot 90) and its fan-out (gate 4 re-placement; engineer decision 1: fan-out first, passives outside) ----
     # pin map at (35.0, 23.95), pads 0.2 x 0.82, tips 0.41 beyond the pad centre: top row y 21.01 (tip 20.60)
@@ -807,6 +811,8 @@ def stage2(job_file):
     os.remove(tmp)
     # ---- board-only holes (no schematic symbol): hanging hole and M2 holes, NPTH (tree_outline)
     for i, (hname, x, y, d, plated) in enumerate(G.holes(), start=1):
+        if hname in MOUNT_REF:                     # D31: plated MH1 / MH2 footprints from the netlist instead
+            continue
         fp = pcbnew.FOOTPRINT(board)
         fp.SetReference(f"H{i}")
         fp.SetValue(hname)
@@ -947,7 +953,10 @@ def stage2(job_file):
         if "MOUNT" in hname:
             r = G.MOUNT_KEEPOUT_D / 2 / math.cos(math.pi / 32)
             circ = [(x + r * math.cos(2 * math.pi * k / 32), y + r * math.sin(2 * math.pi * k / 32)) for k in range(32)]
-            zone(circ, ["F.Cu", "B.Cu"], name="hole_" + hname.lower(), rule=dict(tracks=False, vias=False, pour=False, footprints=True))
+            # D5 screw head / standoff ring: no tracks, vias or pour; MH1 / MH2 (D31) are the only footprint inside. The
+            # flags are DoNotAllow* (zone()): before D31 this read tracks/vias/pour=False, footprints=True, i.e. the
+            # inverse of the intent (copper allowed, footprints forbidden); fixed with the plated mounts.
+            zone(circ, ["F.Cu", "B.Cu"], name="hole_" + hname.lower(), rule=dict(tracks=True, vias=True, pour=True, footprints=False))
     # ---- silk (B.SilkS on the outer face, mirrored); ${GIT_SHA} is resolved by tools/fab_package.py
     for txt, (x, y) in SILK:
         t = pcbnew.PCB_TEXT(board)
