@@ -273,7 +273,7 @@ def floorplan(P):
     for k, ref in enumerate(("R23", "R20", "R21", "R22")):   # SEL pull-down, CFG1, CFG2, CFG3 under pins 2-5
         P.put(ref, ux - 1.575 + 1.05 * k, yb, 270.0)
     power_stage(P)
-    led_escapes(P)
+    led_escapes(P, P.escapes)
     # ---- 5. variant B (DNP in order 1, D10): J2 and U3 under the holder (D15 rule), passives in the right wing ----------
     P.put("J2", TO.CX, 58.0, 0.0)
     P.put("U3", 44.0, 78.5, 0.0)
@@ -284,7 +284,10 @@ def floorplan(P):
     P.put("R31", 52.0, 72.9, 0.0)
 
 
-def led_escapes(P):
+ESCAPES = ("d9", "d10", "vdd")          # hand-led groups of led_escapes (build option --escapes for router sweeps)
+
+
+def led_escapes(P, groups=None):
     """Gate 5 hand-led bottlenecks (kicad-layout stuck protocol), locked B.Cu copper from the placed pads:
     - D9 (star LED under the RF column, 0.5 mm below the antenna keep-out): in every KRT run that routed U1 first, U1's
       escapes looped over the top of the exposed pad on B.Cu and boxed D9 in (LED_L1 / L2 / L6 / L7 open). Its four lines
@@ -302,12 +305,25 @@ def led_escapes(P):
     # orientation relied on: pad 1 top right, 2 top left, 3 bottom right, 4 bottom left (B.Cu, rot 180)
     for d in (d9, d10):
         assert d[1][0] > d[2][0] and d[3][0] > d[4][0] and d[1][1] < d[3][1] and d[2][1] < d[4][1], d
+    groups = ESCAPES if groups is None else groups
     xe, lanes = 41.80, (18.30, 18.62, 18.94, 19.26)                 # D9 lanes top to bottom: L7, L1, L2, L6
+    if "d9" in groups:
+        _d9_lanes(T, d9, xe, lanes)
+    if "d10" in groups:
+        _d10_lanes(T, d10)
+    if "vdd" in groups:
+        _vdd_links(P, T, V)
+
+
+def _d9_lanes(T, d9, xe, lanes):
     T([d9[1], (36.40, d9[1][1]), (36.40 + lanes[0] - d9[1][1], lanes[0]), (xe, lanes[0])], 0.15, "B.Cu")      # LED_L7
     T([d9[3], (36.00, d9[3][1]), (36.00 + lanes[1] - d9[3][1], lanes[1]), (xe, lanes[1])], 0.15, "B.Cu")      # LED_L1
     T([d9[4], (d9[4][0], lanes[2]), (xe, lanes[2])], 0.15, "B.Cu")                                             # LED_L2
     xl6 = round(d9[2][0] - 0.55, 3)
     T([d9[2], (xl6, d9[2][1]), (xl6, lanes[3]), (xe, lanes[3])], 0.15, "B.Cu")                                 # LED_L6
+
+
+def _d10_lanes(T, d10):
     yd = 28.60                                                      # D10 lane ends (outline neck starts at y 28.0)
     xl8 = round(d10[2][0] - 0.90, 3)                                 # LED_L8 outermost lane (left)
     xl7 = round(d10[2][0] - 0.60, 3)
@@ -316,6 +332,9 @@ def led_escapes(P):
     T([d10[2], (xl7, d10[2][1]), (xl7, yd)], 0.15, "B.Cu")                                                     # LED_L7
     T([d10[4], (d10[4][0], yd)], 0.15, "B.Cu")                                                                 # LED_L3
     T([d10[3], (d10[3][0], yd)], 0.15, "B.Cu")                                                                 # LED_L2
+
+
+def _vdd_links(P, T, V):
     # VDD: pin 10 via (36.55, 28.00) -> B.Cu below the TPS_SEL via -> via at C7.1 -> C7.1 (F.Cu)
     c7 = P.pad("C7", "1")
     vx, vy = c7[0], round(c7[1] + 0.85, 3)
@@ -383,11 +402,12 @@ def _opt(args, name, default=None):
     return args[args.index(name) + 1] if name in args else default
 
 
-def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False) -> Path:
+def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None) -> Path:
     """Build the board into another directory (router input, grading copy): board + project + rules + library table +
     schematic (for the parity check). The committed board is never touched."""
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--out", str(out_dir), "--stub", str(stub)]
-                       + (["--frozen", str(routes)] if routes else ["--no-routes"]), capture_output=True, text=True)
+                       + (["--frozen", str(routes)] if routes else ["--no-routes"])
+                       + (["--escapes", ",".join(escapes) or "none"] if escapes is not None else []), capture_output=True, text=True)
     if r.returncode:
         sys.exit(f"build_into {out_dir}: {r.stdout[-800:]}{r.stderr[-800:]}")
     if not quiet:
@@ -427,7 +447,8 @@ def stage1(args):
                        check=True, capture_output=True)
         variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
-               "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0))}
+               "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
+               "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPES]}
         jf = Path(td) / "job.json"
         jf.write_text(json.dumps(job))
         r = PS.run_isolated([kpy, str(Path(__file__).resolve()), "--pcbnew", str(jf)], capture_output=True, text=True)
@@ -1071,6 +1092,7 @@ def stage2(job_file):
             return None
     P = Placer()
     P.ends = []
+    P.escapes = tuple(job.get("escapes", ESCAPES))
     floorplan(P)
     # gate 5: frozen router result (hardware/tree-a/frozen-routes.json, gen/tree_a_krt.py = KiCadRoutingTools) replayed as
     # LOCKED copper, so a rebuild is repeatable and a later router run keeps it; never the router's own board file

@@ -153,11 +153,11 @@ def via_pad_gap(board: Path, routes: dict) -> tuple:
 # ------------------------------------------------------------------------------------------------------------------
 # grading: build the board with a frozen file in a scratch dir, kicad-cli DRC (all severities, parity, refill, waivers)
 # ------------------------------------------------------------------------------------------------------------------
-def grade(frozen: Path, workdir: Path) -> dict:
+def grade(frozen: Path, workdir: Path, escapes=None) -> dict:
     import tree_a_pcb as A
     if workdir.exists():
         shutil.rmtree(workdir)
-    pcb = A.build_into(workdir, frozen, quiet=True)
+    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes)
     st = {}
     A.drc(pcb, routed=True, quiet=True, stats=st)
     st["items"] = [f"{sev} {typ} x{len(v)}: {v[0]}" for (sev, typ), v in sorted(st.pop("seen").items())]
@@ -195,7 +195,7 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
     cfg = {**CHAIN, **(cfg or {})}
     workdir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    inp = A.build_into(workdir / "in", stub=cfg["stub"], quiet=True)
+    inp = A.build_into(workdir / "in", stub=cfg["stub"], quiet=True, escapes=cfg.get("escapes"))
     times = [("build unrouted board (tree_a_pcb.py --no-routes)", time.time() - t0, 0)]
     py, rt = KRT_PY, KRT / "py_router"
     common = ["--clearance", cfg["clearance"], "--via-size", cfg["via"], "--via-drill", cfg["drill"],
@@ -253,7 +253,7 @@ def run(workdir: Path, cfg: dict, write: bool) -> int:
     frozen.write_text(json.dumps(extract(out.read_text()), indent=1) + "\n")
     print_metrics(metrics(json.loads(frozen.read_text())))
     t1 = time.time()
-    res = grade(frozen, workdir / "grade")
+    res = grade(frozen, workdir / "grade", cfg.get("escapes"))
     vp = via_pad_gap(workdir / "grade" / f"{NAME}.kicad_pcb", json.loads(frozen.read_text()))
     print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC + via/pad gap)")
     print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
