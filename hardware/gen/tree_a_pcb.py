@@ -66,8 +66,7 @@ U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
-# rows of 0402 parts between U1's courtyard top (20.30) and the antenna keep-out (y 17.0): courtyards 1.02 tall
-ROW_A, ROW_B, ROW_C = 19.79, 18.77, 17.75
+RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
 
 
 def floorplan(P):
@@ -83,42 +82,99 @@ def floorplan(P):
     P.put("J1", *J1_XY, 90.0)
     P.put("SW1", *TO.SW1_POS, 0.0, "B.Cu")
     P.put("TC1", *TC1_XY, 0.0, "B.Cu")
-    # ---- 2. U1 (rot 90) -------------------------------------------------------------------------------------------------
-    # pin map at (35.0, 23.95): top row y 21.01 (end 20.60) x = 37.2 - 0.4 (k - 25): 30 nRESET 35.2, 31 ANT 34.8,
-    # 32 VSS_PA 34.4, 33 DECA 34.0, 34 XC1 33.6, 35 XC2 33.2, 36 VDD 32.8; left row x 32.06 (end 31.65) y = 21.75 +
-    # 0.4 (k - 37): 43 DECA 24.15, 45 DECD 24.95, 46 DCC 25.35, 47/48 VDD 25.75/26.15; bottom row y 26.89 (end 27.30)
-    # x = 32.8 + 0.4 (k - 1): 1 XL1 32.8, 2 XL2 33.2, 5 VBAT_SENSE 34.4, 10 VDD 36.4; right row x 37.94 y = 26.15 -
-    # 0.4 (k - 13): 18 SWO 24.15, 22 VDD 22.55, 23 CHG_STAT 22.15
+    # ---- 2. U1 (rot 90) and its fan-out (gate 4 re-placement; engineer decision 1: fan-out first, passives outside) ----
+    # pin map at (35.0, 23.95), pads 0.2 x 0.82, tips 0.41 beyond the pad centre: top row y 21.01 (tip 20.60)
+    # x = 37.2 - 0.4 (k - 25); left row x 32.06 (tip 31.65) y = 21.75 + 0.4 (k - 37); bottom row y 26.89 (tip 27.30)
+    # x = 32.8 + 0.4 (k - 1); right row x 37.94 (tip 38.35) y = 26.15 - 0.4 (k - 13). Every used pin gets locked copper
+    # here (stub, dog-bone via or exit track); the router (gate 5) starts from these ends.
     P.put("U1", *U1_XY, 90.0)
-    # RF chain above the top row (rows A..C), series path L3 -> L4 -> L5 rightwards, back left through R50 to the axis
-    P.put("L3", 35.40, ROW_A, 0.0)           # pad 1 (ANT_PA) 34.92 right above pin 31
-    P.put("C6", 35.00, ROW_B, 180.0)         # pad 2 (VSS_PA) left over pin 32, pad 1 (RF_N1) right at L3 pad 2
-    P.put("L4", 37.32, ROW_A, 0.0)
-    P.put("L5", 38.88, 19.28, 90.0)          # pad 1 (RF_N2) at row A, pad 2 (RF_50) at row B
-    P.put("C9", 39.93, 19.28, 90.0)          # RF_N2 shunt; pad 2 (GND_C9) to its via and NT2 on the bottom (D21)
-    P.put("C11", 37.40, ROW_B, 180.0)        # 0.3 pF, pad 1 (RF_50) at L5 pad 2
-    P.put("C50", 37.85, ROW_C, 0.0)          # pi slot: C50 (RF_50) | R50 | C51 (ANT_FEED); feed goes up at x 35
-    P.put("R50", 35.90, ROW_C, 180.0)        # pad 2 (ANT_FEED) 35.42 below the antenna feed pad
-    P.put("C51", 33.90, ROW_C, 180.0)
-    p32 = P.pad("U1", "32")
+    pin = lambda k: P.pad("U1", str(k))      # noqa: E731
+    T, V = P.track, P.via
+    # RF column from pins 31-33 straight up (perpendicular to the pin row), Nordic order ANT -> L3 / C6 -> L4 / C9 ->
+    # L5 / C11 -> pi slot; 0201 parts at the IPC courtyard pitch 0.70
+    P.put("L3", 34.82, 19.60, 90.0)          # pad 1 (ANT_PA) down at pin 31, pad 2 (RF_N1) up
+    P.put("C6", 34.09, 18.90, 270.0)         # pad 2 (VSS_PA) down, fed from pin 32 by a track at x 34.31
+    P.put("L4", 35.50, 18.53, 0.0)           # RF_N1 -> RF_N2
+    P.put("C9", 36.20, 19.60, 270.0)         # pad 1 (RF_N2) up, pad 2 (GND) down to its own In1 via (decision 2)
+    P.put("L5", 36.92, 18.53, 0.0)           # RF_N2 -> RF_50
+    P.put("C11", 37.65, 17.50, 0.0)          # RF_50 shunt 0.3 pF, pad 1 left at the node
+    P.put("R50", 36.00, 17.45, 180.0)        # pi slot series 0R: pad 1 (RF_50) right, pad 2 (ANT_FEED) left of the axis
+    P.put("C50", 38.60, 18.53, 0.0)          # pi slot shunt (DNP) at RF_50
+    P.put("C51", 34.15, 17.45, 180.0)        # pi slot shunt (DNP) at ANT_FEED
+    p32 = pin(32)
     P.put("NT1", p32[0], p32[1] + 0.51, 90.0)   # D25 bridge: pad 1 in pad 32's inner end, pad 2 in the exposed pad
-    # HFXO and DECA at the top-left of the top row
-    P.put("X2", 31.40, 18.96, 180.0)         # XC2 pad bottom-left, XC1 pad top-right (pins 35 / 34)
-    P.put("C5", 33.47, 19.35, 90.0)          # DECA at pin 33, pad 1 down at the pin
-    P.put("C4", 30.80, 21.30, 90.0)          # VDD pin 36 (top-left corner)
-    # power cluster on the left row (pins 43-48), LFXO at the bottom-left corner
-    P.put("C10", 30.40, 26.10, 180.0)        # VDD 47/48, pad 1 right at the pins
-    P.put("L1", 29.56, 24.68, 180.0)         # pad 1 (DCC) right at pin 46
-    P.put("C1", 30.40, 23.27, 180.0)         # DECD
-    P.put("FB1", 28.45, 23.27, 180.0)        # DECD -> DECA
-    P.put("C12", 28.45, 22.25, 180.0)        # DECA 10 nF
-    P.put("C2", 26.50, 23.27, 180.0)         # DECA 2.2 uF
-    P.put("X1", 27.90, 26.74, 0.0)           # XL1 left, XL2 right; traces under C10 to pins 1/2 (bottom row)
-    # right side: VDD 22, bulk, VDD 10, reset filter
-    P.put("C13", 39.70, 21.00, 0.0)          # nRESET filter (pin 30, routed along the top row)
-    P.put("C8", 39.60, 22.55, 0.0)           # VDD pin 22, pad 1 left at the pin
-    P.put("C3", 40.20, 24.40, 0.0)           # VDD bulk 10 uF 0603
-    P.put("C7", 39.60, 26.90, 0.0)           # VDD pin 10 (bottom row, right end)
+    T([(34.80, 20.75), (34.80, 19.92)], 0.20)                       # ANT_PA into L3.1
+    T([(34.33, 20.75), (34.33, 19.30)])                             # VSS_PA into C6.2
+    T([(34.09, 18.55), (35.18, 18.53)], 0.20)                       # RF_N1: C6.1 - L4.1
+    T([(34.82, 19.28), (34.82, 18.55)], 0.20)                       # RF_N1: L3.2 up to the node
+    T([(35.82, 18.53), (36.60, 18.53)], 0.20)                       # RF_N2: L4.2 - L5.1
+    T([(36.20, 19.28), (36.20, 18.53)], 0.20)                       # RF_N2: C9.1 up to the node
+    T([(36.20, 19.92), (36.86, 19.84)], 0.20)
+    V(36.86, 19.84)                                                 # C9 GND via into In1 at the pad (decision 2)
+    T([(37.24, 18.53), (38.12, 18.53)], 0.20)                       # RF_50: L5.2 - C50.1
+    T([(37.24, 18.53), (37.33, 17.50)], 0.20)                       # RF_50: L5.2 - C11.1
+    T([(37.33, 17.50), (36.51, 17.45)], 0.20)                       # RF_50: C11.1 - R50.1
+    T([(34.63, 17.45), (35.49, 17.45)], RF_W)                       # ANT_FEED: C51.1 - R50.2
+    T([(35.00, 17.45), (35.00, 14.20)], RF_W)                       # ANT_FEED up the keep-out notch to ANT1 pad 1
+    # HFXO X2 and DECA C5 above pins 33-35
+    P.put("X2", 31.21, 19.00, 180.0)         # pad 1 (XC1) top-right, pad 3 (XC2) bottom-left
+    P.put("C5", 33.27, 18.95, 90.0)          # DECA (DECRF) pad 1 down
+    T([(34.00, 20.75), (34.00, 19.70), (33.40, 19.70)])             # DECA pin 33 into C5.1
+    T([(33.60, 20.75), (33.60, 20.05), (32.72, 20.05), (32.72, 18.45), (31.91, 18.45)])   # XC1 into X2.1
+    T([(33.20, 20.75), (33.20, 20.37), (30.91, 20.37), (30.51, 19.97)])                   # XC2 into X2.3
+    # VDD pin 36: side stub to the top-left corner via, C4 left of the via row
+    P.put("C4", 29.60, 20.85, 180.0)         # pad 1 (VDD) right
+    T([(32.80, 21.00), (32.05, 21.00)])
+    V(32.05, 21.00)
+    T([(32.05, 21.00), (31.90, 20.85), (30.08, 20.85)])
+    # nRESET pin 30: dog-bone via between L3 and C9; SWDCLK / SWDIO to vias at the top-right corner
+    T([(35.20, 20.75), (35.20, 20.45), (35.50, 20.10)])
+    V(35.50, 20.10)
+    T([(36.80, 20.75), (36.80, 20.37), (38.90, 20.37)])
+    V(38.90, 20.37)
+    T([(37.20, 21.00), (38.00, 21.00)])
+    V(38.00, 21.00)
+    P.put("C13", 40.60, 20.90, 0.0)          # nRESET filter: slow node, next to R9's route (known WARN)
+    # right row: CHG_STAT 23 and SWO 18 to vias, VDD 22 into C8
+    T([(38.20, 22.15), (38.75, 22.15), (39.05, 21.85)])
+    V(39.05, 21.85)
+    P.put("C8", 39.58, 22.75, 0.0)
+    T([(38.20, 22.55), (39.00, 22.55)])
+    T([(38.20, 24.15), (38.95, 24.15)])
+    V(38.95, 24.15)
+    # LFXO X1 rotated 180 (B8) to the right side: the left corner is the power cluster now; XL lines leave pins 1/2
+    # downwards and cross to the right on B.Cu (gate 5)
+    P.put("X1", 40.60, 25.00, 180.0)
+    P.put("C7", 39.60, 26.95, 0.0)           # VDD pin 10 (bottom row, right end)
+    # left row signals 37-42 (BTN, VBUS_DET, LED_L8..L5): dog-bone vias on a diagonal row 0.83 mm apart (hole to hole
+    # 0.5), B.Cu from there down past D10 to the resistors
+    for k in range(6):
+        y = 21.75 + 0.4 * k
+        vx, vy = 31.08 - 0.73 * k, 21.43 + 0.4 * k
+        T([(31.80, y), (vx + 0.32, y), (vx, vy)])
+        V(vx, vy)
+    # power cluster on the left row: DECA 43, GND 44 (to the exposed pad), DECD 45, DCC 46, VDD 47/48
+    P.put("L1", 29.40, 25.45, 180.0)         # pad 1 (DCC) right at pin 46
+    P.put("C10", 30.32, 26.82, 180.0)        # VDD 47/48, pad 1 right
+    P.put("C3", 28.48, 26.82, 0.0)           # VDD 10 uF 0402 (B6), pad 1 (VDD) left, GND next to C10's GND
+    P.put("FB1", 27.05, 24.90, 90.0)         # pad 2 (DECA) up on the DECA line, pad 1 (DECD) down to L1.2
+    P.put("C1", 27.05, 26.80, 270.0)         # DECD, pad 1 up (below FB1.1) (B7: via spot at its GND pad)
+    P.put("C12", 26.05, 24.90, 270.0)        # DECA 10 nF, pad 1 up at FB1.2
+    P.put("C2", 26.05, 26.80, 270.0)         # DECA 2.2 uF
+    T([(31.80, 24.15), (27.30, 24.15)])                             # DECA pin 43 to FB1.2 / C12
+    T([(32.20, 24.55), (32.80, 24.55)], 0.20)                       # GND pin 44 into the exposed pad
+    T([(31.80, 24.95), (31.40, 24.95), (31.00, 24.55), (28.34, 24.55), (28.34, 24.95)])   # DECD 45 into L1.2
+    T([(31.80, 25.35), (30.60, 25.35)], 0.25)                       # DCC 46 into L1.1
+    T([(31.80, 25.75), (31.50, 25.75), (31.50, 26.15), (31.80, 26.15)])                   # VDD 47 + 48
+    T([(31.50, 26.15), (31.30, 26.28), (28.00, 26.28), (28.00, 26.60)])                   # VDD to C10.1 / C3.1
+    T([(30.80, 26.28), (30.80, 26.60)])
+    T([(28.34, 25.45), (27.05, 25.40)])                             # DECD: L1.2 - FB1.1
+    T([(27.05, 25.40), (27.05, 26.32)])                             # DECD: FB1.1 - C1.1
+    T([(27.05, 24.39), (26.05, 24.42)])                             # DECA: FB1.2 - C12.1
+    # bottom row: stubs straight down (XL1/XL2 1/2, VBAT_SENSE 5, LED_L4..L1 6-9, VDD 10, TPS_SEL 11)
+    for k in (1, 2, 5, 6, 7, 8, 9, 10, 11):
+        x = 32.8 + 0.4 * (k - 1)
+        T([(x, 27.15), (x, 27.60)])
     # ---- 3. LED line resistors beside J3 (tier 2 strips): R1-R4 left of the L1-L4 column, R5-R8 right of L5-L8 ---------
     j = {n: P.pad("J3", str(n)) for n in range(1, 9)}
     xl_r = j[1][0] - 1.25 - 0.62 - 0.97
@@ -286,7 +342,7 @@ def sort_top_level(txt):
         run.clear()
     for b in blocks:
         k = kind(b)
-        if k in ("footprint", "zone", "gr_text", "gr_line", "gr_arc"):
+        if k in ("footprint", "zone", "gr_text", "gr_line", "gr_arc", "segment", "via"):
             if run and kind(run[0]) != k and not ({kind(run[0]), k} <= {"gr_line", "gr_arc"}):
                 flush()
             run.append(b)
@@ -446,7 +502,8 @@ ESC_ARGS = ["--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu", "--layer-costs", "1.
             "--track-width", "0.15", "--clearance", "0.15", "--via-size", "0.6", "--via-drill", "0.3",
             "--hole-to-hole-clearance", "0.5", "--board-edge-clearance", "0.3", "--grid-step", "0.05",
             "--fab-tier", "standard", "--escalation", "off", "--keep-input-copper", "--no-fix-drc-settings",
-            "--max-iterations", "2000000", "--max-ripup", "6", "--via-cost", "20", "--ordering", "mps"]
+            "--max-iterations", "2000000", "--max-ripup", "6", "--via-cost", "20", "--ordering", "mps",
+            "--same-net-pad-clearance", "0.15"]   # rules/tree-a.kicad_dru "via to SMD pad" (KRT does not read that rule)
 
 
 def board_geometry(pcb: Path) -> dict:
@@ -464,7 +521,7 @@ def escape_proof(pcb: Path, extra=()) -> bool:
         print("FAIL escape proof: KiCadRoutingTools missing (run hardware/tools/setup_tools.sh)")
         return False
     geom = board_geometry(pcb)
-    u1nets = sorted({p["net"] for p in geom["pads"] if p["ref"] == "U1" and p.get("net")})
+    u1nets = sorted({p["net"] for p in geom["pads"] if p["ref"] == "U1" and p.get("net") and not p["net"].startswith("unconnected-")})
     ESC_DIR.mkdir(parents=True, exist_ok=True)
     src = ESC_DIR / f"{NAME}.kicad_pcb"
     out = ESC_DIR / f"{NAME}_routed.kicad_pcb"
@@ -632,7 +689,48 @@ def stage2(job_file):
                 raise KeyError(f"{ref}.{num}")
             q = pd[0].GetPosition()
             return (pcbnew.ToMM(q.x), pcbnew.ToMM(q.y))
+        def track(self, pts, w=0.15, layer="F.Cu"):
+            """Locked fan-out copper (hw-check: unlocked copper counts as router copper). Net = the pad or locked via at
+            either end (first match)."""
+            net = self._net_at(pts[0]) or self._net_at(pts[-1])
+            if net is None:
+                raise SystemExit(f"fan-out track {pts}: no pad / via at either end")
+            for a, b in zip(pts, pts[1:]):
+                tr = pcbnew.PCB_TRACK(board)
+                tr.SetStart(V(*a))
+                tr.SetEnd(V(*b))
+                tr.SetWidth(mm(w))
+                tr.SetLayer(board.GetLayerID(layer))
+                tr.SetNet(net)
+                tr.SetLocked(True)
+                board.Add(tr)
+                self.ends.append((a, net))
+                self.ends.append((b, net))
+
+        def via(self, x, y):
+            net = next((n for (q, n) in self.ends if abs(q[0] - x) < 1e-6 and abs(q[1] - y) < 1e-6), None)
+            if net is None:
+                raise SystemExit(f"fan-out via ({x}, {y}): no track ends there")
+            v = pcbnew.PCB_VIA(board)
+            v.SetPosition(V(x, y))
+            v.SetViaType(pcbnew.VIATYPE_THROUGH)
+            v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+            v.SetWidth(mm(0.6))
+            v.SetDrill(mm(0.3))
+            v.SetNet(net)
+            v.SetLocked(True)
+            board.Add(v)
+            self.ends.append(((x, y), net))
+
+        def _net_at(self, q):
+            pt = V(*q)
+            for fp in fps.values():
+                for pd in fp.Pads():
+                    if pd.GetNetCode() > 0 and pd.IsOnLayer(pcbnew.F_Cu) and pd.HitTest(pt):
+                        return pd.GetNet()
+            return None
     P = Placer()
+    P.ends = []
     floorplan(P)
     for ref, fp in fps.items():                 # silk reference on the fab layer for 0201/0402-dense parts would hide
         fp.Reference().SetTextSize(V(0.6, 0.6))  # designators; 0.6 mm silk is below the 0.8 floor: keep them on Fab
