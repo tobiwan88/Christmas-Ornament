@@ -500,7 +500,7 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
                 break
         for cyc in range(1, cfg.get("cycles", 3) + 1):
             bad = sorted({t["net"] for t in extract(prev.read_text())["tracks"] if t["layer"] == "In2.Cu"
-                          and not any(fnmatch(t["net"], q) for q in IN2_ALLOWED)})
+                          and t["net"] != "GND" and not any(fnmatch(t["net"], q) for q in IN2_ALLOWED)})   # GND = the plane net
             if not bad:
                 break
             out = workdir / f"s4_repair_c{cyc}.kicad_pcb"
@@ -554,7 +554,8 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
         f = workdir / "s8_fence.kicad_pcb"
         rc, t = sh([py, "-u", rt / "route_planes.py", cur, f, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",
                     "--skip-existing-zones", "--clearance", cfg["standard"], "--stitch-edge-fence", "--stitch-fence-pitch",
-                    "4.2", *(["--add-gnd-vias", "--gnd-via-distance", cfg["gnd_via_mm"]] if cfg.get("gnd_via_mm") else [])],
+                    "4.2", *(["--add-gnd-vias", "--gnd-via-distance", cfg["gnd_via_mm"], "--via-size", cfg["via"], "--via-drill",
+                             cfg["drill"]] if cfg.get("gnd_via_mm") else [])],     # return vias at the small via (more fit within 1.5 mm)
                    workdir / "s8_fence.log")
         times.append(("route_planes.py edge fence round the routed signals", t, rc))
         out = workdir / "s9_final.kicad_pcb"
@@ -580,6 +581,37 @@ def _krt_open(board: Path) -> tuple[int, list]:
     m = re.search(r"FOUND (\d+) ISSUE", r.stdout)
     names = sorted(set(re.findall(r"^\s{2}(\S+) \(net \d+\):", r.stdout, re.M)))
     return (int(m.group(1)) if m else 999), names
+
+
+def in2_report(frozen: Path, board: Path, dist: float = 1.5) -> dict:
+    """Option a bookkeeping: In2 track length per net (frozen copper) and, for the vias of those nets, KRT's
+    check_return_vias at `dist` (a GND via or drilled GND pad within dist of every such via)."""
+    from fnmatch import fnmatch
+    r = json.loads(frozen.read_text())
+    per = {}
+    for t in r["tracks"]:
+        if t["layer"] == "In2.Cu":
+            per[t["net"]] = per.get(t["net"], 0.0) + math.dist(t["a"], t["b"])
+    rep = {"in2_mm": {k: round(v, 1) for k, v in sorted(per.items())},
+           "not_allowed": sorted(n for n in per if n != "GND" and not any(fnmatch(n, q) for q in IN2_ALLOWED))}
+    per.pop("GND", None)
+    if per:
+        js = board.parent / "return_vias.json"
+        subprocess.run([str(KRT_PY), str(KRT / "py_tools" / "check_return_vias.py"), str(board), "--nets", *per,
+                        "--distance", str(dist), "--json", str(js)], capture_output=True, text=True, cwd=str(KRT))
+        d = json.loads(js.read_text()) if js.exists() else {}
+        # an "In2 signal via" = a via of the net that sits on an end of one of the net's In2 tracks (the layer change
+        # onto / off In2); the other vias of these nets are F.Cu <-> B.Cu changes and are reported separately
+        ends = {(t["net"], round(x, 3), round(y, 3)) for t in r["tracks"] if t["layer"] == "In2.Cu" for x, y in (t["a"], t["b"])}
+        in2v = [v for v in r["vias"] if v["net"] in per and any(n == v["net"] and math.dist((x, y), v["at"]) < 0.01
+                                                                for n, x, y in ends)]
+        unc = [(u.get("net"), u.get("x"), u.get("y"), u.get("nearest_mm")) for u in d.get("uncovered_vias", [])]
+        is_in2 = lambda u: any(v["net"] == u[0] and math.dist(v["at"], (u[1], u[2])) < 0.01 for v in in2v)
+        rep["in2_vias"] = len(in2v)
+        rep["uncovered"] = [u for u in unc if is_in2(u)]
+        rep["other_vias_of_in2_nets"] = d.get("signal_vias", 0) - len(in2v)
+        rep["other_uncovered"] = [u for u in unc if not is_in2(u)]
+    return rep
 
 
 def trim_dangling(frozen: Path, drc_json: Path) -> int:
@@ -630,8 +662,12 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
           f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")
     for i in res["items"][:30]:
         print("   ", i)
-    clean = res["errors"] == res["warnings"] == res["unconnected"] == 0
-    (workdir / "grade.json").write_text(json.dumps({**res, "clean": clean, "cfg": cfg, "info": info}, indent=1, default=str))
+    i2 = in2_report(frozen, workdir / "grade" / f"{NAME}.kicad_pcb", cfg.get("gnd_via_mm") or 1.5)
+    print(f"IN2 per net (mm): {i2['in2_mm']}; not allowed on In2: {i2['not_allowed']}; vias of those nets "
+          f"{i2.get('in2_vias')} on In2 track ends, without a GND via within {cfg.get('gnd_via_mm') or 1.5} mm: {i2.get('uncovered')}")
+    clean = res["errors"] == res["warnings"] == res["unconnected"] == 0 and not i2["not_allowed"] and not i2.get("uncovered")
+    (workdir / "grade.json").write_text(json.dumps({**res, "clean": clean, "cfg": cfg, "info": info, "in2": i2}, indent=1,
+                                                   default=str))
     if write and clean:
         doc = {"_comment": "Frozen router result of gen/tree_a_krt.py plan (KiCadRoutingTools v%s: autoroute.py's plan run "
                            "step by step with GND on In1 and In2, settings tree_a_krt.PLAN + 'build'). Board coordinates of "
@@ -702,6 +738,9 @@ def main() -> int:
     pl.add_argument("--workdir", type=Path, default=None)
     pl.add_argument("--cfg", default="{}", help="JSON overrides of PLAN")
     pl.add_argument("--write", action="store_true")
+    ir = sub.add_parser("in2report")
+    ir.add_argument("frozen", type=Path)
+    ir.add_argument("board", type=Path)
     au = sub.add_parser("auto")
     au.add_argument("--workdir", type=Path, default=None)
     au.add_argument("--cfg", default="{}", help="JSON overrides of AUTO")
@@ -723,6 +762,8 @@ def main() -> int:
         return run(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-krt-")), json.loads(a.cfg), a.write)
     elif a.cmd == "plan":
         return run_plan(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-plan-")), json.loads(a.cfg), a.write)
+    elif a.cmd == "in2report":
+        print(json.dumps(in2_report(a.frozen, a.board), indent=1))
     elif a.cmd == "auto":
         return run_auto(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-auto-")), json.loads(a.cfg), a.write)
     elif a.cmd == "sweep":
