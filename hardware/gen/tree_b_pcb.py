@@ -559,7 +559,7 @@ def write_project(out_dir: Path, prof) -> None:
             (out_dir / f).write_text(txt)
 
 
-def plane_rows(b, pcbnew, vias) -> list:
+def plane_rows(b, pcbnew, vias, path) -> list:
     """The two emi_check rows that cannot run on this board (calc/emi_check.py measures the edge fence along the bounding box, and
     reads zone fills from the board file; this tree outline is not a box and the generated board carries no fill), measured here
     with the same limits (emi.yaml): (1) GND via fence along the TRUE outline: largest gap between GND vias within edge_band_mm of
@@ -624,8 +624,27 @@ def plane_rows(b, pcbnew, vias) -> list:
             gaps.append((round(g, 1), tuple(round(v, 1) for v in pa)))
     rows = [("GND via fence along the outline (emi_check row, here)", bool(ss) and not gaps,
              f"{len(ss)} GND vias within {band} mm of the outline, largest unexempted gap {worst:.1f} mm (max {lim})" + (f"; gaps {gaps}" if gaps else ""))]
-    filler = pcbnew.ZONE_FILLER(b)
-    filler.Fill(b.Zones())
+    # fill without SWIG (ZONE_FILLER segfaults on KiCad 10.0.7 / macOS, NOTES-routing-lessons.md "Python crashes"): kicad-cli refills a
+    # temporary copy, the copy is loaded read-only
+    import shutil
+    import tempfile
+    import pcbnew_safe
+    tmpd = tempfile.mkdtemp(prefix="tree-b-fill-")
+    try:
+        filled = Path(tmpd) / "filled.kicad_pcb"
+        shutil.copyfile(str(path), filled)
+        shutil.copyfile(str(Path(path).with_suffix(".kicad_pro")), filled.with_suffix(".kicad_pro"))
+        pcbnew_safe.fill_zones_cli(str(filled))
+        b = pcbnew_safe.load_board(str(filled))
+        rows.extend(_void_row(b, pcbnew, vmax))
+    finally:
+        shutil.rmtree(tmpd, ignore_errors=True)
+    return rows
+
+
+def _void_row(b, pcbnew, vmax) -> list:
+    """Row 'track over plane void' on a board whose zones are filled (read-only SWIG calls)."""
+    mm = pcbnew.ToMM
     zones = {b.GetLayerName(z.GetLayer()): z for z in b.Zones() if not z.GetIsRuleArea() and z.GetNetname() == "GND"}
     ref = {"F.Cu": "In1.Cu", "B.Cu": "In2.Cu"}
     own = {}
@@ -654,17 +673,17 @@ def plane_rows(b, pcbnew, vias) -> list:
             run = 0.0 if covered else run + L / k
             if run > worst_run:
                 worst_run, at_ = run, (t.GetNetname(), lay, round(p[0] - ORIGIN[0], 1), round(p[1] - ORIGIN[1], 1))
-    rows.append(("track over plane void (emi_check row, here)", worst_run <= vmax,
-                 f"longest run without its reference plane after a zone refill {worst_run:.2f} mm (max {vmax}; own antipads excluded)" +
-                 (f" at {at_}" if at_ and worst_run > vmax else "")))
-    return rows
+    return [("track over plane void (emi_check row, here)", worst_run <= vmax,
+             f"longest run without its reference plane after a zone refill {worst_run:.2f} mm (max {vmax}; own antipads excluded)" +
+             (f" at {at_}" if at_ and worst_run > 0 else ""))]
 
 
 def proof(path: Path) -> bool:
     """Run with $KICAD_PYTHON: load the board with pcbnew itself and compare with tree_geometry / tree_common: every pad
     position (LED pads, J4 pads), pad nets, layers, header mating by position, holes, outline bounding box, keep-out."""
     import pcbnew
-    b = pcbnew.LoadBoard(str(path))
+    import pcbnew_safe
+    b = pcbnew_safe.load_board(str(path))
     mm = pcbnew.ToMM
     rows = []
     worst, n, bad_net = 0.0, 0, []
@@ -696,7 +715,7 @@ def proof(path: Path) -> bool:
     gap = min((math.hypot(max(abs(vx - cx) - w / 2, 0.0), max(abs(vy - cy) - h / 2, 0.0)) - d / 2 for vx, vy, d in vias
                for cx, cy, w, h in spads), default=9.9)
     rows.append(("via drill edge to SMD pad >= 0.2 (own net too)", gap >= 0.2 - 1e-6, f"{len(vias)} vias, smallest gap {gap:.3f} mm"))
-    rows.extend(plane_rows(b, pcbnew, vias))
+    rows.extend(plane_rows(b, pcbnew, vias, path))
     box = b.GetBoardEdgesBoundingBox()
     rows.append(("outline box", abs(mm(box.GetWidth()) - TO.W) < 0.2 and abs(mm(box.GetHeight()) - TO.H) < 0.2,
                  f"{mm(box.GetWidth()):.2f} x {mm(box.GetHeight()):.2f} mm (tree_outline {TO.W} x {TO.H})"))
