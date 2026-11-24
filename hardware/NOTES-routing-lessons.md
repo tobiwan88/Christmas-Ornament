@@ -252,3 +252,29 @@ open nets sit around U1 / D9 / D10 / the R columns (LED_L1, L2, L6, L7, L8, SWD,
 24 non-GND nets cross the neck at y 28.5 (14.0 mm between the notches) from the top tier to the rest of the board. With
 GND on both inner layers and Power at its 0.15 class clearance no run closed below 7 open on the outer layers and below 4
 with In2 signals for the open nets. The VDD plane frees VDD from the outer layers and is the difference in autoroute's 0.
+
+### Round 3, options a + b (engineer decision D33 / D34 follow-up, 2026-11-25; append only)
+Settings: Default / Power clearance 0.10 (tree-a fab rules, min clearance / track 0.10), Default track 0.127, RF 0.15,
+Crystal class 0.15; In2 signals only for the named still-open nets (LED lines, SWD, BTN_SW1, VBUS_DET, CHG_STAT), In2
+rule areas without tracks under the RF column, X1, X2 and the DC/DC node; `--hand rf`; GND return vias within 1.5 mm.
+20 graded arms (sweeps pz1, pz3-pz6; 436-1022 s each, 4 in parallel), open = kicad-cli unconnected nets on the rebuild:
+| Arm | Fallback | Router knobs | Open nets | err |
+|---|---|---|---|---|
+| z1-z4 | In2 for still-open allowed nets, 2 passes | default / max-ripup 5 / VDD box on In2 / mps | 4-6 | 2-5 |
+| u1-u4 | "repair": In2 (3.0) for every net, then disallowed nets force-rerouted off In2, allowed open nets In2 again | default / ripup 5 / VDD box / 1 pass | 1-7 (u2 ripup 5: LED_L2 only) | 3-6 |
+| s1-s4 | repair, In2 no-signal box under the U1 EP | ripup 4-6, 4 passes | 4-5 | 0-3 |
+| r0-r3 | repair, U1 EP solid instead of the box | ripup 5 + mps / inside_out / backward / mps-reverse | 3-4 | 1-3 |
+| q1-q4 | repair, + U1.44 / C4.2 / C50.2 solid | inside_out, ripup 5 / 8, D9 lanes | 3-6 (q3: LED_L1, LED_L8, XL1, 0 err) | 0-2 |
+Most frequent open nets over the 20 arms: VDD 9, LED_L8 9, LED_L2 7, LED_L2_MCU 7, LED_L6 6, DECA 5, XC1 / XC2 / LED_L7 /
+LED_L1 / VBUS_DET 4. KRT blocker reports for the D9 nets: LED_L2 (D9 pad 4) blocked by RF_N1, LED_L6 (D9 pad 2) by
+ANT_FEED: D9 sits on B.Cu under the RF column and its two left pads have no free exit.
+Lessons:
+- The landscape is chaotic: one changed rule area or pad connection moves the result by 1-5 open nets (u2 1 open did not
+  reproduce after the EP box was replaced by a solid EP connection, r0 = same cfg: 5). Grade many arms, never one.
+- KRT `--add-gnd-vias` places 0.6 / 0.3 vias by default (Default class) and ignores the 0.5 mm hole-to-hole rule: pass
+  `--via-size 0.45 --via-drill 0.2` (36 -> 48 placed on the same board) and drop the GND via of every kicad-cli
+  hole_to_hole pair. At 1.5 mm it still finds no room for 53 of 146 signal vias around U1.
+- check_return_vias counts every via of a net; for the "In2 signal via" rule count only vias on an In2 track end
+  (`tree_a_krt.py in2report`).
+- A starved thermal moves with the routing (C1.2, C4.2, C50.2, U1.44, U1 EP vias on In2): a solid connection on those pads
+  is cheaper than an In2 no-signal box (the box cost routes).

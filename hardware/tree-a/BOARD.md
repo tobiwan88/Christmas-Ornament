@@ -176,14 +176,16 @@ solid GND, power on the outer layers, a local VDD pour on In2 only if routing ne
   0.1 / 0.1, via 0.45 / 0.2 on F.Cu / B.Cu only -> floor rung 0.09 -> GND edge fence + route.py GND. Power / RF keep
   their 0.15 class clearance; vias keep 0.15 from SMD pads (rule 'via to SMD pad' read as a clearance constraint plus
   the recorded same-net pad clearance).
-- Best results (NOTES-routing-lessons.md "tree-a gate 5 round 3", every run timed): GND / GND outer layers only 7-9 open
-  nets; plus In2 for the still-open nets 4-6 open; autoroute.py with its VDD plane on In2 0 open, but only at the fab
-  floor (0.0889 mm tracks, 0.25 / 0.15 vias, Power / RF clearance 0.1) and not allowed by D34. Hand copper beyond the RF
-  column measured worse in every pairing: the next freeze uses `--hand rf` (generator default unchanged until then).
-- Open nets cluster around U1 / D9 / D10 / the R columns (LED lines 1, 2, 6, 7, 8, SWD, BTN_SW1, VBUS_DET, CHG_STAT, VDD).
-  Engineer decision pending (gate-5 report): signals on In2 locally, Power clearance 0.1, or a placement change.
-- Reproduce: `python3 hardware/gen/tree_a_krt.py plan --workdir DIR [--cfg JSON]` (about 5-12 min); freeze with
-  `--write` (only a clean result is written) or `tree_a_pcb.py --route krt`.
+- Options a + b (2026-11-25, engineer): Default / Power clearance 0.10 (`rules/jlc-4layer-tree-a.json`, `board.yaml`,
+  `rules/tree-a.kicad_dru`), RF 0.15, Crystal class 0.15; In2 signals only for still-open LED / SWD / BTN_SW1 / VBUS_DET /
+  CHG_STAT nets, In2 rule areas without tracks under the RF column, X1, X2 and the DC/DC node (`IN2_NO_SIGNAL`);
+  `--hand rf`. Result over 20 graded arms: NOT complete, best 1 open net (LED_L2, not reproducible after the EP fix),
+  reproducible best 3 nets (LED_L1, LED_L8, XL1; kicad-cli 0 errors; `plan` default). D9 (B.Cu, under the RF column)
+  pads 2 / 4 have no free exit; the neck carries 24 non-GND nets in 14.0 mm. Table and lessons: NOTES-routing-lessons.md
+  "Round 3, options a + b". Engineer decision pending: placement / pin change at D9 or option d.
+- Reproduce: `python3 hardware/gen/tree_a_krt.py plan --workdir DIR [--cfg JSON]` (about 13-17 min); `in2report FROZEN
+  BOARD` lists In2 length per net and In2 vias without a GND via within 1.5 mm; freeze with `--write` (only a clean
+  result is written) or `tree_a_pcb.py --route krt`.
 
 ## Routing review (date)
 Pair numbers, loops, areas, plane voids, edge gaps, detours accepted, fab-floor tracks/vias, residual risks, where to look first.
