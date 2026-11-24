@@ -43,9 +43,9 @@ sys.path.insert(0, str(HERE))
 
 # Net order of the gate 4 escape proof (best start order = start 5: the inner left nets, VDD, the left-row LED lines
 # L8..L5), then the other U1 nets, then everything else ("*").
-U1_FIRST = ["/mcu/VBAT_SENSE", "/mcu/BTN_SW1", "/charger/VBUS_DET", "VDD", "/leds/LED_L8_MCU", "/leds/LED_L7_MCU",
-            "/leds/LED_L6_MCU", "/leds/LED_L5_MCU"]
-U1_REST = ["GND", "/charger/CHG_STAT", "/leds/LED_L1_MCU", "/leds/LED_L2_MCU", "/leds/LED_L3_MCU", "/leds/LED_L4_MCU",
+U1_FIRST = ["/mcu/VBAT_SENSE", "/mcu/BTN_SW1", "/charger/VBUS_DET", "VDD", "/leds/LED_L1_MCU", "/leds/LED_L2_MCU",
+            "/leds/LED_L3_MCU", "/leds/LED_L4_MCU"]      # left-row pins 39..42 (D33 map)
+U1_REST = ["GND", "/charger/CHG_STAT", "/leds/LED_L5_MCU", "/leds/LED_L6_MCU", "/leds/LED_L7_MCU", "/leds/LED_L8_MCU",
            "/mcu/DECA", "/mcu/DECD", "/mcu/SWDCLK", "/mcu/SWDIO", "/mcu/SWO", "/mcu/TPS_SEL", "/mcu/nRESET"]
 LED_LINES = [f"/leds/LED_L{k}" for k in range(1, 9)]
 POWER = [["GND", 0.3], ["VDD", 0.3], ["VIN", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBUS", 0.3], ["/mcu/DCC", 0.3]]   # widths = board.yaml Power class

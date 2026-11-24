@@ -73,8 +73,10 @@ BUS_ORDER = list(range(1, N_LINES + 1))
 # v_source_max: highest voltage the external circuit can put on the net (pin limit VDD + 0.3 V, VDD idle 3.0 V); the
 # divided 5 V nets use V_DIVIDED_MAX from tree_pin_divider.py.
 # Package sides (standard QFN numbering, check the PS drawing): 1-12 left (pin 1 top), 13-24 bottom, 25-36 right,
-# 37-48 top (37 right end). LED lines: two groups of 4 adjacent pins (P1 has no 8 adjacent free pins), in order along
-# the package edge from pin 9 up to pin 6, around the top-left corner, then pin 42 down to 39: L1..L8.
+# 37-48 top (37 right end). LED lines: two groups of 4 adjacent pins (P1 has no 8 adjacent free pins). Gate 5 (D33
+# proposed, coordinator decision): permuted inside the same 8 pins so no line crosses on the way to its resistor
+# (calc/led_pin_perm.py on the placed board: 16 -> 0 straight-line crossings, 94.9 -> 65.0 mm): pins 39-42 (P1.11-P1.14)
+# = L1..L4 (R1-R4 left of J3), pins 6-9 (P1.05-P1.08) = L5..L8 (R5-R8 right of J3). Gate 3 had 9..6 = L1..L4, 42..39 = L5..L8.
 PIN_PLAN = [
     {"net": "XL1", "gpio": "P1.00", "pin": 1, "kind": "xtal", "note": "LFXO 32.768 kHz, no external load caps (INTCAP)"},
     {"net": "XL2", "gpio": "P1.01", "pin": 2, "kind": "xtal", "note": "LFXO"},
@@ -82,10 +84,10 @@ PIN_PLAN = [
     {"net": "NC", "gpio": "P1.03", "pin": 4, "kind": "nc", "note": "NFC2, unused, leave open"},
     {"net": "VBAT_SENSE", "gpio": "P1.04", "pin": 5, "kind": "ain", "v_source_max": 2.1,
      "note": "AIN0, battery divider mid-point (2.2M/2.2M after Q1, 100 nF filter: 4.2 V Li-ion -> 2.1 V); DC net, buffer between LFXO and LED lines"},
-    {"net": "LED_L4_MCU", "gpio": "P1.05", "pin": 6, "kind": "led", "note": "via R4 to LED_L4"},
-    {"net": "LED_L3_MCU", "gpio": "P1.06", "pin": 7, "kind": "led", "note": "via R3 to LED_L3"},
-    {"net": "LED_L2_MCU", "gpio": "P1.07", "pin": 8, "kind": "led", "note": "via R2 to LED_L2"},
-    {"net": "LED_L1_MCU", "gpio": "P1.08", "pin": 9, "kind": "led", "note": "via R1 to LED_L1 (P1.08 = EXTREF, not used)"},
+    {"net": "LED_L5_MCU", "gpio": "P1.05", "pin": 6, "kind": "led", "note": "via R5 to LED_L5"},
+    {"net": "LED_L6_MCU", "gpio": "P1.06", "pin": 7, "kind": "led", "note": "via R6 to LED_L6"},
+    {"net": "LED_L7_MCU", "gpio": "P1.07", "pin": 8, "kind": "led", "note": "via R7 to LED_L7"},
+    {"net": "LED_L8_MCU", "gpio": "P1.08", "pin": 9, "kind": "led", "note": "via R8 to LED_L8 (P1.08 = EXTREF, not used)"},
     {"net": "TPS_SEL", "gpio": "P2.00", "pin": 11, "kind": "out",
      "note": "TPS63900 SEL: high = VO(2) lit, low = VO(1) 3.0 V; external pull-down (never float, 3.0 V at start)"},
     {"net": "SPARE_P2_01", "gpio": "P2.01", "pin": 12, "kind": "spare",
@@ -111,10 +113,10 @@ PIN_PLAN = [
     {"net": "VBUS_DET", "gpio": "P1.10", "pin": 38, "kind": "in", "wake": True, "v_source_max": V_DIVIDED_MAX,
      "conditioning": "D13: divider R42/R43 (tree_pin_divider.py); R43 alone pulls down in variant A (D21)",
      "note": "Li-ion variant; wakes on USB plug-in"},
-    {"net": "LED_L8_MCU", "gpio": "P1.11", "pin": 39, "kind": "led", "note": "via R8 to LED_L8 (AIN4 unused)"},
-    {"net": "LED_L7_MCU", "gpio": "P1.12", "pin": 40, "kind": "led", "note": "via R7 to LED_L7"},
-    {"net": "LED_L6_MCU", "gpio": "P1.13", "pin": 41, "kind": "led", "note": "via R6 to LED_L6"},
-    {"net": "LED_L5_MCU", "gpio": "P1.14", "pin": 42, "kind": "led", "note": "via R5 to LED_L5"},
+    {"net": "LED_L1_MCU", "gpio": "P1.11", "pin": 39, "kind": "led", "note": "via R1 to LED_L1 (AIN4 unused)"},
+    {"net": "LED_L2_MCU", "gpio": "P1.12", "pin": 40, "kind": "led", "note": "via R2 to LED_L2"},
+    {"net": "LED_L3_MCU", "gpio": "P1.13", "pin": 41, "kind": "led", "note": "via R3 to LED_L3"},
+    {"net": "LED_L4_MCU", "gpio": "P1.14", "pin": 42, "kind": "led", "note": "via R4 to LED_L4"},
 ]
 LINE_GPIO = {e["net"][:-4]: e["gpio"] for e in PIN_PLAN if e["kind"] == "led"}     # {'LED_L1': 'P1.08', ...}
 PIN_BY_NET = {e["net"]: e for e in PIN_PLAN if e["net"] != "NC"}

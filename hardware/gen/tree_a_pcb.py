@@ -766,7 +766,7 @@ ESC_ARGS = ["--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu", "--layer-costs", "1.
 # open go first, together with the nets KRT names as their blockers, which may be ripped and re-routed ("REPAIR").
 # KRT's result depends on the net order (sweep: 20-27 of 28 for different orders on the same board), so pass 1 runs several
 # start orders in parallel and keeps the board with the most connected U1 nets (ties: fewer DRC errors, then the first).
-_L = ("/leds/LED_L8_MCU", "/leds/LED_L7_MCU", "/leds/LED_L6_MCU", "/leds/LED_L5_MCU")
+_L = ("/leds/LED_L1_MCU", "/leds/LED_L2_MCU", "/leds/LED_L3_MCU", "/leds/LED_L4_MCU")   # left-row pins 39..42 (D33 map)
 ESC_STARTS = (("VDD", *_L, "/mcu/BTN_SW1", "/charger/VBUS_DET", "/mcu/VBAT_SENSE"),
               ("VDD", *_L, "/charger/VBUS_DET", "/mcu/VBAT_SENSE", "/mcu/BTN_SW1"),
               ("VDD", "/mcu/BTN_SW1", "/charger/VBUS_DET", *_L, "/mcu/VBAT_SENSE"),

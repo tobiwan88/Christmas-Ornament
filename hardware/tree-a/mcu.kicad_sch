@@ -3777,7 +3777,7 @@
 		)
 		(uuid "e5af6e7c-620d-57ee-a4cf-d631ec2f8fea")
 	)
-	(hierarchical_label "LED_L4_MCU"
+	(hierarchical_label "LED_L5_MCU"
 		(shape output)
 		(at 231.14 114.3 0)
 		(effects
@@ -3788,7 +3788,7 @@
 		)
 		(uuid "114aef5a-3504-5298-b579-d399192a3dd5")
 	)
-	(hierarchical_label "LED_L3_MCU"
+	(hierarchical_label "LED_L6_MCU"
 		(shape output)
 		(at 231.14 116.84 0)
 		(effects
@@ -3799,7 +3799,7 @@
 		)
 		(uuid "1246b542-dc60-5006-8f3c-fbe623f89572")
 	)
-	(hierarchical_label "LED_L1_MCU"
+	(hierarchical_label "LED_L8_MCU"
 		(shape output)
 		(at 231.14 121.92 0)
 		(effects
@@ -3810,7 +3810,7 @@
 		)
 		(uuid "199f7d53-4def-558a-958e-5049c1dd67ab")
 	)
-	(hierarchical_label "LED_L8_MCU"
+	(hierarchical_label "LED_L1_MCU"
 		(shape output)
 		(at 231.14 129.54 0)
 		(effects
@@ -3821,7 +3821,7 @@
 		)
 		(uuid "1bf74c53-2eb8-55ac-9357-fa1c7203f2f8")
 	)
-	(hierarchical_label "LED_L7_MCU"
+	(hierarchical_label "LED_L2_MCU"
 		(shape output)
 		(at 231.14 132.08 0)
 		(effects
@@ -3832,7 +3832,7 @@
 		)
 		(uuid "3284f214-1ce4-5c7d-9173-da0efa8869a4")
 	)
-	(hierarchical_label "LED_L5_MCU"
+	(hierarchical_label "LED_L4_MCU"
 		(shape output)
 		(at 231.14 137.16 0)
 		(effects
@@ -3887,7 +3887,7 @@
 		)
 		(uuid "8e72159e-3ebe-5a6d-9675-940a7a79691c")
 	)
-	(hierarchical_label "LED_L2_MCU"
+	(hierarchical_label "LED_L7_MCU"
 		(shape output)
 		(at 231.14 119.38 0)
 		(effects
@@ -3909,7 +3909,7 @@
 		)
 		(uuid "be5688c0-5c91-5bc7-84f7-512c8662a02f")
 	)
-	(hierarchical_label "LED_L6_MCU"
+	(hierarchical_label "LED_L3_MCU"
 		(shape output)
 		(at 231.14 134.62 0)
 		(effects
