@@ -71,7 +71,8 @@ BT1_ROT = 270.0               # pads 1 (BAT) and 2 (GND) at the top end, next to
 J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: the bottom edge is blocked by BT1's pads
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
 NO_POUR_PADS = (("C9", "2"), ("C11", "2"))   # 0201 GND pads: own via, no connection to GND_F_local
-POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"), ("C1", "2"), ("U1", "49"))   # U1.49 (EP thermal vias, starved In2 spokes) and C1.2: gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
+POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"), ("C1", "2"), ("U1", "49"), ("U1", "44"), ("C4", "2"),
+                   ("C50", "2"))   # U1.49 (EP thermal vias, starved In2 spokes), U1.44 / C4.2 / C50.2 / C1.2 (round 3 KRT runs): gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
 MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)

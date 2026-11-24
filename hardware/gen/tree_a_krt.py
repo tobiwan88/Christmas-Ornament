@@ -624,6 +624,11 @@ def trim_dangling(frozen: Path, drc_json: Path) -> int:
         if v["type"] in ("via_dangling", "track_dangling"):
             for it in v["items"]:
                 pts.append((v["type"], it["pos"]["x"], it["pos"]["y"], it["description"]))
+    for v in d.get("violations", []):        # KRT's return vias ignore the board's 0.5 mm hole-to-hole: drop the GND one
+        if v["type"] == "hole_to_hole":
+            for it in v["items"]:
+                if it["description"].startswith("Via [GND]"):
+                    pts.append(("via_dangling", it["pos"]["x"], it["pos"]["y"], it["description"]))
     n0 = len(r["vias"]) + len(r["tracks"])
     for typ, x, y, desc in pts:
         if typ == "via_dangling":
@@ -656,7 +661,7 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
         cut = trim_dangling(frozen, workdir / "grade" / "drc.json")      # frozen file (same rule on every rebuild)
         if not cut:
             break
-        print(f"   trim {k + 1}: removed {cut} dangling router item(s), regrading", flush=True)
+        print(f"   trim {k + 1}: removed {cut} dangling router item(s) / hole-to-hole GND return vias, regrading", flush=True)
     print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC, all severities, parity)")
     print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
           f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")
