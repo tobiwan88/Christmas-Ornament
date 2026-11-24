@@ -117,3 +117,24 @@ GND vias and ANT_FEED): `qfn_fanout.py -c U1 --width 0.15 --clearance 0.15 --gri
 `place_fanout_clearance.py --clearance 0.15` 0.2 s (no cap moved); then the same six-start route + two repair passes:
 22/28, 0 DRC errors, 236 s (open VDD, LED L7, DECA, DECD, SWDCLK, XC1). `check_complete.py` exit 4 (INCOMPLETE; it grades
 the whole board, and only U1 nets are routed; same verdict on the hand fan-out board, 3.9 s). Kept the hand fan-out.
+
+## Panel builder (2026-11-24, gen/panel_pcb.py; append only)
+Flow: parse both board files as S-expressions (quoted atoms kept), rigid transform (B turned 180 in the panel plane), Edge.Cuts
+replaced by split board outlines + tab sides + rails, panel parts written as text, zones refilled by kicad-cli in a COPY OF THE PANEL
+PROJECT, then rows and DRC. No pcbnew import anywhere. Build about 20 s (tree_outline.nested 5.7 s, refill 2-3 s, three DRCs about 8 s).
+What bit:
+- KiCad keeps footprint texts upright: a text at 180 is drawn at 0 and its ink moves by the glyph asymmetry (8 silk_overlap warnings
+  on B's LEDs at 0.10 mm vs 0.15). Write the drawn angle + 180 with `unlocked` (keep-upright off): a rigid copy, no overlap.
+- Footprint graphics and pad positions are footprint-local; pad and text ANGLES are absolute (+180); footprint rule areas (TC1's zone)
+  are stored in board coordinates (transform their points).
+- KiCad adds Datasheet / Description properties with random uuids on save: write them, or the build is not repeatable.
+- Two boards with a net of the same name (GND) become one net with two islands: 'unconnected' in the panel. Rename on one board.
+- `pcbnew_safe.fill_zones_cli` copies the bare board into a temp dir: the fill then uses default rules (no net classes, no rule areas).
+  For a project-dependent fill copy .kicad_pro / .kicad_dru / fp-lib-table along (proposal for the shared helper: an optional
+  `project_files` argument).
+- Pours that run to 0.3 mm from the edge fill between the mouse-bite holes (0.27 mm from the outline): a keep-out rule area behind each
+  hole row is needed. Tabs then must avoid edge tracks too (B's LED_L2 runs 0.43 mm from the edge on tier 3).
+- Ratsnest pairs differ between DRC runs of the same copper: compare unconnected items per net, not by position.
+- A DRC in a temp dir needs the `../lib` relation of `${KIPRJMOD}/../lib` or every project footprint shows lib_footprint_issues.
+- `kicad-cli pcb drc --schematic-parity` on a board without a schematic prints a warning and reports 0 parity items (rc 0).
+- DRC rule conditions: `A.Reference == 'MB*'` wildcards work; holes inside one footprint are checked against each other (hole_to_hole).

@@ -47,6 +47,32 @@ Quote (OPEN): PCB ____ USD, shipping ____ USD, date ____.
 8. Mouse bites on slanted edges and tab width; minimum copper to the outline in the tab zones (0.6 mm used).
 9. Placement preview: send it first (hw-fab-order). Confirm LED polarity (pin 1 top-left per the datasheet top view, DS-A1), antenna
    orientation (brown mark at the feed end), USB-C is not placed in variant A.
+Added 2026-11-24 with the KiCad panel (`panel/BOARD.md`; evidence level in brackets: P page quote, S search snippet, E estimate):
+10. Fiducial edge distance: the edge-rails article says "minimum clearance of 3.35 mm from the board edge, including the fiducial keep-out
+    area" [P], the process-edges article "1 mm fiducials placed 3.85 mm from the panel edge" [P]. Our centres are 3.85 mm from the edge,
+    so the 2.0 mm mask circle reaches 2.85 mm. Is that accepted, or must the mask edge be 3.35 mm in (centre 4.35 mm on a 5 mm rail)?
+11. Rails on two sides only (top and bottom, 5 mm), no side frame: the panel's left and right edges are the boards' tier corners and the
+    middle is held only by 8 tabs (rail -> B -> A -> rail). Accepted for Standard PCBA with a 1.0 mm board, or do you want a four-sided
+    frame (tree_outline arrangement 3: 128.8 x 120.0 mm, +12 % area) or added support bars? [E: stiffness not computed]
+12. Tab sets: the mouse-bite guide wants "at least 2 symmetrically placed sets ... on both sides" and "a set every 50-60 mm" [P]. A has
+    tabs only on its right slanted edges and its trunk end, B on its left edges and its trunk end (nothing faces the other sides). OK?
+13. Tooling holes: 4 x D2.0 NPTH, 2.5 mm from the rail edge, 5 mm from the panel ends, one corner moved 5 mm [P: "2 mm tooling holes",
+    count and position not stated; S: flex guide "in each corner"]. Do you add or move your own, and does the count (3 or 4) matter?
+14. BOM and CPL for a two-design panel: we send ONE BOM and ONE CPL generated from the panel file (designators unique across both
+    designs, placement quantity = panel count) and select "files already contain complete panelized data" [P: BOM/CPL matching page offers
+    that option; S: no page covers two designs]. Is that the right option for a "panel by customer" with two designs?
+15. Rotation: design B is turned 180 degrees in the panel; its CPL rows come from the fit with +180 already in them. Please confirm in the
+    placement preview that the B LEDs (D1-D8) and J4 sit right. Both designs carry bottom-side parts (A: D9-D16; B: J4): which rotation
+    convention does the CPL use for bottom parts (already open in section 7)?
+16. Mouse bites as built: hole centres on the board outline, 5 holes D0.6 at 0.35 mm web, 5.0 mm bridges up to 4.0 mm long, trapezoid
+    bridges between non-parallel slanted edges, sharp inside corners at the tab roots in the file [P for the holes; E for bridge width and
+    length, no JLC figure]. Accepted, or do you change them (the guide says non-standard spacing is adjusted without notice)?
+17. Different-design fee for this panel (2 designs): how much [P: "will usually charge more", amount not published]. Does the stencil rule
+    "customer-created panel, up to 4 different PCB designs free" [P: stencil article, for the stencil service] apply to PCBA as well?
+18. Copper at the tabs: we keep copper 0.6 mm behind each hole row (copper elsewhere 0.3 mm from the routed edge). Enough for clean
+    separation of a 1.0 mm board without exposed copper? [E]
+19. Hole-to-hole 0.35 mm web between the 0.6 mm bite holes is below the 0.5 mm hole-to-hole floor of the capability page: accepted for
+    mouse bites (the guide's own figure) [P]?
 
 ## 4. Variant switch before a variant B order (DS-C4)
 The production BOM and CPL come from the PCB file's DNP flags (`tools/fab_package.py` lines that skip `dnp`), not from a csv. The generators
@@ -139,3 +165,31 @@ Open for the tool owner (the gate still FAILS on ANT1, BT1, J4 and 14 of the 16 
 - Bottom-side CPL rows (D9-D16 on board A, J4 on board B) are not written: `fab_package.py` stops for an assembled bottom part outside
   `--fit-only`. Before a board A order, someone must settle JLC's bottom rotation convention against its placement preview (UNVERIFIED) and
   extend the tool.
+
+## 8. The two-design panel: BOM, CPL, fiducials (2026-11-24, panel builder; evidence: P page quote, S search snippet, E estimate)
+Built by `gen/panel_pcb.py` (numbers in `panel/BOARD.md`). What changes for the order compared with single boards:
+1. One file set from the panel, not per design: gerbers, drill, BOM and CPL all from `hardware/panel/panel.kicad_pcb`
+   (`fab_package.py <panel>`). The single-board packages are only for the bring-up and for a re-quote of D1. [E: our pipeline]
+2. BOM: one list for both designs, grouped by LCSC number (the LED C965834 appears once with D1-D16). DNP flags come from the board files
+   (variant A: A's charger parts DNP). JLC: "Each reference designator appears only once" [P, BOM/CPL matching page]: met, 105 unique
+   references (gate row "designators unique in the panel"); no prefixes needed because the project numbers A and B apart (D1-D8 B, D9-D16 A,
+   J3 A, J4 B, MH1/MH2 A, MH3/MH4 B).
+3. CPL: one list, panel coordinates (absolute, drill origin absolute in the gerbers). JLC: "The minimum coordinate spacing between different
+   reference designators is greater than 0.2 mm" [P]: closest pair D12 / R10 0.750 mm (gate row, both faces counted together).
+   Choose "files already contain complete panelized data" in the upload, so the component count is the placement count [P: "If your files
+   already contain complete panelized data, select this option"]; whether that holds for a two-design customer panel is question 14 [E].
+4. Rotation of B: B is turned 180 degrees in the panel plane, so each B part's CPL angle is its board-B angle + 180 (LEDs top: board 0 ->
+   panel KiCad 180 -> CPL 270 with the +90 LED correction; J4: panel KiCad 0, CPL 270 = the 90/270 symmetric header). The fit computes this
+   from the pads (`fab_package.py --fit-only --offline hardware/panel/panel.kicad_pcb`: `placement fit panel: OK`, 2026-11-24); nobody
+   adds 180 by hand. The J4 mating proof (tree_geometry --kicad-proof) is about the board file; the panel copy is rigid (gate row: worst
+   pad deviation 0.000000 mm), so the proof holds in the panel. [E: tool output]
+5. Bottom side: A's D9-D16 and B's J4 are assembled bottom parts. `fab_package.py` refuses bottom CPL rows today (section 7), so the panel
+   package stops at the first one exactly like the board A package would: same open item, same fix (JLC bottom convention from the
+   placement preview, then the tool). [E]
+6. Fiducials: global only, on the rails: FID1-FID3 on the top face, FID4-FID6 on the bottom face at the same three points (1.0 mm copper,
+   2.0 mm mask, 3.85 mm from the panel edge, not 180-degree symmetric) [P sizes and 3.85; count "Three to four" P]. No local fiducials on
+   the boards (none in the board files; U1 is a 0.4 mm pitch QFN: ask whether local fiducials near U1 are wanted [E]).
+7. Stencils: one per face for the whole panel (two-sided assembly D6), cut from the panel paste layers (both designs). [E]
+8. Rails stay on at delivery unless removal is ordered [P: "Removal requires notice at order placement, and Additional post-processing
+   fees will apply" (edge-rails article)]: we break the tabs by hand; keep it.
+9. Size for the quote: 114.8 x 120.0 mm, 4 layers, 1.0 mm, ENIG, black mask, panel by customer, 2 designs, 5 panels (section 2 step 1).
