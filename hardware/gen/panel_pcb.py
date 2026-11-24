@@ -341,6 +341,15 @@ def board_items(b, xf, netmap):
         head = c[0]
         if head == "footprint":
             n = parse(dump(c))
+            have = {str(p[1]) for p in children(n, "property")}
+            fuid = str(child(n, "uuid")[1])
+            fab = "F.Fab" if str(child(n, "layer")[1]) == "F.Cu" else "B.Fab"
+            for prop in ("Datasheet", "Description"):   # KiCad adds missing ones with random uuids on save: add them here
+                if prop not in have:
+                    at0 = child(n, "at")
+                    n.insert(n.index(at0) + 1, ["property", Q(prop), Q(""), ["at", "0", "0", at0[3] if len(at0) > 3 else "0"],
+                                                ["layer", Q(fab)], ["hide", "yes"], ["uuid", Q(str(uuid.uuid5(uuid.NAMESPACE_URL, fuid + prop)))],
+                                                ["effects", ["font", ["size", "1.27", "1.27"]]]])
             _xf_point_node(child(n, "at"), xf, angle=True)
             _rotate_child_angles(n, xf)
             for z in children(n, "zone"):            # footprint rule areas are stored in board coordinates
@@ -1213,8 +1222,10 @@ def compose(ctx):
         body += A["items"][k] + B["items"][k]
     body += parts
     body += A["items"]["gr"] + B["items"]["gr"] + silk
-    for i, pc in enumerate(pieces):
-        body.append(gr_line(pc[1], pc[2], i) if pc[0] == "L" else gr_arc(pc[1], pc[2], pc[3], i))
+    for pc in pieces:     # uuid from the geometry: stable when a board file lists its outline in another order
+        pts = ["%s,%s" % (fmt(p[0]), fmt(p[1])) for p in pc[1:]]
+        tag = pc[0] + "/".join(sorted(pts[::len(pts) - 1]))   # end points only, direction-free (KiCad may reverse an arc / move its mid on save)
+        body.append(gr_line(pc[1], pc[2], tag) if pc[0] == "L" else gr_arc(pc[1], pc[2], pc[3], tag))
     for k in ("segment", "arc", "via", "zone", "group"):
         body += A["items"][k] + B["items"][k]
     body += tab_keepouts(tabs, [l for l in la if l.endswith(".Cu")])
