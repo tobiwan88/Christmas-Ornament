@@ -103,3 +103,17 @@ Placement experiments that did NOT help (reverted): R10 on top of the left strip
 R5..R8, R43, R10 (planar peel order for a bundle on the J3 side, 23-24/28); R42 moved next to R43 (24/28).
 Not tried: KRT's `qfn_fanout.py` / `place_fanout_clearance.py` flow (the engineer's decision 1 binds a hand-drawn fan-out;
 a KRT fan-out would replace it, so it is an engineer option, not a proof of this placement).
+Round 2 (2026-11-24, engineer decisions 1c/1d/2; append): 28/28 U1 nets, 0 DRC errors (F.Cu / B.Cu only), pass 1 of the
+`--escape-proof` run, best of six start orders = start 5 (VBAT_SENSE, BTN_SW1, VBUS_DET, VDD, LED L8..L5 first); 54 s for
+the six parallel starts. What made it: the three inner left-side nets (BTN_SW1 pin 37, VBUS_DET pin 38, VBAT_SENSE pin 5)
+got their parts in one place in the left wing (R43 / R42 / R10 above Q1, R40 / R41 / C14 below it), so all three leave
+on B.Cu between the via row and the exposed pad, run under J3 and under the holder and cross no LED line; only LED L5-L8
+(+ VDD / GND) pass the neck left of J3. Steps that did not work on the way: R43 at the right strip next to R42 (VBUS_DET
+then crosses the bottom-row LED lines L1-L4: 23/28); GND left out of pass 1 (19/28: worse); R43's GND pad walled in by
+BTN / VBUS_DET (fixed with a generator GND via at the pad); C10.2 starved spokes after routing (solid pad).
+KRT's own QFN flow on the same placement (scratch hardware/out/tree-a-escape-krtqfn/, hand fan-out copper stripped except
+GND vias and ANT_FEED): `qfn_fanout.py -c U1 --width 0.15 --clearance 0.15 --grid-step 0.05 --via-size 0.6 --via-drill
+0.3` 0.7 s, escaped 25 of 28 (ANT_PA, DECA, VSS_PA not escaped: the RF column parts sit on the pins);
+`place_fanout_clearance.py --clearance 0.15` 0.2 s (no cap moved); then the same six-start route + two repair passes:
+22/28, 0 DRC errors, 236 s (open VDD, LED L7, DECA, DECD, SWDCLK, XC1). `check_complete.py` exit 4 (INCOMPLETE; it grades
+the whole board, and only U1 nets are routed; same verdict on the hand fan-out board, 3.9 s). Kept the hand fan-out.

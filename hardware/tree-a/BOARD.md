@@ -59,7 +59,7 @@ fan-out as locked copper (engineer decision 1, gate 4 review A1-A4 / B1-B10). Co
 top-left of the 70 x 105 box, y down); the placement table is printed by the generator (`PLACE` rows).
 DRC (kicad-cli, schematic parity, all severities, zones refilled): 0 errors, 0 open warnings, 37 waivers (NT1 parity D25;
 dangling locked fan-out stubs / vias = gate 5 route ends; lib_footprint_mismatch of the 12 DNP parts whose paste the
-generator removes, B10), 122 unconnected items (not routed). `critical.py --placement`: OK, 13 WARN rows with reasons
+generator removes, B10), 121 unconnected items (not routed). `critical.py --placement`: OK, 13 WARN rows with reasons
 (critical.yaml, distances re-measured 2026-11-24).
 Escape proof (`tree_a_pcb.py --escape-proof`, KiCadRoutingTools v0.24.2 on a copy in hardware/out/tree-a-escape/): see
 "U1 fan-out and escape proof" below.
@@ -95,8 +95,20 @@ Blocks and why (source in brackets):
   (39.60, 26.95) at the bottom-right corner (VDD 10 via at 36.55/28.00).
 - LED line resistors in the tier-2 strips beside J3 (outside the mated-header envelope 30.5-39.5), sides swapped at gate 4:
   R8-R5 LEFT (next to the left-row pins 39-42, whose locked stubs end in a via row at 1.08 mm spacing), R1-R4 RIGHT (next
-  to the bottom-row pins 6-9); left also R40/R41/C14 (battery divider), R10, R43; right R45, R42/R44 (variant B). TC1 is
-  rot 180 so its SWD row faces U1.
+  to the bottom-row pins 6-9); right also R45 and R44 (variant B). TC1 is rot 180 so its SWD row faces U1.
+- Left wing column at x 22.55 between the edge and BT1 (gate 4 round 2, engineer decision 1c): R43 (VBUS_DET pull-down,
+  own GND via), R42 (variant B VBUS_DET top) and R10 (BTN_SW1 series) above Q1; battery divider R40 / R41 with C14 right
+  below R41 under Q1 (R40's VIN pad next to Q1's source). BTN_SW1, VBUS_DET and VBAT_SENSE leave U1 on B.Cu between the
+  via row and the exposed pad / down J3's middle, run under J3 and the holder and cross no LED line; VBAT_SENSE is about
+  27 mm long (C14 at the divider, known WARN accepted). Only LED L5-L8 (+ VDD / GND) use the neck left of J3.
+- C1 / C12 (decision 4 of round 2: C1 <= 3 mm from pin 45, C12 <= 4 mm from pin 43): not achieved, still 5.19 / 6.17 mm.
+  Blockers (F.Cu): every spot within 3 mm of pin 45 is either L1's slot (DCC pin 46 exits 0.4 mm below DECD and must reach
+  L1.1 within 2.5 mm; the only free strip next to pins 44-46 after shifting L1 left by 0.76 mm is 0.96 mm wide, a vertical
+  C1 there gives 1.2 mm but blocks the DCC stub: the gap between the 0402 pads is 0.40 mm, a 0.15 track needs 0.45), or
+  C10's slot (pins 47/48, 1.36 mm known), or under the J3 courtyard (y >= 27.62). C12 within 4 mm would sit on the band
+  y 23.6-24.6 left of pin 43, which carries the L5 stub (pin 42, y 23.8), the DECA line (y 24.15) and the DECD line
+  (y 24.55). The freed left-strip space is below the neck (y > 29.5), not next to pins 43-45. Options: C1 on B.Cu under
+  pins 44-46; L1 in a smaller package (part change); a second via row for pins 37-42 to free the band for C12.
 - Power stage in the left wing: Q1 below BT1 pad 1 (BAT), TPS63900 U2 rot 90 at (19.5, 61) with L2 above (LX1/LX2 2.06 mm),
   C20 at VIN (1.44 mm), C21 at VOUT (1.63 mm), CFG/SEL resistors below (TI SLVSET3D Figure 10-1 arrangement).
 - Variant B (DNP, D10): J2 (35, 58) and U3 (44, 78.5) under the holder (rule "D15 holder vs variant B courtyards": only
@@ -109,9 +121,10 @@ Blocks and why (source in brackets):
   an error) and the TC2030 pins would reach into the holder body. Open decision 3.
 - Planes: In1 and In2 solid GND over the outline (board.yaml stackup), clearance 0.2, thermal 0.25 / 0.3. No inner cut-out
   under the matching network (the Nordic reference has one): open decision 2. Local F.Cu GND pour `GND_F_local` from the
-  keep-out line (y 17) to y 28 around U1 / RF / X2 (B4/B5), SOLID pad connection (thermal spokes starved on the 0201 /
-  0402 GND pads; tombstone risk accepted for now, engineer item), stitched to In1 / In2 by the via row along y 17.35 and the
-  fan-out GND vias.
+  keep-out line (y 17) to y 28 around U1 / RF / X2 (B4/B5), thermal pad connection; the 0201 GND pads (C9.2, C11.2) take
+  NO pour connection and have their own GND via at the pad (engineer, round 2: no tombstoning, no starved spokes); C51.2,
+  NT1.2 and C10.2 are solid (two spokes do not fit). Stitched to In1 / In2 by the via row along y 17.35 and the fan-out GND
+  vias; no island (the X2 case pads are joined through the crystal centre, C3 / C10 GND reach C1's via under C3).
 - Paste (B10): the generator strips F.Paste / B.Paste from every DNP pad of variant A (charger parts, pi-slot C50 / C51);
   `tree_a_pcb.py --variant B` writes the variant B paste set to hardware/out/tree-a-variant-b/ (charger parts with paste,
   BT1 without), the committed board is variant A. Silk `TREE-01 A` + `${GIT_SHA}` on B.SilkS
@@ -122,9 +135,9 @@ or exit track; 0.15 mm, power 0.25): top row RF column / XC1 / XC2 / DECA via / 
 left row a via row for pins 37-42 (1.08 mm pitch) and the power cluster tracks for 43-48; right row CHG_STAT, VDD22, SWO
 vias; bottom row stubs for pins 5-9 into J3's middle and dog-bone vias for XL1, XL2, VDD10, TPS_SEL. GND (pin 44) to the
 exposed pad. Escape proof with KiCadRoutingTools v0.24.2 (rules 0.15 / 0.15, via 0.6 / 0.3, F.Cu / B.Cu, inner planes
-forbidden): best single board 25 of 28 U1 nets routed, 0 DRC errors (open BTN_SW1, VBUS_DET, GND at R43); every net routes
-in at least one of the six start orders, none routes all 28 (hardware/NOTES-routing-lessons.md "tree-a U1 escape").
-Bottleneck for gate 5: the neck between the board edge (x ~28) and J3 (x 31) at y 28-29.5 that all left-row nets share.
+forbidden): 28 of 28 U1 nets routed, 0 DRC errors (round 2, after the left-wing column; earlier 25/28). KRT's own QFN flow
+(qfn_fanout + place_fanout_clearance) on the same placement: 22/28, so the hand fan-out stays (NOTES-routing-lessons.md
+"tree-a U1 escape"). The routed copy is a feasibility proof, not the gate 5 routing.
 
 Area share (generator row, courtyard bounding boxes): F.Cu 1966 mm2 = 66 % of 2966 mm2 (BT1 alone 1393 mm2), B.Cu 71 mm2 = 2 %.
 Stack checks: `tree_geometry.py --check` OK (LED / header / holder / peg rows); heights on the inner face: holder 11.3
