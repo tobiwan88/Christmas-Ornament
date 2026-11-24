@@ -154,11 +154,12 @@ def via_pad_gap(board: Path, routes: dict) -> tuple:
 # ------------------------------------------------------------------------------------------------------------------
 # grading: build the board with a frozen file in a scratch dir, kicad-cli DRC (all severities, parity, refill, waivers)
 # ------------------------------------------------------------------------------------------------------------------
-def grade(frozen: Path, workdir: Path, escapes=None, in2_zone=None) -> dict:
+def grade(frozen: Path, workdir: Path, escapes=None, in2_zone=None, in2_net=None, hand=None, rules=None) -> dict:
     import tree_a_pcb as A
     if workdir.exists():
         shutil.rmtree(workdir)
-    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes, in2_zone=in2_zone)
+    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes, in2_zone=in2_zone, in2_net=in2_net, hand=hand)
+    patch_rules(pcb.with_suffix(".kicad_pro"), rules)
     st = {}
     A.drc(pcb, routed=True, quiet=True, stats=st)
     st["items"] = [f"{sev} {typ} x{len(v)}: {v[0]}" for (sev, typ), v in sorted(st.pop("seen").items())]
@@ -243,6 +244,126 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
     return cur, times
 
 
+# ------------------------------------------------------------------------------------------------------------------
+# the default flow (gate 5 round 3): KRT's own deterministic plan router, autoroute.py (README Option C), on the unrouted
+# board with only the copper that must be ours locked (RF column, U1 fan-out, XL lanes, TPS63900 stage)
+# ------------------------------------------------------------------------------------------------------------------
+AUTO = dict(in2_net="GND", hand=["rf", "fanout", "xl", "power"], escapes=[], keep_placement=True, finish=False,
+            board_rules=False, floor_first=False, effort=None, plane_cost=None, snpc=0.15)
+
+
+def _json_lines(text: str, tag: str) -> list:
+    out = []
+    for ln in text.splitlines():
+        if ln.startswith(tag + ": "):
+            try:
+                out.append(json.loads(ln[len(tag) + 2:]))
+            except json.JSONDecodeError:
+                pass
+    return out
+
+
+def stamp_snpc(pro: Path, value: float) -> None:
+    """Record KRT's same-net pad via clearance (#581) in the router input's project, so every autoroute step keeps its
+    vias off same-net SMD pads (rule 'via to SMD pad' 0.15 of rules/tree-a.kicad_dru; autoroute.py has no flag for it)."""
+    d = json.loads(pro.read_text())
+    d.setdefault("kicad_routing_tools", {})["same_net_pad_clearance"] = value
+    pro.write_text(json.dumps(d, indent=2))
+
+
+def patch_rules(pro: Path, rules: dict | None) -> None:
+    """Experiment hook: the Default net class and the board minimums of a project copy (router input or grading copy)
+    set to rules = {clearance, track, via, drill}; never used on the committed project (board.yaml is the source)."""
+    if not rules:
+        return
+    d = json.loads(pro.read_text())
+    for c in d["net_settings"]["classes"]:
+        if c["name"] == "Default":
+            c.update(clearance=rules["clearance"], track_width=rules["track"], via_diameter=rules["via"], via_drill=rules["drill"])
+    r = d["board"]["design_settings"]["rules"]
+    r.update(min_clearance=min(r["min_clearance"], rules["clearance"]), min_track_width=min(r["min_track_width"], rules["track"]),
+             min_via_diameter=min(r["min_via_diameter"], rules["via"]),
+             min_through_hole_diameter=min(r["min_through_hole_diameter"], rules["drill"]))
+    pro.write_text(json.dumps(d, indent=2))
+
+
+def auto_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
+    import tree_a_pcb as A
+    workdir.mkdir(parents=True, exist_ok=True)
+    times, info = [], {}
+    t0 = time.time()
+    inp = A.build_into(workdir / "in", quiet=True, escapes=cfg["escapes"], in2_net=cfg["in2_net"], hand=cfg["hand"])
+    times.append((f"build router input (escapes {cfg['escapes'] or 'none'}, hand {','.join(cfg['hand']) or 'none'}, "
+                  f"In2 {cfg['in2_net']})", time.time() - t0, 0))
+    patch_rules(inp.with_suffix(".kicad_pro"), cfg.get("rules"))
+    if cfg.get("snpc"):
+        stamp_snpc(inp.with_suffix(".kicad_pro"), cfg["snpc"])
+    out = workdir / "out" / f"{NAME}.kicad_pcb"
+    out.parent.mkdir(exist_ok=True)
+    opts = (["--keep-placement"] if cfg["keep_placement"] else []) + (["--finish"] if cfg["finish"] else []) \
+        + (["--board-rules"] if cfg["board_rules"] else []) + (["--floor-first"] if cfg["floor_first"] else []) \
+        + (["--effort-factor", cfg["effort"]] if cfg.get("effort") is not None else []) \
+        + (["--plane-layer-cost", cfg["plane_cost"]] if cfg.get("plane_cost") is not None else [])
+    ar = KRT / "py_router" / "autoroute.py"
+    rc, t = sh([KRT_PY, "-u", ar, inp, out, "--dry-run", *opts], workdir / "plan-dry.log")
+    times.append(("autoroute.py --dry-run (plan)", t, rc))
+    txt = (workdir / "plan-dry.log").read_text()
+    plan = _json_lines(txt, "AUTOROUTE_PLAN")
+    (workdir / "plan.json").write_text(json.dumps({"analysis": _json_lines(txt, "AUTOROUTE_ANALYSIS"), "plan": plan}, indent=1))
+    rc, t = sh([KRT_PY, "-u", ar, inp, out, *opts], workdir / "autoroute.log")
+    times.append(("autoroute.py " + " ".join(str(o) for o in opts), t, rc))
+    txt = (workdir / "autoroute.log").read_text()
+    summ = _json_lines(txt, "AUTOROUTE_SUMMARY")
+    info["summary"] = summ[-1] if summ else None
+    info["steps"] = [(s.get("tag"), s.get("seconds"), s.get("result")) for s in _json_lines(txt, "AUTOROUTE_STEP")
+                     if s.get("state") in ("done", "failed")]
+    sumline = [ln for ln in txt.splitlines() if ln.startswith("AUTOROUTE_SUMMARY")]
+    (workdir / "AUTOROUTE_SUMMARY.txt").write_text((sumline[-1] if sumline else "none") + "\n")
+    return out, times, info
+
+
+def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
+    cfg = {**AUTO, **cfg}
+    t0 = time.time()
+    out, times, info = auto_flow(workdir, cfg)
+    for step, sec, rc in times:
+        print(f"TIME {sec:7.1f} s  rc {rc}  {step}")
+    for tag, sec, res in info["steps"]:
+        print(f"   step {tag:24} {sec if sec is not None else 0:7.1f} s  {str(res)[:110]}")
+    sm = info["summary"] or {}
+    print(f"AUTOROUTE_SUMMARY final {sm.get('final_tag')} open {sm.get('open')} {sm.get('open_nets')} drc {sm.get('drc')} "
+          f"seconds {sm.get('seconds')}")
+    print(f"TIME {time.time() - t0:7.1f} s  total (build + plan + autoroute)")
+    if not out.exists():
+        print("FAIL: autoroute wrote no board; logs in", workdir)
+        return 1
+    frozen = workdir / "routes.json"
+    frozen.write_text(json.dumps(extract(out.read_text()), indent=1) + "\n")
+    print_metrics(metrics(json.loads(frozen.read_text())))
+    t1 = time.time()
+    res = grade(frozen, workdir / "grade", cfg["escapes"], None, cfg["in2_net"], cfg["hand"], cfg.get("rules"))
+    print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC, all severities, parity)")
+    print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
+          f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")
+    for i in res["items"][:30]:
+        print("   ", i)
+    clean = res["errors"] == res["warnings"] == res["unconnected"] == 0
+    (workdir / "grade.json").write_text(json.dumps({**res, "clean": clean, "cfg": cfg, "summary": sm}, indent=1))
+    if write and clean:
+        doc = {"_comment": "Frozen router result of gen/tree_a_krt.py auto (KiCadRoutingTools v%s autoroute.py, settings "
+                           "tree_a_krt.AUTO + 'build'). Board coordinates of tree_outline. Replayed as locked copper by "
+                           "gen/tree_a_pcb.py with the 'build' options. Re-freeze only on purpose: tree_a_pcb.py --route krt."
+                           % (KRT / "VERSION").read_text().strip(),
+               "build": {"in2_net": cfg["in2_net"], "hand": cfg["hand"], "escapes": cfg["escapes"]},
+               **json.loads(frozen.read_text())}
+        FROZEN.write_text(json.dumps(doc, indent=1) + "\n")
+        print("wrote", FROZEN.relative_to(HW.parent))
+    elif write:
+        print("NOT written: the result is not clean (DRC / unconnected)")
+        return 1
+    return 0 if clean else 2
+
+
 def run(workdir: Path, cfg: dict, write: bool) -> int:
     t0 = time.time()
     out, times = run_flow(workdir, cfg)
@@ -294,6 +415,10 @@ def main() -> int:
     r.add_argument("--workdir", type=Path, default=None)
     r.add_argument("--cfg", default="{}", help="JSON overrides of CHAIN")
     r.add_argument("--write", action="store_true")
+    au = sub.add_parser("auto")
+    au.add_argument("--workdir", type=Path, default=None)
+    au.add_argument("--cfg", default="{}", help="JSON overrides of AUTO")
+    au.add_argument("--write", action="store_true")
     s = sub.add_parser("sweep")
     s.add_argument("--cfgs", required=True, help="JSON list of CHAIN overrides (each may carry a 'name')")
     s.add_argument("--workdir", type=Path, default=None)
@@ -309,6 +434,8 @@ def main() -> int:
         print(json.dumps({k: v for k, v in res.items()}, indent=1)[:3000])
     elif a.cmd == "run":
         return run(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-krt-")), json.loads(a.cfg), a.write)
+    elif a.cmd == "auto":
+        return run_auto(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-auto-")), json.loads(a.cfg), a.write)
     elif a.cmd == "sweep":
         base = a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-sweep-"))
         cfgs = json.loads(a.cfgs)
@@ -319,8 +446,9 @@ def main() -> int:
                 k, c = pending.pop(0)
                 d = base / (c.get("name") or f"v{k}")
                 d.mkdir(parents=True, exist_ok=True)
-                c2 = {x: y for x, y in c.items() if x != "name"}
-                procs.append((k, d, subprocess.Popen([sys.executable, __file__, "run", "--workdir", str(d), "--cfg", json.dumps(c2)],
+                c2 = {x: y for x, y in c.items() if x not in ("name", "flow")}
+                cmd = "run" if c.get("flow") == "chain" else "auto"     # sweeps run the autoroute flow unless flow=chain
+                procs.append((k, d, subprocess.Popen([sys.executable, __file__, cmd, "--workdir", str(d), "--cfg", json.dumps(c2)],
                                                      stdout=open(d / "run.log", "w"), stderr=subprocess.STDOUT)))
             time.sleep(2)
             for p in [p for p in procs if p[2].poll() is not None]:
@@ -329,6 +457,9 @@ def main() -> int:
                 gj = d / "grade.json"
                 gr = json.loads(gj.read_text()) if gj.exists() else {}
                 tt = [l for l in (d / "run.log").read_text().splitlines() if l.startswith("TIME") and "total" in l]
+                sm = [l for l in (d / "run.log").read_text().splitlines() if l.startswith("AUTOROUTE_SUMMARY")]
+                if sm:
+                    print(f"SWEEP {d.name:14} {sm[0][:160]}")
                 print(f"SWEEP {d.name:14} rc {pr.returncode} err {gr.get('errors')} warn {gr.get('warnings')} unc {gr.get('unconnected')} "
                       f"{gr.get('unconnected_nets')} vp {gr.get('via_pad_gap', [None])[0]} | {tt[0][5:].strip() if tt else ''}", flush=True)
         print(f"sweep wall time {time.time() - t0:.0f} s, dirs in {base}")

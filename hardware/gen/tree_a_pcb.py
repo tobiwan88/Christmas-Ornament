@@ -77,6 +77,8 @@ TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
+IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
+HAND = ("rf", "fanout", "xl", "power")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
 RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
@@ -105,6 +107,7 @@ def floorplan(P):
     P.put("U1", *U1_XY, 90.0)
     pin = lambda k: P.pad("U1", str(k))      # noqa: E731
     T, V = P.track, P.via
+    P.group = "rf"                           # --hand groups: rf (RF column, ANT_FEED, stitching row), fanout, xl, power
     # RF column from pins 31-33 straight up (perpendicular to the pin row), Nordic order ANT -> L3 / C6 -> L4 / C9 ->
     # L5 / C11 -> pi slot; 0201 parts at the IPC courtyard pitch 0.70
     P.put("L3", 34.82, 19.60, 90.0)          # pad 1 (ANT_PA) down at pin 31, pad 2 (RF_N1) up
@@ -133,6 +136,7 @@ def floorplan(P):
     T([(37.33, 17.50), (36.51, 17.45)], RF50_W)                     # RF_50: C11.1 - R50.1
     T([(34.63, 17.45), (35.49, 17.45)], RF_W)                       # ANT_FEED: C51.1 - R50.2
     T([(35.00, 17.45), (35.00, 14.20)], RF_W)                       # ANT_FEED up the keep-out notch to ANT1 pad 1
+    P.group = "fanout"
     # HFXO X2 and DECA C5 above pins 33-35. DECA pin 33 gets a dog-bone via (its only way out: XC1 and VSS_PA enclose
     # it) that also links it to DECA pin 43 on B.Cu; C5 (DECRF 2.2 nF) above the via
     P.put("X2", 30.70, 19.10, 180.0)         # pad 1 (XC1) top-right, pad 3 (XC2) bottom-left
@@ -229,11 +233,14 @@ def floorplan(P):
     # gap 0.5); reference plane In2 (GND) under the whole run
     xl1_u, xl2_u, xl2_x, xl1_x = (32.55, 27.95), (33.40, 28.00), (39.90, 26.10), (41.30, 26.10)
     assert xl1_u[0] < xl2_u[0] and xl2_x[0] < xl1_x[0]       # the crossing this drawing resolves
+    P.group = "xl" if "fanout" in P.hand else "-"
     T([xl1_u, (xl1_u[0], 26.50), (39.25, 26.50), (39.25, 25.35), (xl1_x[0], 25.35), xl1_x], 0.15, "B.Cu")
     T([xl2_u, (xl2_u[0], 27.05), (xl2_x[0], 27.05), xl2_x], 0.15, "B.Cu")
+    P.group = "rf"
     # F.Cu GND stitching row along y 17.35 under the keep-out line (decision 4), clear of the RF parts and C5
     for x in (28.40, 29.40, 30.40, 31.40, 39.55, 40.40, 41.40):
         V(x, 17.35, "GND")
+    P.group = "fanout"
     # ---- 3. LED line resistors beside J3 (tier 2 strips) -------------------------------------------------------------
     j = {n: P.pad("J3", str(n)) for n in range(1, 9)}
     xl_r = j[1][0] - 1.25 - 0.62 - 0.67      # 0.3 closer to J3 than before gate 4: room for a via at pad 1 (board edge)
@@ -277,7 +284,9 @@ def floorplan(P):
     yb = uy + 1.93 + 0.97 + 0.30                         # 0.27 below the courtyard touch: clear of U2's pin-1 silk mark
     for k, ref in enumerate(("R23", "R20", "R21", "R22")):   # SEL pull-down, CFG1, CFG2, CFG3 under pins 2-5
         P.put(ref, ux - 1.575 + 1.05 * k, yb, 270.0)
+    P.group = "power"
     power_stage(P)
+    P.group = "escape"
     led_escapes(P, P.escapes)
     # ---- 5. variant B (DNP in order 1, D10): J2 and U3 under the holder (D15 rule), passives in the right wing ----------
     P.put("J2", TO.CX, 58.0, 0.0)
@@ -424,14 +433,17 @@ def _opt(args, name, default=None):
     return args[args.index(name) + 1] if name in args else default
 
 
-def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, keepout=None, in2_zone=None) -> Path:
+def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, keepout=None, in2_zone=None, in2_net=None,
+               hand=None) -> Path:
     """Build the board into another directory (router input, grading copy): board + project + rules + library table +
     schematic (for the parity check). The committed board is never touched."""
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--out", str(out_dir), "--stub", str(stub)]
                        + (["--frozen", str(routes)] if routes else ["--no-routes"])
                        + (["--escapes", ",".join(escapes) or "none"] if escapes is not None else [])
                        + (["--router-keepout", ";".join(",".join(str(v) for v in b) for b in keepout)] if keepout else [])
-                       + (["--in2-zone", ",".join(str(v) for v in in2_zone) if in2_zone else "none"] if in2_zone is not None else []),
+                       + (["--in2-zone", ",".join(str(v) for v in in2_zone) if in2_zone else "none"] if in2_zone is not None else [])
+                       + (["--in2-net", in2_net] if in2_net else [])
+                       + (["--hand", ",".join(hand) or "none"] if hand is not None else []),
                        capture_output=True, text=True)
     if r.returncode:
         sys.exit(f"build_into {out_dir}: {r.stdout[-800:]}{r.stderr[-800:]}")
@@ -473,6 +485,8 @@ def stage1(args):
         variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
                "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
+               "in2_net": _opt(args, "--in2-net", IN2_NET),
+               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND],
                "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
                "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b],
                "in2_zone": [float(v) for v in _opt(args, "--in2-zone", ",".join(map(str, IN2_ZONE or ()))).split(",") if v]
@@ -1075,7 +1089,9 @@ def stage2(job_file):
             return (pcbnew.ToMM(q.x), pcbnew.ToMM(q.y))
         def track(self, pts, w=0.15, layer="F.Cu"):
             """Locked fan-out copper (hw-check: unlocked copper counts as router copper). Net = the pad or locked via at
-            either end (first match)."""
+            either end (first match). Skipped when its group (P.group) is not in the build's --hand set."""
+            if self.group not in self.hand:
+                return
             lid = board.GetLayerID(layer)
             net = self._net_at(pts[0], lid) or self._net_at(pts[-1], lid) or self._end_net(pts[0]) or self._end_net(pts[-1])
             if net is None:
@@ -1093,6 +1109,8 @@ def stage2(job_file):
                 self.ends.append((b, net))
 
         def via(self, x, y, netname=None):
+            if self.group not in self.hand:
+                return
             net = nets[netname] if netname else next((n for (q, n) in self.ends if abs(q[0] - x) < 1e-6 and abs(q[1] - y) < 1e-6), None)
             if net is None:
                 raise SystemExit(f"fan-out via ({x}, {y}): no track ends there")
@@ -1121,6 +1139,8 @@ def stage2(job_file):
     P = Placer()
     P.ends = []
     P.escapes = tuple(job.get("escapes", ESCAPES))
+    P.hand = tuple(job.get("hand", HAND)) + ("escape",)
+    P.group = "fanout"
     floorplan(P)
     # gate 5: frozen router result (hardware/tree-a/frozen-routes.json, gen/tree_a_krt.py = KiCadRoutingTools) replayed as
     # LOCKED copper, so a rebuild is repeatable and a later router run keeps it; never the router's own board file
@@ -1231,7 +1251,8 @@ def stage2(job_file):
 
     outline = list(G.outline_polygon())
     zone(outline, ["In1.Cu"], "GND", "GND_In1")          # board.yaml stackup: In1 plane GND
-    zone(outline, ["In2.Cu"], "GND", "GND_In2")          # board.yaml stackup: In2 plane GND (proposed decision there)
+    in2 = job.get("in2_net", IN2_NET)
+    zone(outline, ["In2.Cu"], in2, f"{in2}_In2")         # board.yaml stackup: In2 plane (GND, or VDD under proposed D34)
     # local F.Cu GND pour around U1, the RF network and X2 (engineer decision 4, review B4/B5): the tier-1 band from the
     # keep-out line (y 17.0) to the shelf (y 28); stitched to In1 by the generator's GND vias and the router's taps.
     # The ANT_FEED gap to it = the 0.30 'RF feed track clearance' rule (GCPW gap, board.yaml net_classes.RF.cpw_gap_mm)
