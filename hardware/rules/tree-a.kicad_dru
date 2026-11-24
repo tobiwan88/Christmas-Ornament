@@ -10,12 +10,13 @@
   (constraint courtyard_clearance (min 0mm))
   (condition "(A.Reference == 'BT1' && (B.Reference == 'J1' || B.Reference == 'J2' || B.Reference == 'U3')) || (B.Reference == 'BT1' && (A.Reference == 'J1' || A.Reference == 'J2' || A.Reference == 'U3'))"))
 
-# RF feed (net class RF, 50 ohm microstrip over In1, board.yaml net_classes.RF): 0.30 mm to any other copper for TRACKS of
-# the feed. Pads keep the net-class clearance, because the nRF54L ANT pin sits at 0.40 mm pitch (0.20 mm to its
-# neighbours by the package land) and the 0201 network parts have 0.18 mm pad gaps; a pad-level 0.30 mm cannot be met.
+# RF feed (50 ohm GCPW over In1 from the pi slot to ANT1, board.yaml net_classes.RF / rf): 0.30 mm to any other copper for
+# TRACKS of the ANT_FEED net only (engineer, gate 4, review B1): the line beyond the pi slot. The matching network (ANT_PA,
+# RF_N1, RF_N2, RF_50 between 0201 pads at 0.18 mm gaps and the 0.40 mm pitch ANT pin) keeps the net-class clearance, and so
+# do the pads of the network parts, U1 and NT1 when an ANT_FEED track starts at R50 / C51. Other rules are unchanged.
 (rule "RF feed track clearance"
   (constraint clearance (min 0.3mm))
-  (condition "A.NetClass == 'RF' && A.Type == 'Track' && B.Net != A.Net"))
+  (condition "A.NetName == '/rf/ANT_FEED' && A.Type == 'Track' && B.Net != A.Net && !(B.Type == 'Pad' && (B.Reference == 'U1' || B.Reference == 'NT1' || B.Reference == 'L3' || B.Reference == 'L4' || B.Reference == 'L5' || B.Reference == 'C6' || B.Reference == 'C9' || B.Reference == 'C11' || B.Reference == 'C50' || B.Reference == 'R50' || B.Reference == 'C51'))"))
 
 # kicad-layout skill: no via in an SMD pad; a same-net via keeps a copper gap to SMD pads (router guard; no vias exist at
 # gate 4 except the footprints' own thermal-via pads).

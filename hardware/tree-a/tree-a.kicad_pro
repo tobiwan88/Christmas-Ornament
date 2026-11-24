@@ -109,7 +109,7 @@
         "microvia_drill": 0.1,
         "diff_pair_via_gap": 0.25,
         "name": "RF",
-        "track_width": 0.4,
+        "track_width": 0.35,
         "clearance": 0.15,
         "via_diameter": 0.6,
         "via_drill": 0.3,

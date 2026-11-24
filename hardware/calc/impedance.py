@@ -3,6 +3,8 @@
 Checks every diff_pair in critical.yaml against its net class (board.yaml) and the outer layer of the stackup:
   impedance.py hardware/<board>                 OK/FAIL per pair (Zdiff with soldermask vs z_diff +- tol_ohm)
   impedance.py hardware/<board> --try 0.25/0.15 explore widths/gaps (mm) on the same stackup
+  impedance.py hardware/<board> --cpw 0.30/0.30  single line, coplanar waveguide over ground (GCPW): W / gap to the
+                                                same-layer ground pour (mm), plane below at the outer dielectric
 Self-test (--selftest): wide gap (S=3.0) gives 2x the single-line Z0 (~62 ohm for W 0.27 on JLC04161H-7628).
 Fab calculators (e.g. jlcpcb.com/impedance) are the cross-check: write their inputs and result into the order notes.
 """
@@ -58,6 +60,50 @@ def solve(W, S, h=0.2104, er=4.4, t=0.035, mask=0.0, erm=3.8, d=0.005):
     C, C0 = c*eps0, c0*eps0
     Z = 1/(cl*np.sqrt(C*C0))
     return 2*Z, C/C0
+def solve_cpw(W, G, h=0.2104, er=4.4, t=0.035, mask=0.0, erm=3.8, d=0.005, X=3.0, Y=1.5):
+    """Grounded coplanar waveguide: line of width W centred at x=0, ground copper on the same layer from W/2+G outwards,
+    ground plane at y=0. Even symmetry at x=0 (Neumann), half domain; returns (Z0 ohm, eps_eff)."""
+    nx, ny = int(X/d), int(Y/d)
+    x = (np.arange(nx)+0.5)*d; y = np.arange(ny)*d
+    inlay = (y[:, None] >= h) & (y[:, None] <= h+t)
+    sig = inlay & (x[None, :] <= W/2)
+    gnd = inlay & (x[None, :] >= W/2+G)
+    eps = np.ones((ny, nx)); eps[y < h, :] = er
+    if mask:
+        eps[(y[:, None] >= h) & (y[:, None] < h+t+mask) & ~sig & ~gnd] = erm
+    fixed = sig | gnd; fixed[0, :] = True
+    V = np.where(sig, 1.0, 0.0)
+
+    def cap(epsm):
+        N = nx*ny; idx = np.arange(N).reshape(ny, nx)
+        rows, cols, vals = [], [], []; b = np.zeros(N)
+        for dj, di in ((1, 0), (-1, 0), (0, 1), (0, -1)):        # vectorised 5-point stencil, Neumann at every boundary
+            jj = np.arange(ny)[:, None] + dj + 0*np.arange(nx)[None, :]
+            ii = np.arange(nx)[None, :] + di + 0*np.arange(ny)[:, None]
+            ok = (jj >= 0) & (jj < ny) & (ii >= 0) & (ii < nx) & ~fixed
+            jc, ic = np.clip(jj, 0, ny-1), np.clip(ii, 0, nx-1)
+            e = 0.5*(epsm + epsm[jc, ic])
+            rows += [idx[ok], idx[ok]]; cols += [idx[ok], idx[jc, ic][ok]]; vals += [e[ok], -e[ok]]
+        rows.append(idx[fixed]); cols.append(idx[fixed]); vals.append(np.ones(fixed.sum())); b[idx[fixed]] = V[fixed]
+        A = sp.csr_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(N, N))
+        phi = spl.spsolve(A, b).reshape(ny, nx)
+        gx = np.diff(phi, axis=1); ex = 0.5*(epsm[:, 1:]+epsm[:, :-1])
+        gy = np.diff(phi, axis=0); ey = 0.5*(epsm[1:, :]+epsm[:-1, :])
+        return 2*((ex*gx**2).sum() + (ey*gy**2).sum())        # both halves
+    c, c0 = cap(eps), cap(np.ones_like(eps))
+    eps0, cl = 8.854e-12, 3e8
+    return 1/(cl*np.sqrt(c*eps0*c0*eps0)), c/c0
+
+
+def zcpw(W, G, layer, stack):
+    """(bare, with soldermask) GCPW Z0 in ohm."""
+    h, er, t = layer["dielectric_mm"], layer["er"], stack["copper_mm"]
+    m = stack.get("soldermask") or {}
+    bare, _ = solve_cpw(W, G, h=h, er=er, t=t)
+    masked, _ = solve_cpw(W, G, h=h, er=er, t=t, mask=m.get("thickness_mm", 0.0), erm=m.get("er", 3.8))
+    return bare, masked
+
+
 def zdiff(W, S, layer, stack):
     """(bare, with soldermask) differential impedance in ohm."""
     h, er, t = layer["dielectric_mm"], layer["er"], stack["copper_mm"]
@@ -71,6 +117,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("board_dir", type=Path)
     ap.add_argument("--try", dest="tries", nargs="*", default=[], metavar="W/S")
+    ap.add_argument("--cpw", nargs="*", default=[], metavar="W/G", help="single-line GCPW: width / gap to the pour (mm)")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     prof = load_profile(a.board_dir)
@@ -86,7 +133,11 @@ def main():
         W, S = map(float, t.split("/"))
         bare, masked = zdiff(W, S, outer, stack)
         print(f"W {W} S {S} on {outer['name']}: Zdiff {bare:.1f} ohm bare, {masked:.1f} with mask")
-    if a.tries:
+    for t in a.cpw:
+        W, G = map(float, t.split("/"))
+        bare, masked = zcpw(W, G, outer, stack)
+        print(f"GCPW W {W} G {G} on {outer['name']}: Z0 {bare:.1f} ohm bare, {masked:.1f} with mask")
+    if a.tries or a.cpw:
         return
     rows = []
     for e in prof["critical"].get("diff_pair", []):

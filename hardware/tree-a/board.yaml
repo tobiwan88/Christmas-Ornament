@@ -51,8 +51,9 @@ net_classes:                           # full KiCad net names; widths checked by
     drill_mm: 0.3
     current_a: 0.5                      # TPS63900 peak switch current limit 0.51 A max in the 100 mA setting (card 6.5); average input 0.1 A
     nets: [BAT, VIN, VDD, /power/LX1, /power/LX2, VBUS]   # netlist names (gate 3 schematic): BAT was VBAT, LX1/LX2 are sheet-local
-  RF:                                   # 50 ohm single-ended feed to ANT1 (microstrip over In1 GND)
-    track_mm: 0.40                      # calc/impedance.py --try 0.40/6.0 on this stackup: Zdiff 99.2 ohm with mask at S 6 mm => Z0 about 49.6 ohm; 0.38 gives 51.0 ohm. Microstrip model only: the Johanson feed is GCPW (coplanar ground): re-check the width/gap pair with the fab impedance calculator before layout release (EST)
+  RF:                                   # 50 ohm single-ended feed to ANT1 (GCPW: F.Cu GND pour beside the line, In1 GND below)
+    track_mm: 0.35                      # GCPW over In1 (gate 4, engineer decision 4): calc/impedance.py --cpw 0.35/0.30 => Z0 49.4 ohm with mask (52.1 bare); 0.40/0.30 46.0, 0.30/0.30 53.2. Field solver of the repo, fab calculator cross-check still open (ORDER.md)
+    cpw_gap_mm: 0.30                    # ANT_FEED track to the F.Cu GND pour (= the 0.30 'RF feed track clearance' rule of rules/tree-a.kicad_dru)
     clearance_mm: 0.15                  # pad-level floor (0402 pads of the matching network are 0.5 mm apart); RF TRACK clearance 0.30 is a rule in rules/tree-a.kicad_dru
     via_mm: 0.6
     drill_mm: 0.3

@@ -3,7 +3,8 @@
 # pair; a single line is approximated by the same solver with a wide gap (S = 6 mm: odd-mode coupling negligible, Z0 = Zdiff / 2,
 # as in PARTS-REVIEW tree-a "Checked and clean"). Width = board.yaml net_classes.RF.track_mm. Limits: WARN beyond +-5 %, FAIL beyond
 # +-10 % of 50 ohm (own thresholds, not from a requirement: R6.2 only says "50 ohm for that stackup"). The model is microstrip; the
-# feed to the Johanson antenna is coplanar: the fab calculator cross-check (human, ORDER.md) is still open.
+# feed to the Johanson antenna is coplanar: with net_classes.RF.cpw_gap_mm set the hook uses impedance.py --cpw W/G (GCPW).
+# The fab calculator cross-check (human, ORDER.md) is still open.
 # Needs scipy: uses .venv/bin/python when it has scipy, else SKIP (the gate has then not checked impedance). ~15 s.
 set -euo pipefail
 PY=${PYTHON:-python3}
@@ -18,14 +19,23 @@ if [ -z "${IMP:-}" ]; then
 fi
 board=hardware/tree-a
 w=$("$IMP" -c "import yaml; print(yaml.safe_load(open('$board/board.yaml'))['net_classes']['RF']['track_mm'])")
-out=$("$IMP" hardware/calc/impedance.py "$board" --try "$w/6.0")
+g=$("$IMP" -c "import yaml; print(yaml.safe_load(open('$board/board.yaml'))['net_classes']['RF'].get('cpw_gap_mm', ''))")
+if [ -n "$g" ]; then
+    out=$("$IMP" hardware/calc/impedance.py "$board" --cpw "$w/$g")       # GCPW (gate 4: F.Cu GND pour beside the feed)
+else
+    out=$("$IMP" hardware/calc/impedance.py "$board" --try "$w/6.0")
+fi
 printf '%s\n' "$out"
-"$IMP" - "$out" "$w" <<'PYEOF'
+"$IMP" - "$out" "$w" "$g" <<'PYEOF'
 import re, sys
-m = re.search(r"Zdiff ([\d.]+) ohm bare, ([\d.]+) with mask", sys.argv[1])
-z0 = float(m.group(2)) / 2
+m = re.search(r"Z0 ([\d.]+) ohm bare, ([\d.]+) with mask", sys.argv[1])
+if m:
+    z0, model = float(m.group(2)), f"GCPW model, gap {sys.argv[3]} mm"
+else:
+    m = re.search(r"Zdiff ([\d.]+) ohm bare, ([\d.]+) with mask", sys.argv[1])
+    z0, model = float(m.group(2)) / 2, "microstrip model"
 dev = abs(z0 - 50) / 50 * 100
 st = "OK" if dev <= 5 else ("WARN" if dev <= 10 else "FAIL")
-print(f"{st:4} RF feed Z0 {z0:.1f} ohm with mask at W {sys.argv[2]} mm (target 50 ohm, deviation {dev:.1f} %; microstrip model, coplanar feed to be cross-checked with the fab calculator)")
+print(f"{st:4} RF feed Z0 {z0:.1f} ohm with mask at W {sys.argv[2]} mm (target 50 ohm, deviation {dev:.1f} %; {model}, to be cross-checked with the fab calculator)")
 sys.exit(1 if st == "FAIL" else 0)
 PYEOF
