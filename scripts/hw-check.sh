@@ -15,8 +15,10 @@ if [ -n "${HW_BOARDS:-}" ]; then BOARDS="$HW_BOARDS"; else
 fi
 [ -n "${BOARDS// /}" ] || { echo "no board found (hardware/<name>/board.yaml); see the hw-base skill, bootstrap" >&2; exit 2; }
 rc=0
-# routed = the board carries router copper (locked tracks are generator copper)
-routed() { "$PY" -c 'import re, sys
+# routed = the board carries router copper (locked tracks are generator copper), or the board directory holds a
+# frozen router result (frozen-routes.json): the generator replays it as LOCKED copper, so the copper test alone misses it
+routed() { [ -f "$(dirname "$1")/frozen-routes.json" ] && return 0
+"$PY" -c 'import re, sys
 blocks = re.findall(r"\(segment\b.*?\(uuid", open(sys.argv[1]).read(), re.S)
 sys.exit(0 if any("(locked yes)" not in b for b in blocks) else 1)' "$1"; }
 

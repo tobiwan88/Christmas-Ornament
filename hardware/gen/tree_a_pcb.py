@@ -76,6 +76,9 @@ MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are pla
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
+FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
+IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
+RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
 
 
@@ -125,9 +128,9 @@ def floorplan(P):
     V(36.85, 19.80)                                                 # C9 GND via into In1 at the pad (decision 2)
     T([(37.97, 17.50), (38.70, 17.72)], 0.20)
     V(38.70, 17.72)                                                 # C11 GND via at the pad (0201: no pour connection)
-    T([(37.24, 18.53), (38.12, 18.53)], 0.20)                       # RF_50: L5.2 - C50.1
-    T([(37.24, 18.53), (37.33, 17.50)], 0.20)                       # RF_50: L5.2 - C11.1
-    T([(37.33, 17.50), (36.51, 17.45)], 0.20)                       # RF_50: C11.1 - R50.1
+    T([(37.24, 18.53), (38.12, 18.53)], RF50_W)                     # RF_50: L5.2 - C50.1
+    T([(37.24, 18.53), (37.33, 17.50)], RF50_W)                     # RF_50: L5.2 - C11.1
+    T([(37.33, 17.50), (36.51, 17.45)], RF50_W)                     # RF_50: C11.1 - R50.1
     T([(34.63, 17.45), (35.49, 17.45)], RF_W)                       # ANT_FEED: C51.1 - R50.2
     T([(35.00, 17.45), (35.00, 14.20)], RF_W)                       # ANT_FEED up the keep-out notch to ANT1 pad 1
     # HFXO X2 and DECA C5 above pins 33-35. DECA pin 33 gets a dog-bone via (its only way out: XC1 and VSS_PA enclose
@@ -236,11 +239,13 @@ def floorplan(P):
     xl_r = j[1][0] - 1.25 - 0.62 - 0.67      # 0.3 closer to J3 than before gate 4: room for a via at pad 1 (board edge)
     xr_r = j[2][0] + 1.25 + 0.62 + 0.67
     yk = lambda k: j[1][1] + 0.8 + 1.3 * k   # noqa: E731
-    # sides swapped at gate 4 (engineer lever): R5-R8 on the LEFT next to the left-row pins 39-42 (B.Cu from their vias),
-    # R1-R4 on the RIGHT next to the bottom-row pins 6-9 (L1 rightmost); the LED line nets cross to J3 instead
-    for k, ref in enumerate(("R8", "R7", "R6", "R5")):
-        P.put(ref, xl_r, yk(k), 0.0)
+    # gate 5 (engineer decision on the gate-5 report, option a): each R beside the J3 pad of its own line, so no LED line
+    # crosses the J3 column: R1-R4 LEFT (J3.1/3/5/7 = L1-L4), R8-R5 RIGHT (J3.2/4/6/8 = L8-L5); the MCU lines cross
+    # instead (L5-L8_MCU from the left row to the right column, L1-L4_MCU from the bottom row to the left column).
+    # Gate 4 had the sides the other way round (MCU side short, every LED line crossing J3: KRT left 20+ items open).
     for k, ref in enumerate(("R1", "R2", "R3", "R4")):
+        P.put(ref, xl_r, yk(k), 0.0)
+    for k, ref in enumerate(("R8", "R7", "R6", "R5")):
         P.put(ref, xr_r, yk(k), 180.0)
     # gate 4 escape round 2 (engineer decision 1c): the neck left of J3 (y 28-29.5, 2.9 mm between the edge fillet and J3)
     # carries only the LED lines L5-L8 (+ VDD / GND); the other left-strip parts moved out:
@@ -403,13 +408,14 @@ def _opt(args, name, default=None):
     return args[args.index(name) + 1] if name in args else default
 
 
-def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, keepout=None) -> Path:
+def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, keepout=None, in2_zone=None) -> Path:
     """Build the board into another directory (router input, grading copy): board + project + rules + library table +
     schematic (for the parity check). The committed board is never touched."""
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--out", str(out_dir), "--stub", str(stub)]
                        + (["--frozen", str(routes)] if routes else ["--no-routes"])
                        + (["--escapes", ",".join(escapes) or "none"] if escapes is not None else [])
-                       + (["--router-keepout", ";".join(",".join(str(v) for v in b) for b in keepout)] if keepout else []),
+                       + (["--router-keepout", ";".join(",".join(str(v) for v in b) for b in keepout)] if keepout else [])
+                       + (["--in2-zone", ",".join(str(v) for v in in2_zone) if in2_zone else "none"] if in2_zone is not None else []),
                        capture_output=True, text=True)
     if r.returncode:
         sys.exit(f"build_into {out_dir}: {r.stdout[-800:]}{r.stderr[-800:]}")
@@ -452,7 +458,9 @@ def stage1(args):
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
                "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
                "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
-               "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b]}
+               "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b],
+               "in2_zone": [float(v) for v in _opt(args, "--in2-zone", ",".join(map(str, IN2_ZONE or ()))).split(",") if v]
+               if _opt(args, "--in2-zone", "x") != "none" else []}
         jf = Path(td) / "job.json"
         jf.write_text(json.dumps(job))
         r = PS.run_isolated([kpy, str(Path(__file__).resolve()), "--pcbnew", str(jf)], capture_output=True, text=True)
@@ -1216,6 +1224,30 @@ def stage2(job_file):
     # thermal connection (board.yaml thermal_relief); 0201 GND pads none (NO_POUR_PADS), starved pads solid (POUR_SOLID_PADS)
     ko = list(G.antenna_keepout_polygon())               # [(35, 0), (right, 17), (left, 17)]
     zone(ko, ["In1.Cu", "In2.Cu", "B.Cu"], name="antenna_keepout", rule=dict(footprints=False))
+    # In2 signal exception (coordinator decision option c, gate 5): signal tracks on In2 only inside the LED-bus box
+    # around J3 and the R columns (job "in2_zone"); everywhere else an In2 rule area forbids tracks (vias and the GND
+    # pour stay allowed), so In2 stays GND outside the box and under the RF line, the crystal lanes and U1.
+    if job.get("in2_zone"):
+        x0, y0, x1, y1 = job["in2_zone"]
+        z = pcbnew.ZONE(board)
+        ls2 = pcbnew.LSET()
+        ls2.AddLayer(pcbnew.In2_Cu)
+        z.SetLayerSet(ls2)
+        o = z.Outline()
+        o.NewOutline()
+        for x, y in outline:
+            o.Append(mm(x), mm(y))
+        o.NewHole()
+        for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+            o.Append(mm(x), mm(y))
+        z.SetZoneName("in2_tracks_outside_led_bus")
+        z.SetIsRuleArea(True)
+        z.SetDoNotAllowTracks(True)
+        z.SetDoNotAllowVias(False)
+        z.SetDoNotAllowPads(False)
+        z.SetDoNotAllowZoneFills(False)
+        z.SetDoNotAllowFootprints(False)
+        board.Add(z)
     # F.Cu: the same triangle with a notch for the antenna land and its feed (tree_outline: only A's land and feed inside)
     nh = 1.4
     (tx, ty), (rx, ry), (lx, ly) = ko
@@ -1360,7 +1392,7 @@ def proof(path: Path) -> bool:
             for pad in fp.Pads():
                 own.setdefault(pad.GetNetname(), []).append(((mm(pad.GetPosition().x), mm(pad.GetPosition().y)),
                                                               max(mm(pad.GetSizeX()), mm(pad.GetSizeY())) / 2 + 0.45))
-        worst_run, at_ = 0.0, None
+        worst_run, at_, ko_feed = 0.0, None, set()
         for t in bf.GetTracks():
             if t.GetClass() == "PCB_VIA" or t.GetNetname() == "GND":
                 continue
@@ -1374,14 +1406,24 @@ def proof(path: Path) -> bool:
             run = 0.0
             for i in range(k + 1):
                 p = (a_p[0] + (c_p[0] - a_p[0]) * i / k, a_p[1] + (c_p[1] - a_p[1]) * i / k)
-                covered = z.HitTestFilledArea(z.GetLayer(), pcbnew.VECTOR2I(pcbnew.FromMM(p[0]), pcbnew.FromMM(p[1])), 0) or \
-                    any(math.dist(p, q) < r for q, r in own.get(t.GetNetname(), []))
+                if t.GetNetname() == "/rf/ANT_FEED" and p[1] < TO.ANT_KEEPOUT_H_MM:
+                    ko_feed.add(round(p[1], 2))          # known deviation (critical.yaml): counted in its own row below
+                    covered = True
+                else:
+                    covered = z.HitTestFilledArea(z.GetLayer(), pcbnew.VECTOR2I(pcbnew.FromMM(p[0]), pcbnew.FromMM(p[1])), 0) or \
+                        any(math.dist(p, q) < r for q, r in own.get(t.GetNetname(), []))
                 run = 0.0 if covered else run + L / k
                 if run > worst_run:
                     worst_run, at_ = run, (t.GetNetname(), lay, round(p[0], 2), round(p[1], 2))
         rows.append(("track over plane void (refilled copy)", worst_run <= vmax,
                      f"longest run without its reference plane {worst_run:.2f} mm (max {vmax}; own antipads excluded)"
                      + (f" at {at_}" if at_ and worst_run > 0 else "")))
+        ant = [pd for fp in bf.GetFootprints() if fp.GetReference() == "ANT1" for pd in fp.Pads() if pd.GetNumber() == "1"]
+        pad_edge = mm(ant[0].GetBoundingBox().GetBottom()) if ant else TO.ANT_KEEPOUT_H_MM
+        free_len = max(0.0, TO.ANT_KEEPOUT_H_MM - pad_edge) if ko_feed else 0.0
+        rows.append(("ANT_FEED in the antenna keep-out (known, critical.yaml)", free_len <= FEED_NO_REF_MAX + 1e-6,
+                     f"{free_len:.2f} mm from the keep-out line (y {TO.ANT_KEEPOUT_H_MM}) to ANT1 pad 1 without any reference "
+                     f"plane (In1 / In2 / B.Cu barred, no F.Cu pour; not GCPW); allowed {FEED_NO_REF_MAX} mm"))
     finally:
         shutil.rmtree(tmpd, ignore_errors=True)
     fails = 0

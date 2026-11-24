@@ -50,7 +50,11 @@ net_classes:                           # full KiCad net names; widths checked by
     via_mm: 0.6
     drill_mm: 0.3
     current_a: 0.5                      # TPS63900 peak switch current limit 0.51 A max in the 100 mA setting (card 6.5); average input 0.1 A
-    nets: [BAT, VIN, VDD, /power/LX1, /power/LX2, VBUS]   # netlist names (gate 3 schematic): BAT was VBAT, LX1/LX2 are sheet-local
+    nets: [BAT, VIN, VDD, /power/LX1, /power/LX2, VBUS, /mcu/DCC]   # netlist names (gate 3 schematic): BAT was VBAT, LX1/LX2 are sheet-local
+                                        # /mcu/DCC (gate 5, coordinator): the nRF54L DC/DC switch node (pin 46 -> L1), NOT a TPS63900 net;
+                                        # its peak coil current is not in the material read (parts/MPL2012S4R7MHT.yaml: UNVERIFIED, L1 Isat
+                                        # est. 250 mA), so it takes this class's 0.5 A / 0.3 mm (upper bound); 0.25 mm neck at the 0.4 mm
+                                        # pitch pad 46 (1.2 mm long hand track; 0.25 mm carries 0.5 A per calc/track_width.py: min 0.12)
   RF:                                   # 50 ohm single-ended feed to ANT1 (GCPW: F.Cu GND pour beside the line, In1 GND below)
     track_mm: 0.35                      # GCPW over In1 (gate 4, engineer decision 4): calc/impedance.py --cpw 0.35/0.30 => Z0 49.4 ohm with mask (52.1 bare); 0.40/0.30 46.0, 0.30/0.30 53.2. Field solver of the repo, fab calculator cross-check still open (ORDER.md)
     cpw_gap_mm: 0.30                    # ANT_FEED track to the F.Cu GND pour (= the 0.30 'RF feed track clearance' rule of rules/tree-a.kicad_dru)

@@ -147,6 +147,10 @@
         "pattern": "VBUS"
       },
       {
+        "netclass": "Power",
+        "pattern": "/mcu/DCC"
+      },
+      {
         "netclass": "RF",
         "pattern": "/rf/ANT_FEED"
       },

@@ -48,7 +48,7 @@ U1_FIRST = ["/mcu/VBAT_SENSE", "/mcu/BTN_SW1", "/charger/VBUS_DET", "VDD", "/led
 U1_REST = ["GND", "/charger/CHG_STAT", "/leds/LED_L1_MCU", "/leds/LED_L2_MCU", "/leds/LED_L3_MCU", "/leds/LED_L4_MCU",
            "/mcu/DECA", "/mcu/DECD", "/mcu/SWDCLK", "/mcu/SWDIO", "/mcu/SWO", "/mcu/TPS_SEL", "/mcu/nRESET"]
 LED_LINES = [f"/leds/LED_L{k}" for k in range(1, 9)]
-POWER = [["GND", 0.3], ["VDD", 0.3], ["VIN", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBUS", 0.3], ["/mcu/DCC", 0.25]]
+POWER = [["GND", 0.3], ["VDD", 0.3], ["VIN", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBUS", 0.3], ["/mcu/DCC", 0.3]]   # widths = board.yaml Power class
 # emi.yaml parallel rules as KRT soft keep-aways (aggressor:victim:gap): crystal and RF nets 0.5 mm from LED, power,
 # switch nodes (the router prices it; emi_check.py grades the result)
 KEEP_AWAY = ["/leds/*,/power/*,/mcu/DCC,VIN,BAT:/mcu/XC*,/mcu/XL*:0.5",
@@ -154,11 +154,11 @@ def via_pad_gap(board: Path, routes: dict) -> tuple:
 # ------------------------------------------------------------------------------------------------------------------
 # grading: build the board with a frozen file in a scratch dir, kicad-cli DRC (all severities, parity, refill, waivers)
 # ------------------------------------------------------------------------------------------------------------------
-def grade(frozen: Path, workdir: Path, escapes=None) -> dict:
+def grade(frozen: Path, workdir: Path, escapes=None, in2_zone=None) -> dict:
     import tree_a_pcb as A
     if workdir.exists():
         shutil.rmtree(workdir)
-    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes)
+    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes, in2_zone=in2_zone)
     st = {}
     A.drc(pcb, routed=True, quiet=True, stats=st)
     st["items"] = [f"{sev} {typ} x{len(v)}: {v[0]}" for (sev, typ), v in sorted(st.pop("seen").items())]
@@ -196,7 +196,7 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
     cfg = {**CHAIN, **(cfg or {})}
     workdir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    inp = A.build_into(workdir / "in", stub=cfg["stub"], quiet=True, escapes=cfg.get("escapes"), keepout=cfg.get("keepout"))
+    inp = A.build_into(workdir / "in", stub=cfg["stub"], quiet=True, escapes=cfg.get("escapes"), keepout=cfg.get("keepout"), in2_zone=cfg.get("in2_zone"))
     times = [("build unrouted board (tree_a_pcb.py --no-routes)", time.time() - t0, 0)]
     py, rt = KRT_PY, KRT / "py_router"
     common = ["--clearance", cfg["clearance"], "--via-size", cfg["via"], "--via-drill", cfg["drill"],
@@ -256,7 +256,7 @@ def run(workdir: Path, cfg: dict, write: bool) -> int:
     frozen.write_text(json.dumps(extract(out.read_text()), indent=1) + "\n")
     print_metrics(metrics(json.loads(frozen.read_text())))
     t1 = time.time()
-    res = grade(frozen, workdir / "grade", cfg.get("escapes"))
+    res = grade(frozen, workdir / "grade", cfg.get("escapes"), cfg.get("in2_zone"))
     vp = via_pad_gap(workdir / "grade" / f"{NAME}.kicad_pcb", json.loads(frozen.read_text()))
     print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC + via/pad gap)")
     print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
