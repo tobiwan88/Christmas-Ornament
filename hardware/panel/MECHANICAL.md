@@ -136,7 +136,14 @@ Component height zones (`height_zones()`; heights from the board face; the gap i
   (research digest, heights UNVERIFIED until the parts arrive). The holder (11.3 mm, 11.65 worst case) and the mated header (11.7 mm nominal; 12.05 mm worst case by the card tolerances, 0.05 mm over, UNVERIFIED) fit the 12 mm gap at nominal.
 - Antenna keep-out copper-free on both boards; nothing metal over it in the housing.
 
-## 6. Panel (`panel_arrangements()`, no KiCad panel yet)
+## 6. Panel (`panel_arrangements()`; KiCad panel built 2026-11-24 by `gen/panel_pcb.py`)
+
+Current state (2026-11-24): `hardware/panel/panel.kicad_pcb` is generated from the board files with arrangement 2 below (recomputed
+by `nested("X")` on every build: 114.8 x 120.0 mm). The KiCad panel deviates from the planning numbers of this section in four points
+(numbers, evidence and the tab table in `BOARD.md`): bridge 5.0 mm instead of 4.4 mm (0.3 mm web outside the end holes); the tabs slide
+along their runs away from parts and edge copper (T1 on A's tier-2 edge now at A (47.31, 37.46), 4.9 mm from the planned (44.6, 33.4);
+T4 2.5 mm down its run); a rule area keeps copper 0.6 mm behind every hole row; 4 tooling holes D2.0 and 3 fiducials per face on the rails.
+The text below is the planning record of 2026-11-23.
 
 Rules used: gap 2.0 mm board to board and board to rail, rails 5 mm, mouse bites hole D0.6, 0.35 mm edge to edge (0.95 mm
 pitch), 5 holes per tab = 4.40 mm wide tab (8 holes = 7.25 mm), holes centred on the board outline (so keep copper >= 0.6 mm

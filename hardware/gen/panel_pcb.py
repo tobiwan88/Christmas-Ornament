@@ -1334,6 +1334,19 @@ def check_geometry(ctx, comp, rows):
     dup = sorted({r for r in refs if refs.count(r) > 1})
     rows.add("OK" if not dup else "FAIL", "designators unique in the panel", "%d references, duplicates: %s; mounts A %s, B %s" % (
         len(refs), dup or "none", [r for r in refs_of(A["root"]) if r.startswith("MH")], [r for r in refs_of(B["root"]) if r.startswith("MH")]))
+    # JLC CPL rule (BOM/CPL matching page): "minimum coordinate spacing between different reference designators is greater
+    # than 0.2 mm"; assembled parts of both faces share one CPL (footprint origin as the centre: the fit moves it by < 0.01 mm
+    # except ORIGIN_FIT parts, whose CPL centre is the origin anyway)
+    placed = []
+    for fp in children(parse(comp["text"]), "footprint"):
+        attr = [str(a) for a in (child(fp, "attr") or [])[1:]]
+        props = {str(p[1]): str(p[2]) for p in children(fp, "property")}
+        if props.get("LCSC") and not ({"dnp", "exclude_from_pos_files", "board_only"} & set(attr)):
+            at = child(fp, "at")
+            placed.append((props["Reference"], float(at[1]), float(at[2]), str(child(fp, "layer")[1])))
+    near = min(((math.dist(a[1:3], b[1:3]), a[0], b[0]) for i, a in enumerate(placed) for b in placed[i + 1:]), default=(1e9, "-", "-"))
+    rows.add("OK" if near[0] > 0.2 else "FAIL", "CPL: designator spacing > 0.2 mm (JLC)",
+             "%d placed parts on both faces, closest pair %s / %s %.3f mm" % (len(placed), near[1], near[2], near[0]))
     rows.add("OK", "net names", "kept; shared by both boards and renamed on B: %s" % (ctx["netmap_b"] or "none"))
     # rigid copy of B (J4 mating proof is about the board file; the panel only moves / turns it)
     rigid_dev = 0.0
