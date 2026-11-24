@@ -79,6 +79,7 @@ VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
 HAND = ("rf", "fanout", "xl", "power")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
 RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
@@ -434,7 +435,7 @@ def _opt(args, name, default=None):
 
 
 def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, keepout=None, in2_zone=None, in2_net=None,
-               hand=None) -> Path:
+               hand=None, in2_vdd=None) -> Path:
     """Build the board into another directory (router input, grading copy): board + project + rules + library table +
     schematic (for the parity check). The committed board is never touched."""
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--out", str(out_dir), "--stub", str(stub)]
@@ -443,7 +444,8 @@ def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, 
                        + (["--router-keepout", ";".join(",".join(str(v) for v in b) for b in keepout)] if keepout else [])
                        + (["--in2-zone", ",".join(str(v) for v in in2_zone) if in2_zone else "none"] if in2_zone is not None else [])
                        + (["--in2-net", in2_net] if in2_net else [])
-                       + (["--hand", ",".join(hand) or "none"] if hand is not None else []),
+                       + (["--hand", ",".join(hand) or "none"] if hand is not None else [])
+                       + (["--in2-vdd", ";".join(",".join(str(v) for v in b) for b in in2_vdd) or "none"] if in2_vdd is not None else []),
                        capture_output=True, text=True)
     if r.returncode:
         sys.exit(f"build_into {out_dir}: {r.stdout[-800:]}{r.stderr[-800:]}")
@@ -486,6 +488,9 @@ def stage1(args):
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
                "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
                "in2_net": _opt(args, "--in2-net", IN2_NET),
+               "in2_vdd": [[float(v) for v in b.split(",")] for b in
+                           _opt(args, "--in2-vdd", ";".join(",".join(map(str, b)) for b in (IN2_VDD or []))).split(";")
+                           if b and b != "none"],
                "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND],
                "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
                "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b],
@@ -1252,7 +1257,12 @@ def stage2(job_file):
     outline = list(G.outline_polygon())
     zone(outline, ["In1.Cu"], "GND", "GND_In1")          # board.yaml stackup: In1 plane GND
     in2 = job.get("in2_net", IN2_NET)
-    zone(outline, ["In2.Cu"], in2, f"{in2}_In2")         # board.yaml stackup: In2 plane (GND, or VDD under proposed D34)
+    zone(outline, ["In2.Cu"], in2, f"{in2}_In2")         # board.yaml stackup: In2 plane GND (D34: S / GND / GND / S)
+    # D34 fallback (engineer): VDD as a LOCAL pour on In2 only where routing needs it, inside the GND plane (priority 1:
+    # the GND_In2 fill keeps its 0.2 mm clearance round it), GND stitching vias round it come from the router's fence /
+    # stitching step. Boxes from job "in2_vdd" (tree_a_pcb.IN2_VDD / --in2-vdd); none by default.
+    for k, (x0, y0, x1, y1) in enumerate(job.get("in2_vdd") or []):
+        zone([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], ["In2.Cu"], "VDD", f"VDD_In2_local{k + 1}", priority=1)
     # local F.Cu GND pour around U1, the RF network and X2 (engineer decision 4, review B4/B5): the tier-1 band from the
     # keep-out line (y 17.0) to the shelf (y 28); stitched to In1 by the generator's GND vias and the router's taps.
     # The ANT_FEED gap to it = the 0.30 'RF feed track clearance' rule (GCPW gap, board.yaml net_classes.RF.cpw_gap_mm)

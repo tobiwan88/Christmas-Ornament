@@ -197,3 +197,38 @@ Lessons: KRT honours a KiCad rule area on In2 (DoNotAllowTracks, hole = the allo
 all five runs; it used 16-43 In2 segments and did not close the gap (the open nets sit in the top tier and at the R columns,
 not in the box). The R swap moves the crossing from the LED lines to the MCU lines, it does not remove it. Parallel escape
 proofs share `hardware/out/review/tree-a/geom.json` (board_geometry): run them one after another.
+
+## tree-a gate 5 round 3: KRT autoroute.py and the plan with GND / GND (2026-11-24, gate 5 agent; append only)
+**Rule: run `autoroute.py` (README Option C) on the bare board FIRST, before any hand-built chain or hand lanes.** It is one
+command, it plans from the board, and it shows in minutes what the board needs. Hand copper comes after, only where its
+result is measured to be worse.
+
+What we did wrong (rounds 1-2, about a day of agent time):
+- We built our own chain (route_planes -> route.py passes -> fence -> GND) with our CLASS sizes as hard limits: 0.15 / 0.15
+  tracks, 0.6 / 0.3 vias, `--fab-tier standard --escalation off`. autoroute routes at the fab tier (0.1 / 0.1, via
+  0.45 / 0.2) and descends a rung only where a net cannot complete. The 0.6 mm via is the biggest single loss at a 0.4 mm
+  QFN and between 0.8 mm LED pads.
+- We staged passes, orders and keep-outs by hand (16 sweeps, 3-5 variants each: mps / original / inside_out, LED first,
+  In2 box, D9 / D10 / VDD lanes, R dog-bones) and hand-led lanes that are locked copper: a lane in the wrong place costs
+  more than it gives (D10 lanes, then the whole U1 fan-out, see below).
+- Numbers: CHAIN best 18 open after 1044.7 s (sweep 14), typically 20-25 open in 86-560 s per run; escape proofs 22-23/28.
+  autoroute.py on the bare board (`--no-routes --escapes none`, its own plan: GND In1, VDD In2): 0 open, KRT DRC 0, 189 s.
+- Our grader trusted KRT's `check_connected.py` without `--nets "*"`: it checks only nets that carry copper ("Checking 56
+  routed nets"), so a net route.py left with NO copper (RIP-RESTORE "remains UNROUTED", stub dropped later) read as
+  connected (BTN_SW1). kicad-cli parity / unconnected caught it. Always pass `--nets "*"`.
+- `--clearance-ceiling` on ANY step (qfn_fanout too) clamps every net class in the written project (Power / RF 0.15 ->
+  0.1); every later step then routes power at 0.1 and kicad-cli, graded on board.yaml, reports 48-49 Power clearance
+  errors. Use `--clearance` when other classes must keep their own clearance.
+
+autoroute.py facts (v0.24.2, docs/utilities.md "Deterministic Plan Router"):
+- No option or plan field sets the plane map: GND on In1, the dominant rail (>= 10 pads: VDD) on In2. On a board that already
+  has In2 GND it pours VDD on In2 ON TOP (higher priority) and the frozen replay with our GND In2 leaves VDD open.
+  `--finish` takes the board's own pours as planes but skips the fan-out step.
+- It does not read `physical_clearance` (KiCad's 'via to SMD pad'): the same 0.15 as a `clearance` constraint with
+  `A.Type == 'Via' && B.Type == 'Pad' && B.Pad_Type == 'SMD'` is read by its scoped rule channel (#1491), and
+  `kicad_routing_tools.same_net_pad_clearance: 0.15` in the input's .kicad_pro keeps every step's vias off own-net pads
+  (#581). With both: 0 'via to SMD pad' items (was 63, 35 of them via-in-pad).
+- Its floor rung descends to 0.0889 mm tracks and 0.25 / 0.15 vias (fab tier floor). `--board-rules` with Board Setup
+  minimums 0.09 / 0.09 and via 0.45 / 0.2 holds every descent at our floors (fine via = 0.45 / 0.2 then).
+- Passes 2-3 price the inner planes 3.0, so signals cross them (VDD-plane run: 34.6 mm on In1; GND-finish run: 155 mm on
+  In1 + In2).

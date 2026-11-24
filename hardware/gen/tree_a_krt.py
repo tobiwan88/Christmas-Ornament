@@ -154,11 +154,12 @@ def via_pad_gap(board: Path, routes: dict) -> tuple:
 # ------------------------------------------------------------------------------------------------------------------
 # grading: build the board with a frozen file in a scratch dir, kicad-cli DRC (all severities, parity, refill, waivers)
 # ------------------------------------------------------------------------------------------------------------------
-def grade(frozen: Path, workdir: Path, escapes=None, in2_zone=None, in2_net=None, hand=None, rules=None) -> dict:
+def grade(frozen: Path, workdir: Path, escapes=None, in2_zone=None, in2_net=None, hand=None, rules=None, in2_vdd=None) -> dict:
     import tree_a_pcb as A
     if workdir.exists():
         shutil.rmtree(workdir)
-    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes, in2_zone=in2_zone, in2_net=in2_net, hand=hand)
+    pcb = A.build_into(workdir, frozen, quiet=True, escapes=escapes, in2_zone=in2_zone, in2_net=in2_net, hand=hand,
+                       in2_vdd=in2_vdd)
     patch_rules(pcb.with_suffix(".kicad_pro"), rules)
     st = {}
     A.drc(pcb, routed=True, quiet=True, stats=st)
@@ -383,7 +384,7 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # ------------------------------------------------------------------------------------------------------------------
 PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=True, fence=True,
             rules={"clearance": 0.1, "track": 0.1, "via": 0.45, "drill": 0.2, "min_clearance": 0.09, "min_track": 0.09},
-            standard=0.1, floor_clearance=0.09, track=0.1, via=0.45, drill=0.2, grid=0.05, in2_fallback=[],
+            standard=0.1, floor_clearance=0.09, track=0.1, via=0.45, drill=0.2, grid=0.05, in2_fallback=[], in2_vdd=[],
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
                    ["/mcu/DCC", 0.3], ["/mcu/VSS_PA", 0.3]])
 
@@ -401,21 +402,25 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
     workdir.mkdir(parents=True, exist_ok=True)
     times, info = [], {"rungs": {}}
     t0 = time.time()
-    inp = A.build_into(workdir / "in", quiet=True, escapes=cfg["escapes"], in2_net="GND", hand=cfg["hand"])
+    inp = A.build_into(workdir / "in", quiet=True, escapes=cfg["escapes"], in2_net="GND", hand=cfg["hand"],
+                       in2_vdd=cfg["in2_vdd"])
     times.append((f"build router input (hand {','.join(cfg['hand']) or 'none'}, In1 + In2 GND)", time.time() - t0, 0))
     patch_rules(inp.with_suffix(".kicad_pro"), cfg["rules"])
     stamp_snpc(inp.with_suffix(".kicad_pro"), cfg["snpc"])
     py, rt = KRT_PY, KRT / "py_router"
     s1 = workdir / "s1_planes.kicad_pcb"
+    # --skip-existing-zones: the generator's own GND_In1 / GND_In2 (and any local VDD_In2 pour) stay as they are, with
+    # their 0.2 mm clearance and priorities (a replaced GND In2 pour takes priority 2 over a local VDD pour); only the
+    # frozen copper is kept anyway, so the router works on the zones the committed board will have
     rc, t = sh([py, "-u", rt / "route_planes.py", inp, s1, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",
-                "--clearance", cfg["standard"]], workdir / "s1_planes.log")
-    times.append(("route_planes.py GND on In1 + In2", t, rc))
+                "--skip-existing-zones", "--clearance", cfg["standard"]], workdir / "s1_planes.log")
+    times.append(("route_planes.py GND on In1 + In2 (generator pours kept)", t, rc))
     cur = s1
     if cfg["fanout"] and "fanout" not in cfg["hand"]:
         s2 = workdir / "s2_fanout_U1.kicad_pcb"
         rc, t = sh([py, "-u", rt / "qfn_fanout.py", s1, "--output", s2, "--component", "U1", "--nets", "*", "!GN[D/]",
-                    "--width", cfg["track"], "--grid-step", cfg["grid"], "--clearance", cfg["standard"],
-                    "--clearance-ceiling", cfg["standard"]], workdir / "s2_fanout_U1.log")
+                    "--width", cfg["track"], "--grid-step", cfg["grid"], "--clearance", cfg["standard"]],
+                   workdir / "s2_fanout_U1.log")   # no --clearance-ceiling: it clamps Power / RF to 0.1 in the project
         times.append(("qfn_fanout.py U1 (autoroute's fanout step)", t, rc))
         if s2.exists():
             cur = s2
@@ -426,7 +431,9 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
     best = None
 
     def one_pass(prev, out, ceil, nets, lc, label):
-        rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance-ceiling", ceil, "--layer-costs", *lc,
+        # --clearance (not the ceiling): the Default class routes at the rung, Power / RF keep their own 0.15 (board.yaml),
+        # which kicad-cli grades; a ceiling would route them at the rung too (measured: 49 Power-class clearance errors)
+        rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance", ceil, "--layer-costs", *lc,
                     "--json-out", out.with_suffix(".json")], out.with_suffix(".log"), nets=nets)
         times.append((f"route.py {label}", t, rc))
         if not out.exists():
@@ -451,7 +458,24 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             if r[0] == 0 or (last is not None and r[0] >= last):
                 break
             prev, last = out, r[0]
-    if best and best[1] and cfg["in2_fallback"]:       # engineer's fallback: only the still-open nets (or the listed ones) may
+    if best and best[1] and cfg["in2_fallback"] == "first":   # the still-open nets FIRST, In2 allowed, from the fan-out
+        hard = list(best[2])                                    # board; then every other net on the outer layers only
+        out = workdir / "s5_hard_first.kicad_pcb"
+        r = one_pass(cur, out, cfg["standard"], hard, ["1.0", "-1", "3.0", "1.0"], f"hard nets first with In2 {hard}")
+        prev, last = out, None
+        for k in range(1, cfg["passes"] + 1):
+            if r is None:
+                break
+            o2 = workdir / f"s5_rest_p{k}.kicad_pcb"
+            r = one_pass(prev, o2, cfg["standard"], ["*"], ["1.0", "-1", "-1", "1.0"], f"after hard nets: pass {k}, outer layers")
+            if r is None:
+                break
+            if r[0] < best[1]:
+                best = (o2, r[0], r[1])
+            if r[0] == 0 or (last is not None and r[0] >= last):
+                break
+            prev, last = o2, r[0]
+    if best and best[1] and cfg["in2_fallback"] and cfg["in2_fallback"] != "first":   # engineer's fallback: only the still-open nets (or the listed ones) may
         prev = best[0]                                  # use In2 (3.0), In1 stays closed
         for k in (1, 2):
             nets = best[2] if cfg["in2_fallback"] == "open" else list(cfg["in2_fallback"])
@@ -466,7 +490,8 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
     if cfg["fence"]:
         f = workdir / "s8_fence.kicad_pcb"
         rc, t = sh([py, "-u", rt / "route_planes.py", cur, f, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",
-                    "--clearance", cfg["standard"], "--stitch-edge-fence", "--stitch-fence-pitch", "4.2"], workdir / "s8_fence.log")
+                    "--skip-existing-zones", "--clearance", cfg["standard"], "--stitch-edge-fence", "--stitch-fence-pitch",
+                    "4.2"], workdir / "s8_fence.log")
         times.append(("route_planes.py edge fence round the routed signals", t, rc))
         out = workdir / "s9_final.kicad_pcb"
         rc, t = sh([py, "-u", rt / "route.py", f, out, *base[:0], "--nets", "GND", "--no-bga-zones", "--track-width", cfg["track"],
@@ -482,8 +507,10 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
 
 def _krt_open(board: Path) -> tuple[int, list]:
     """Open nets by KRT's check_connected (as autoroute grades a pass): (count, net names)."""
-    r = subprocess.run([str(KRT_PY), str(KRT / "py_router" / "check_connected.py"), str(board)], capture_output=True,
-                       text=True, cwd=str(KRT))
+    # --nets "*": without it check_connected checks only nets that carry copper ("Checking 56 routed nets"), so a net
+    # route.py left with no copper at all (RIP-RESTORE "remains UNROUTED", its stub dropped later) reads as connected
+    r = subprocess.run([str(KRT_PY), str(KRT / "py_router" / "check_connected.py"), str(board), "--nets", "*"],
+                       capture_output=True, text=True, cwd=str(KRT))
     if "ALL NETS FULLY CONNECTED" in r.stdout:
         return 0, []
     m = re.search(r"FOUND (\d+) ISSUE", r.stdout)
@@ -505,7 +532,7 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
     frozen.write_text(json.dumps(extract(out.read_text()), indent=1) + "\n")
     print_metrics(metrics(json.loads(frozen.read_text())))
     t1 = time.time()
-    res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"], cfg["rules"])
+    res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"], cfg["rules"], cfg["in2_vdd"])
     print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC, all severities, parity)")
     print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
           f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")
@@ -518,7 +545,7 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
                            "step by step with GND on In1 and In2, settings tree_a_krt.PLAN + 'build'). Board coordinates of "
                            "tree_outline. Replayed as locked copper by gen/tree_a_pcb.py with the 'build' options. Re-freeze "
                            "only on purpose: tree_a_pcb.py --route krt." % (KRT / "VERSION").read_text().strip(),
-               "build": {"in2_net": "GND", "hand": cfg["hand"], "escapes": cfg["escapes"]},
+               "build": {"in2_net": "GND", "hand": cfg["hand"], "escapes": cfg["escapes"], "in2_vdd": cfg["in2_vdd"]},
                **json.loads(frozen.read_text())}
         FROZEN.write_text(json.dumps(doc, indent=1) + "\n")
         print("wrote", FROZEN.relative_to(HW.parent))
