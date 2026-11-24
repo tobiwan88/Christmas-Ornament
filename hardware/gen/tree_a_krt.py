@@ -483,20 +483,71 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             if r[0] == 0 or (last is not None and r[0] >= last):
                 break
             prev, last = o2, r[0]
-    if best and best[1] and cfg["in2_fallback"] and cfg["in2_fallback"] != "first":   # engineer's fallback: only the still-open nets (or the listed ones) may
-        prev = best[0]                                  # use In2 (3.0), In1 stays closed
+    if best and best[1] and cfg["in2_fallback"] == "repair":
+        # option a, measured route: In2 (3.0) for every net in up to two passes on the best outer board, then every net
+        # with In2 track copper that is NOT allowed there (power, RF, crystal, DCC, decoupling) is ripped and re-routed on
+        # the outer layers only (--force-reroute); then the still-open allowed nets get In2 again. A step is kept when it
+        # does not raise the open count and it lowers the disallowed In2 copper or the open count.
+        from fnmatch import fnmatch
+        prev = best[0]
         for k in (1, 2):
-            from fnmatch import fnmatch
-            nets = best[2] if cfg["in2_fallback"] == "open" else list(cfg["in2_fallback"])
-            nets = [n for n in nets if any(fnmatch(n, q) for q in IN2_ALLOWED)]      # never RF / crystal / DCC / power
-            if not nets:
-                break
-            out = workdir / f"s4_in2_fallback_p{k}.kicad_pcb"
-            r = one_pass(prev, out, cfg["standard"], nets, ["1.0", "-1", "3.0", "1.0"], f"In2 fallback pass {k} for {nets}")
+            out = workdir / f"s4_in2all_p{k}.kicad_pcb"
+            r = one_pass(prev, out, cfg["standard"], ["*"], ["1.0", "-1", "3.0", "1.0"], f"In2 (3.0) for every net, pass {k}")
             if r is None or r[0] >= best[1]:
                 break
             best, prev = (out, r[0], r[1]), out
             if r[0] == 0:
+                break
+        for cyc in range(1, cfg.get("cycles", 3) + 1):
+            bad = sorted({t["net"] for t in extract(prev.read_text())["tracks"] if t["layer"] == "In2.Cu"
+                          and not any(fnmatch(t["net"], q) for q in IN2_ALLOWED)})
+            if not bad:
+                break
+            out = workdir / f"s4_repair_c{cyc}.kicad_pcb"
+            rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance", cfg["standard"], "--layer-costs", "1.0",
+                        "-1", "-1", "1.0", "--force-reroute", "--json-out", out.with_suffix(".json")], out.with_suffix(".log"),
+                       nets=bad)
+            times.append((f"route.py repair {cyc}: {bad} off In2 (outer layers, force-reroute)", t, rc))
+            if not out.exists():
+                break
+            g, names = _krt_open(out)
+            info["passes"].append((f"repair {cyc} {bad}", g, names, round(t, 1)))
+            print(f"   repair {cyc}: {bad} off In2 -> {g} open {names}, {t:.1f} s", flush=True)
+            best, prev = (out, g, names), out          # disallowed In2 copper must go even if it costs an open net
+            allowed_open = [n for n in names if any(fnmatch(n, q) for q in IN2_ALLOWED)]
+            if allowed_open:
+                o2 = workdir / f"s4_repair_c{cyc}_in2.kicad_pcb"
+                r = one_pass(prev, o2, cfg["standard"], allowed_open, ["1.0", "-1", "3.0", "1.0"], f"cycle {cyc}: In2 for {allowed_open}")
+                if r is not None and r[0] < best[1]:
+                    best, prev = (o2, r[0], r[1]), o2
+            other_open = [n for n in best[2] if not any(fnmatch(n, q) for q in IN2_ALLOWED)]
+            if other_open:
+                o3 = workdir / f"s4_repair_c{cyc}_outer.kicad_pcb"
+                r = one_pass(prev, o3, cfg["standard"], other_open, ["1.0", "-1", "-1", "1.0"], f"cycle {cyc}: outer for {other_open}")
+                if r is not None and r[0] < best[1]:
+                    best, prev = (o3, r[0], r[1]), o3
+    if best and best[1] and cfg["in2_fallback"] and cfg["in2_fallback"] not in ("first", "repair"):
+        # engineer's fallback (option a): cycles of [In2 for the still-open ALLOWED nets only (In2 3.0, In1 closed)] then
+        # [outer layers only for every still-open net]; a step is kept only when it lowers the open count
+        from fnmatch import fnmatch
+        prev = best[0]
+        for cyc in range(1, cfg.get("cycles", 3) + 1):
+            gained = False
+            nets = best[2] if cfg["in2_fallback"] == "open" else list(cfg["in2_fallback"])
+            nets = [n for n in nets if any(fnmatch(n, q) for q in IN2_ALLOWED)]      # never RF / crystal / DCC / power
+            if nets:
+                out = workdir / f"s4_c{cyc}_in2.kicad_pcb"
+                r = one_pass(prev, out, cfg["standard"], nets, ["1.0", "-1", "3.0", "1.0"], f"cycle {cyc}: In2 for {nets}")
+                if r is not None and r[0] < best[1]:
+                    best, prev, gained = (out, r[0], r[1]), out, True
+            if best[1] == 0:
+                break
+            out = workdir / f"s4_c{cyc}_outer.kicad_pcb"
+            r = one_pass(prev, out, cfg["standard"], list(best[2]), ["1.0", "-1", "-1", "1.0"],
+                         f"cycle {cyc}: outer layers for {best[2]}")
+            if r is not None and r[0] < best[1]:
+                best, prev, gained = (out, r[0], r[1]), out, True
+            if best[1] == 0 or not gained:
                 break
     cur = best[0] if best else cur
     if cfg["fence"]:
@@ -531,6 +582,29 @@ def _krt_open(board: Path) -> tuple[int, list]:
     return (int(m.group(1)) if m else 999), names
 
 
+def trim_dangling(frozen: Path, drc_json: Path) -> int:
+    """Remove the router's own dangling vias / dangling track pieces that kicad-cli names (via_dangling, track_dangling)
+    from a frozen routes file; locked generator copper is not in the file, so it is never touched. Returns the count."""
+    d = json.loads(drc_json.read_text())
+    r = json.loads(frozen.read_text())
+    pts = []
+    for v in d.get("violations", []):
+        if v["type"] in ("via_dangling", "track_dangling"):
+            for it in v["items"]:
+                pts.append((v["type"], it["pos"]["x"], it["pos"]["y"], it["description"]))
+    n0 = len(r["vias"]) + len(r["tracks"])
+    for typ, x, y, desc in pts:
+        if typ == "via_dangling":
+            r["vias"] = [q for q in r["vias"] if math.dist(q["at"], (x, y)) > 0.01]
+        else:
+            def hit(t):
+                return min(math.dist(t["a"], (x, y)), math.dist(t["b"], (x, y)),
+                           math.dist(((t["a"][0] + t["b"][0]) / 2, (t["a"][1] + t["b"][1]) / 2), (x, y))) < 0.01
+            r["tracks"] = [t for t in r["tracks"] if not hit(t)]
+    frozen.write_text(json.dumps(r, indent=1) + "\n")
+    return n0 - len(r["vias"]) - len(r["tracks"])
+
+
 def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
     cfg = {**PLAN, **cfg}
     t0 = time.time()
@@ -545,7 +619,12 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
     frozen.write_text(json.dumps(extract(out.read_text()), indent=1) + "\n")
     print_metrics(metrics(json.loads(frozen.read_text())))
     t1 = time.time()
-    res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"], cfg["rules"], cfg["in2_vdd"])
+    for k in range(4):             # router leftovers: dangling vias / track ends that kicad-cli reports are cut from the
+        res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"], cfg["rules"], cfg["in2_vdd"])
+        cut = trim_dangling(frozen, workdir / "grade" / "drc.json")      # frozen file (same rule on every rebuild)
+        if not cut:
+            break
+        print(f"   trim {k + 1}: removed {cut} dangling router item(s), regrading", flush=True)
     print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC, all severities, parity)")
     print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
           f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")

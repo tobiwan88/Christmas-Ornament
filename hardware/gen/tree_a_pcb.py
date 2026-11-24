@@ -71,7 +71,7 @@ BT1_ROT = 270.0               # pads 1 (BAT) and 2 (GND) at the top end, next to
 J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: the bottom edge is blocked by BT1's pads
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
 NO_POUR_PADS = (("C9", "2"), ("C11", "2"))   # 0201 GND pads: own via, no connection to GND_F_local
-POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"))                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
+POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"), ("C1", "2"))   # C1.2: gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
 MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
@@ -81,7 +81,8 @@ IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --
 HAND = ("rf", "fanout", "xl", "power")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
-                 "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
+                 "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2),
+                 "u1_exposed_pad": (32.9, 21.8, 37.1, 26.1)}   # EP thermal vias keep full In2 spokes (starved_thermal otherwise)   # In2: no signal tracks (option a)
 IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
 RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
