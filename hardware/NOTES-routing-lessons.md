@@ -73,3 +73,33 @@ All crashes were SIGSEGV inside KiCad's `_pcbnew.so` called from our generators 
 | `ZONE_FILLER(board)` with a None/stale board (GetDesignSettings) | tree_a_pcb.py:493, tree_b_pcb.py:627, 2026-11-24 07:00 | `pcbnew_safe.fill_zones_cli` (kicad-cli drc --refill-zones --save-board, 1.2 s on tree-b, no SWIG) |
 Helper: `hardware/gen/pcbnew_safe.py` (`--selftest` causes one deliberate crash report: expected). Direction: prefer writing the board file as text (tree_b_pcb.py does) and use pcbnew read-only for proofs; run any pcbnew subprocess through `run_isolated` (crash detection, one retry, crash summary).
 Board B changes (2026-11-24, tree_b_pcb.py): the generator writes the board as S-expressions (no zone API for the GND planes: `gnd_pours()` text zones, route_planes.py adds the fence vias). The only SWIG use is read-only in `--proof`: the board is loaded through `pcbnew_safe.load_board`, and the plane-void row fills a TEMPORARY COPY with `pcbnew_safe.fill_zones_cli` (kicad-cli, about 1 s) and loads that copy; the in-process `ZONE_FILLER(b).Fill` at tree_b_pcb.py:627 (my own line, added the same day) is gone. Result changed: with the in-process fill the void row read 0.00 mm, with the CLI fill 0.91 mm (limit 1.0); the CLI number is the one to trust. No crash happened in my runs.
+Board A changes (2026-11-24, tree_a_pcb.py, gate 4 agent): the render step's `ZONE_FILLER(b).Fill` one-liner (the 07:00 crash) is replaced by `pcbnew_safe.fill_zones_cli` on the filled copy; stage 2 (the pcbnew job) and every `tools/board_geom.py` call run through `pcbnew_safe.run_isolated` (crash detected, one retry, summary line on stderr); `tree_geometry.kicad_place` (read-only for board A) is only called for footprints already added to the board, guarded by an assert before the call (its flip needs the board). The stage 2 board build itself still uses the SWIG API (placement, locked tracks / vias, zones with `z.Outline()` filled in place). No crash happened in the board A runs after the change (about 30 stage 2 builds and 40 escape-proof copies).
+
+## tree-a U1 escape (2026-11-24, gate 4 agent; append only)
+Flow: `tree_a_pcb.py --escape-proof` copies the built board (hand fan-out of U1 as LOCKED copper, engineer decision 1) to
+`hardware/out/tree-a-escape/` and drives KiCadRoutingTools v0.24.2 `py_router/route.py` on every U1 net (28, GND included);
+verdict per net from kicad-cli DRC on the routed copy (unconnected items per net + error count).
+Settings: `--layers F.Cu In1.Cu In2.Cu B.Cu --layer-costs 1.0 -1 -1 1.5` (inner GND planes forbidden for tracks),
+`--track-width 0.15 --clearance 0.15 --via-size 0.6 --via-drill 0.3 --hole-to-hole-clearance 0.5 --board-edge-clearance 0.3
+--grid-step 0.05 --fab-tier standard --escalation off --keep-input-copper --no-fix-drc-settings --max-iterations 2000000
+--max-ripup 6 --via-cost 20 --same-net-pad-clearance 0.15`. KRT does not read our custom "via to SMD pad" rule (it parses
+it as unsupported) -> `--same-net-pad-clearance 0.15`, else it drops vias into SMD pads; it also skips the RF clearance rule
+(condition on Reference), KiCad DRC still enforces it on the result. KRT never rips KiCad-locked copper (good for a fan-out).
+Measured (MacBook, KRT venv): one route.py pass over 28 nets 17-35 s; pass 1 as six start orders in parallel 41-61 s;
+full proof (pass 1 x6 + 2 repair passes + 3 DRCs) 77-102 s wall, 81 s for the final run.
+What worked: ordering matters more than any knob. Same board, different `--ordering` / first nets: 20 to 27 of 28.
+`inside_out` beat `mps` on the old placement (19 -> 23); `original` with the left-row nets first (VDD, LED L8..L5, BTN,
+VBUS_DET, VBAT_SENSE) was best on the new one (25-27). Rotating TC1 by 180 (SWD row towards U1) fixed SWDIO / SWO / SWDCLK;
+moving R9 next to C13 fixed nRESET; a 1.08 mm via pitch in the left-row dog-bone row (a B.Cu track between two vias)
+helped LED L5-L8. `--rip-existing-nets "*"` repair passes never gained a net (blockers are named "preexisting" and stay);
+repair with the named blockers only (current code) also gained 0. Knobs tried on pass 1 without gain: `--via-cost 5 / 10`,
+`--grid-step 0.025` (slower, same 25), `--layer-costs ... B.Cu 1.0`, `--max-ripup 12 / 20`.
+Not solved: no single run routes all 28. Final (placement of commit f57584a): 25/28, open BTN_SW1, VBUS_DET (both reach the
+R10 / R43 ends in the bottom of the left strip, KRT reports boxed_in_static) and GND (R43's GND pad, or a GND_F_local island);
+every one of them routes in some other start order (BTN / VBUS_DET in starts 2/3, which then lose LED L6 / L7).
+Bottleneck: the neck left of J3 at y 28-29.5 (board edge fillet at x ~27.5-28.1, J3 pad at 31.0) that every left-row net
+(LED L5-L8, BTN, VBUS_DET, VDD to U2 / TC1, GND) passes on F.Cu / B.Cu; KRT routes it with wiggles that use the width twice.
+Placement experiments that did NOT help (reverted): R10 on top of the left strip + R43 beside R5 (24-25/28); strip order
+R5..R8, R43, R10 (planar peel order for a bundle on the J3 side, 23-24/28); R42 moved next to R43 (24/28).
+Not tried: KRT's `qfn_fanout.py` / `place_fanout_clearance.py` flow (the engineer's decision 1 binds a hand-drawn fan-out;
+a KRT fan-out would replace it, so it is an engineer option, not a proof of this placement).

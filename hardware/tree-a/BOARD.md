@@ -54,10 +54,15 @@ Command: `python3 hardware/calc/bom_check.py hardware/tree-a --stock --qty 5 --s
 Variant B (same command, variant B rows): 231.92 USD before PCB + shipping, 25 unique Extended parts. No part carries an unconfirmed Basic/Extended class (`?`); every line still reads "status not VERIFIED" (datasheet card and stock checked 2026-11-23, no engineer sign-off): WARN rows in the gate.
 
 ## Floorplan (gate 4)
-2026-11-23, built by `gen/tree_a_pcb.py` (placement, zones, keep-outs, planes; no tracks). Coordinates = tree_outline mm
-(origin top-left of the 70 x 105 box, y down); the placement table is printed by the generator (`PLACE` rows).
-DRC (kicad-cli, schematic parity, all severities, zones refilled): 0 errors, 0 open warnings, 1 waiver (NT1 parity, D25),
-166 unconnected items (not routed). `critical.py --placement`: OK, 13 WARN rows with reasons (critical.yaml).
+2026-11-23, built by `gen/tree_a_pcb.py` (placement, zones, keep-outs, planes); 2026-11-24 re-placed around U1 with the U1
+fan-out as locked copper (engineer decision 1, gate 4 review A1-A4 / B1-B10). Coordinates = tree_outline mm (origin
+top-left of the 70 x 105 box, y down); the placement table is printed by the generator (`PLACE` rows).
+DRC (kicad-cli, schematic parity, all severities, zones refilled): 0 errors, 0 open warnings, 37 waivers (NT1 parity D25;
+dangling locked fan-out stubs / vias = gate 5 route ends; lib_footprint_mismatch of the 12 DNP parts whose paste the
+generator removes, B10), 122 unconnected items (not routed). `critical.py --placement`: OK, 13 WARN rows with reasons
+(critical.yaml, distances re-measured 2026-11-24).
+Escape proof (`tree_a_pcb.py --escape-proof`, KiCadRoutingTools v0.24.2 on a copy in hardware/out/tree-a-escape/): see
+"U1 fan-out and escape proof" below.
 
 Blocks and why (source in brackets):
 - Stack geometry first, from `gen/tree_geometry.py` (shared with B): LEDs D9-D16 on B.Cu rot 180 at the D8/LED_XY
@@ -71,16 +76,25 @@ Blocks and why (source in brackets):
   on B.Cu: the KiCad ThermalVias QFN footprint has a 4.1 mm B.Cu pad and 16 through-vias that must clear D10's pads
   (U1 x >= 33.875); rot 0 at x 34 would put the RF chain and X2 on the same corner. Courtyard 31.35-38.65 x 20.30-27.60
   sits on J3's courtyard top (27.62).
-- RF chain in three 0402 rows between U1 and the keep-out (y 17.0-20.3), Nordic order (parts/nRF54L15-QFAA.yaml
-  reference_layout_distances_mm): L3 at ANT, C6 (VSS_PA), L4, L5 / C9 upright, C11 at RF_50, pi slot C50 | R50 | C51 with
-  R50's ANT_FEED pad under the feed axis; NT1 bridge (D25) in the pad-32 to exposed-pad gap; NT2 on B.Cu next to C9's
-  GND_C9 pad (D21). RF class: track 0.40, pad clearance 0.15, track clearance 0.30 (rules/tree-a.kicad_dru).
-- HFXO X2 rot 180 at (31.4, 18.96), 2.9-3.0 mm from XC1/XC2 (reference 2.1-3.5). DECA C5 at pin 33, VDD C4 at the top-left
-  corner. Power cluster on the left row (pins 43-48): C10 at VDD 47/48 (1.18 mm), L1 at DCC (1.59 mm, reference 2.2-2.5),
-  C1, FB1, C12, C2 above. LFXO X1 at the bottom-left corner (4.6-5.6 mm, reference 1.8-2.1: WARN, pins 1/2 face J3).
-  Right side: C13 (nRESET), C8 (VDD 22), C3 (10 uF), C7 (VDD 10).
-- LED line resistors R1-R4 and R5-R8 in the tier-2 strips beside J3 (outside the mated-header envelope 30.5-39.5), with
-  R40/R41/C14 (battery divider), R43, R10 left and R45, R9, R42/R44 (variant B) right.
+- RF network as a compact column from pins 31-33 up to the keep-out (y 17.0-20.3), Nordic order: L3 (34.82, 19.60) rot 90
+  right above ANT (1.09 mm), C6 (34.09, 18.90) on VSS_PA (x 34.33 track to pin 32), L4 / C9 / L5 / C11 on the RF_N1 -
+  RF_N2 - RF_50 line (0.2 mm tracks), pi slot C50 | R50 | C51 at y 17.45-18.5 with R50's ANT_FEED pad under the feed axis;
+  NT1 bridge (D25) in the pad-32 to exposed-pad gap. C9's GND pad has its own via into In1 at the pad (gate 4: NT2 /
+  GND_C9 dropped, KNOWN deviation, ORDER.md bring-up 7). ANT_FEED: GCPW 0.35 mm / gap 0.30 mm over In1 = 49.4 ohm with
+  mask (calc/impedance.py --cpw 0.35/0.30, hook 60-rf-impedance); the 0.30 mm RF clearance rule applies to ANT_FEED tracks
+  only, not to the network pads, U1 or NT1 (B1).
+- HFXO X2 rot 180 at (30.70, 19.10), 3.30 / 3.48 mm from XC1 / XC2 (reference 2.1-3.5); XC1 / XC2 as locked F.Cu tracks
+  round the corner. DECA C5 (32.75, 18.30) rot 90 fed from pin 33 through a dog-bone via; VDD C4 (29.60, 20.95) left of
+  X2, fed from pin 36 through a via. Power cluster at the left row (pins 43-48): L1 (29.40, 25.45) at DCC (1.60 mm), C10
+  (30.40, 26.82) at VDD 47/48 (1.36 mm, known WARN), C3 10 uF 0402 next to C10 (B6), FB1 / C1 / C12 / C2 left of L1 with
+  one shared GND via at (25.00, 27.30) for C1 / C12 / C2 (B7). DECD / DECA / DCC / VDD 47-48 are locked tracks.
+- Right side: C13 (40.60, 20.90) and R9 (41.80, 22.40) for nRESET, C8 at VDD 22 (1.18 mm, via 39.10/23.55), LFXO X1
+  (40.60, 25.00) rot 180 (B8) with XL1 / XL2 from the bottom row by dog-bone vias to B.Cu (8.7 / 7.0 mm, known WARN), C7
+  (39.60, 26.95) at the bottom-right corner (VDD 10 via at 36.55/28.00).
+- LED line resistors in the tier-2 strips beside J3 (outside the mated-header envelope 30.5-39.5), sides swapped at gate 4:
+  R8-R5 LEFT (next to the left-row pins 39-42, whose locked stubs end in a via row at 1.08 mm spacing), R1-R4 RIGHT (next
+  to the bottom-row pins 6-9); left also R40/R41/C14 (battery divider), R10, R43; right R45, R42/R44 (variant B). TC1 is
+  rot 180 so its SWD row faces U1.
 - Power stage in the left wing: Q1 below BT1 pad 1 (BAT), TPS63900 U2 rot 90 at (19.5, 61) with L2 above (LX1/LX2 2.06 mm),
   C20 at VIN (1.44 mm), C21 at VOUT (1.63 mm), CFG/SEL resistors below (TI SLVSET3D Figure 10-1 arrangement).
 - Variant B (DNP, D10): J2 (35, 58) and U3 (44, 78.5) under the holder (rule "D15 holder vs variant B courtyards": only
@@ -92,8 +106,23 @@ Blocks and why (source in brackets):
   tree_outline TC_POS (35, 99.4) its three NPTH alignment holes sit inside BT1's courtyard (DRC npth_inside_courtyard,
   an error) and the TC2030 pins would reach into the holder body. Open decision 3.
 - Planes: In1 and In2 solid GND over the outline (board.yaml stackup), clearance 0.2, thermal 0.25 / 0.3. No inner cut-out
-  under the matching network (the Nordic reference has one): open decision 2. Silk `TREE-01 A` + `${GIT_SHA}` on B.SilkS
+  under the matching network (the Nordic reference has one): open decision 2. Local F.Cu GND pour `GND_F_local` from the
+  keep-out line (y 17) to y 28 around U1 / RF / X2 (B4/B5), SOLID pad connection (thermal spokes starved on the 0201 /
+  0402 GND pads; tombstone risk accepted for now, engineer item), stitched to In1 / In2 by the via row along y 17.35 and the
+  fan-out GND vias.
+- Paste (B10): the generator strips F.Paste / B.Paste from every DNP pad of variant A (charger parts, pi-slot C50 / C51);
+  `tree_a_pcb.py --variant B` writes the variant B paste set to hardware/out/tree-a-variant-b/ (charger parts with paste,
+  BT1 without), the committed board is variant A. Silk `TREE-01 A` + `${GIT_SHA}` on B.SilkS
   at (35, 79.5 / 81.3), 1.0 mm.
+
+U1 fan-out and escape proof (2026-11-24): every used U1 pin has locked copper in the generator (stub, dog-bone via 0.6 / 0.3
+or exit track; 0.15 mm, power 0.25): top row RF column / XC1 / XC2 / DECA via / VDD36 via / nRESET, SWDCLK, SWDIO vias;
+left row a via row for pins 37-42 (1.08 mm pitch) and the power cluster tracks for 43-48; right row CHG_STAT, VDD22, SWO
+vias; bottom row stubs for pins 5-9 into J3's middle and dog-bone vias for XL1, XL2, VDD10, TPS_SEL. GND (pin 44) to the
+exposed pad. Escape proof with KiCadRoutingTools v0.24.2 (rules 0.15 / 0.15, via 0.6 / 0.3, F.Cu / B.Cu, inner planes
+forbidden): best single board 25 of 28 U1 nets routed, 0 DRC errors (open BTN_SW1, VBUS_DET, GND at R43); every net routes
+in at least one of the six start orders, none routes all 28 (hardware/NOTES-routing-lessons.md "tree-a U1 escape").
+Bottleneck for gate 5: the neck between the board edge (x ~28) and J3 (x 31) at y 28-29.5 that all left-row nets share.
 
 Area share (generator row, courtyard bounding boxes): F.Cu 1966 mm2 = 66 % of 2966 mm2 (BT1 alone 1393 mm2), B.Cu 71 mm2 = 2 %.
 Stack checks: `tree_geometry.py --check` OK (LED / header / holder / peg rows); heights on the inner face: holder 11.3
@@ -136,6 +165,8 @@ python3 -I hardware/gen/tree_split_check.py [--selftest]
 python3 -I hardware/gen/tree_pin_divider.py
 .venv/bin/python -I hardware/gen/tree_charge_path.py hardware/tree-a [--selftest]   # also run by build_tree_a.sh
 source scripts/kicad-env.sh; .venv/bin/python hardware/gen/tree_a_pcb.py [--drc] [--render]   # board + project + rules copy; DRC with parity / review PNGs in hardware/out/review/tree-a/
+source scripts/kicad-env.sh; .venv/bin/python hardware/gen/tree_a_pcb.py --escape-proof   # U1 escape proof with KiCadRoutingTools (hardware/tools/setup_tools.sh) on a copy in hardware/out/tree-a-escape/, about 2 min
+source scripts/kicad-env.sh; .venv/bin/python hardware/gen/tree_a_pcb.py --variant B      # variant B paste set (fab copy) in hardware/out/tree-a-variant-b/
 <route>   <freeze>
 python3 hardware/calc/critical.py hardware/tree-a [--placement]
 python3 hardware/calc/emi_check.py hardware/tree-a
