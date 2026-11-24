@@ -246,7 +246,7 @@ DRC errors on the rebuilt board with board.yaml classes; hand copper "rf" = RF c
 | plan, max-ripup 5 / mps / inside_out / no fan-out (w1-w5) | GND / GND (+VDD box) | rf | same | 7-11 | 1-2 | 318-560 s |
 | plan + In2 only for the still-open nets (x1-x3, t1) | GND / GND (+VDD box) | rf | same | 4-6 | 1-2 | 342-704 s |
 | plan + In2 for the open nets, Power / RF clamped to 0.1 by mistake (r1) | GND / GND | rf | Power 0.1 | 2 (LED_L2, LED_L8) | 51 (Power clearance) | 676 s |
-| plan + In2 for EVERY net in passes 2-3 (p4) | GND / GND | rf | Power 0.1 | 1, with 120 mm on In2 (VDD 54 mm, 8 signal nets) | n/a | ~400 s |
+| plan + In2 for EVERY net in passes 2-3 (p4) | GND / GND | rf | Power 0.1 | 1, with 120 mm on In2 (VDD 54 mm, 8 signal nets) | not graded (run stopped) | 231 s (3 route passes) |
 Lessons: the locked hand copper costs completion in every pairing (rf-only beats all: a4 0 vs a1 3, p1 6 vs p3 8). The
 open nets sit around U1 / D9 / D10 / the R columns (LED_L1, L2, L6, L7, L8, SWD, BTN_SW1, VBUS_DET, CHG_STAT, VDD);
 24 non-GND nets cross the neck at y 28.5 (14.0 mm between the notches) from the top tier to the rest of the board. With

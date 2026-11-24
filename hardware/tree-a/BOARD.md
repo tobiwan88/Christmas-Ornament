@@ -167,7 +167,23 @@ Open decisions (engineer), default first:
      position must be the body centre.
 
 ## Routing
-What is hand-drawn, what the router did, frozen routes, build and reproduce commands.
+Status 2026-11-24 (gate 5 round 3): NOT routed. No `frozen-routes.json`; the committed board is the gate-4 placement with the
+locked hand copper (RF column / ANT_FEED, U1 fan-out, XL lanes, TPS63900 stage). Planes per D34 (engineer): In1 and In2
+solid GND, power on the outer layers, a local VDD pour on In2 only if routing needs it (`tree_a_pcb.IN2_VDD`, none set).
+- Router: KiCadRoutingTools v0.24.2 only. `gen/tree_a_krt.py plan` = autoroute.py's own plan run step by step with only
+  the plane map changed (GND on In1 and In2; autoroute.py has no option for the plane map and puts VDD on In2): planes
+  (`route_planes.py --skip-existing-zones`, the generator's pours stay) -> `qfn_fanout.py` on U1 -> route.py passes at
+  0.1 / 0.1, via 0.45 / 0.2 on F.Cu / B.Cu only -> floor rung 0.09 -> GND edge fence + route.py GND. Power / RF keep
+  their 0.15 class clearance; vias keep 0.15 from SMD pads (rule 'via to SMD pad' read as a clearance constraint plus
+  the recorded same-net pad clearance).
+- Best results (NOTES-routing-lessons.md "tree-a gate 5 round 3", every run timed): GND / GND outer layers only 7-9 open
+  nets; plus In2 for the still-open nets 4-6 open; autoroute.py with its VDD plane on In2 0 open, but only at the fab
+  floor (0.0889 mm tracks, 0.25 / 0.15 vias, Power / RF clearance 0.1) and not allowed by D34. Hand copper beyond the RF
+  column measured worse in every pairing: the next freeze uses `--hand rf` (generator default unchanged until then).
+- Open nets cluster around U1 / D9 / D10 / the R columns (LED lines 1, 2, 6, 7, 8, SWD, BTN_SW1, VBUS_DET, CHG_STAT, VDD).
+  Engineer decision pending (gate-5 report): signals on In2 locally, Power clearance 0.1, or a placement change.
+- Reproduce: `python3 hardware/gen/tree_a_krt.py plan --workdir DIR [--cfg JSON]` (about 5-12 min); freeze with
+  `--write` (only a clean result is written) or `tree_a_pcb.py --route krt`.
 
 ## Routing review (date)
 Pair numbers, loops, areas, plane voids, edge gaps, detours accepted, fab-floor tracks/vias, residual risks, where to look first.
