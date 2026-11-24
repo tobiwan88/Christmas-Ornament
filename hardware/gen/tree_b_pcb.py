@@ -10,8 +10,9 @@ WHAT IT BUILDS (gates 4 and 5, one build):
     faces and a plated barrel, net GND): brass standoffs tie B's GND to A's; the Ø1.4 hanging hole stays an NPTH in the keep-out;
   - LEDs D1-D8 on F.Cu at the tree_geometry positions and rotation, header J4 on B.Cu at file orientation 180 (the J4 trap in
     tree_geometry's docstring: B.Cu footprints are stored mirrored top-bottom, the generator writes pads at (px, -py));
-  - copper: frozen routes (hardware/tree-b/frozen-routes.json, written by gen/tree_b_route.py from a router run or from the
-    hand generator) replayed as locked tracks and vias, so every rebuild is identical;
+  - copper: frozen routes (hardware/tree-b/frozen-routes.json, written by gen/tree_b_krt.py = KiCadRoutingTools v0.24.2; the
+    archived own router gen/tree_b_route.py wrote the older frozen-routes-own-router.json) replayed as locked tracks and vias,
+    so every rebuild is identical;
   - silk: board name and version on B.Cu (inner face), reference designators and pin-1 marks from the footprints;
   - project: net classes and fab floors merged into tree-b.kicad_pro (tools/write_project.py), custom DRC rules copied next to
     the board (board.yaml fab.custom_drc).
@@ -29,6 +30,8 @@ Usage (repository root):
   python3 hardware/gen/tree_b_pcb.py --out DIR       write the board into DIR (the router's input: add --no-routes)
   python3 hardware/gen/tree_b_pcb.py --no-routes     placement only, no copper (input of gen/tree_b_route.py)
   python3 hardware/gen/tree_b_pcb.py --check         build twice into temp dirs and compare (repeatable build)
+  python3 hardware/gen/tree_b_pcb.py --route krt     re-run KiCadRoutingTools (hardware/.tools, tools/setup_tools.sh), freeze a clean result, build
+  python3 hardware/gen/tree_b_pcb.py --frozen FILE   replay another frozen file (grading; hardware/tree-b/frozen-routes-own-router.json = old router)
 Needs PyYAML (the gate's python3 or .venv/bin/python); no KiCad. Stdlib otherwise.
 """
 from __future__ import annotations
@@ -465,9 +468,10 @@ def route_items(routes: dict | None) -> list:
     return items
 
 
-def load_routes():
-    if FROZEN.exists():
-        return json.loads(FROZEN.read_text())
+def load_routes(path: Path | None = None):
+    path = path or FROZEN
+    if path.exists():
+        return json.loads(path.read_text())
     return None
 
 
@@ -492,6 +496,27 @@ def router_keepouts() -> list:
              ["layer", Q("User.2")], ["uuid", uid("rk", nm)]] for nm, pts in polys]
 
 
+STUB_LEN = 0.0                 # router input only (--no-routes --stub L): LED pad escape stubs on F.Cu, mm from the pad centre; see router_stubs()
+STUB_W = 0.25
+
+
+def router_stubs(nets: dict) -> list:
+    """Experiment (router input only, never in the committed board): a straight F.Cu stub from every LED pad outward (pads 1 and 3
+    of tree_geometry's LED left, 2 and 4 right: the columns of the 0.8 mm pitch pads, nothing fits between them) so the router
+    starts from open copper and may drop a via at the stub end, away from the 0.45 mm land. Its result is frozen WITH the stubs."""
+    out = []
+    for ref, fpn, x, y, layer, rot in placements():
+        if not ref.startswith("D"):
+            continue
+        for pn, cx, cy, _w, _h in G.world_pads(fpn, x, y, rot, layer):
+            sx = -1.0 if cx < x else 1.0
+            a, b = (cx, cy), (x + sx * (0.4 + STUB_LEN), cy)
+            pa, pb = P(a), P(b)
+            out.append(["segment", ["start", num(pa[0]), num(pa[1])], ["end", num(pb[0]), num(pb[1])], ["width", num(STUB_W)],
+                        ["layer", Q("F.Cu")], ["net", Q(nets[(ref, pn)])], ["uuid", uid("stub", ref, pn)]])
+    return out
+
+
 def build(routes: dict | None, router_input: bool = False) -> str:
     prof = load_yaml()
     syms = schematic_symbols()
@@ -513,6 +538,8 @@ def build(routes: dict | None, router_input: bool = False) -> str:
     body += route_items(routes)
     if router_input:
         body += router_keepouts()
+    if STUB_LEN > 0 and not routes:
+        body += router_stubs(nets)
     return ser(["kicad_pcb"] + body) + "\n"
 
 
@@ -530,6 +557,107 @@ def write_project(out_dir: Path, prof) -> None:
         if (BOARD_DIR / f).exists() and out_dir != BOARD_DIR:
             txt = (BOARD_DIR / f).read_text().replace("${KIPRJMOD}/../lib", str(HW / "lib"))
             (out_dir / f).write_text(txt)
+
+
+def plane_rows(b, pcbnew, vias) -> list:
+    """The two emi_check rows that cannot run on this board (calc/emi_check.py measures the edge fence along the bounding box, and
+    reads zone fills from the board file; this tree outline is not a box and the generated board carries no fill), measured here
+    with the same limits (emi.yaml): (1) GND via fence along the TRUE outline: largest gap between GND vias within edge_band_mm of
+    the outline, spans inside the antenna keep-out and the M2 rings exempt, limit edge_pitch_mm; (2) longest run of a signal track
+    without its reference plane (F.Cu over In1, B.Cu over In2) after a pcbnew zone refill, own via / pad antipads excluded,
+    limit void_max_mm."""
+    mm = pcbnew.ToMM
+    txt = (BOARD_DIR / "emi.yaml").read_text()          # KiCad's Python has no PyYAML: read the three numbers by name
+
+    def emi_num(key, default):
+        m = re.search(rf"^{key}:\s*([0-9.]+)", txt, re.M)
+        return float(m.group(1)) if m else default
+    lim, band, vmax = emi_num("edge_pitch_mm", 5.0), emi_num("edge_band_mm", 1.6), emi_num("void_max_mm", 1.0)
+    poly = [tuple(p) for p in TO.OUTLINE_POLY]
+    n = len(poly)
+    cum = [0.0]
+    for i in range(n):
+        cum.append(cum[-1] + math.dist(poly[i], poly[(i + 1) % n]))
+    per = cum[-1]
+
+    def near(pt):                        # (arc position, distance) of the nearest outline point
+        best = (1e9, 0.0)
+        for i in range(n):
+            a, c = poly[i], poly[(i + 1) % n]
+            dx, dy = c[0] - a[0], c[1] - a[1]
+            t = max(0.0, min(1.0, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / (dx * dx + dy * dy)))
+            d = math.dist(pt, (a[0] + t * dx, a[1] + t * dy))
+            if d < best[0]:
+                best = (d, cum[i] + t * math.sqrt(dx * dx + dy * dy))
+        return best[1], best[0]
+
+    def at(s):                           # outline point at arc position s
+        s %= per
+        for i in range(n):
+            if s <= cum[i + 1]:
+                t = (s - cum[i]) / (cum[i + 1] - cum[i])
+                return (poly[i][0] + t * (poly[(i + 1) % n][0] - poly[i][0]), poly[i][1] + t * (poly[(i + 1) % n][1] - poly[i][1]))
+        return poly[0]
+    gnd = [(mm(t.GetPosition().x) - ORIGIN[0], mm(t.GetPosition().y) - ORIGIN[1]) for t in b.GetTracks()
+           if t.GetClass() == "PCB_VIA" and t.GetNetname() == "GND"]
+    on = sorted((s_, p) for p, (s_, d_) in ((p, near(p)) for p in gnd) if d_ <= band)
+    ss = [s_ for s_, _p in on]
+    ko_h = TO.ANT_KEEPOUT_H_MM + 0.3                    # the keep-out triangle is bounded by the outline: every outline point above it is inside
+    rings = [(x, y, G.MOUNT_KEEPOUT_D / 2) for nm, x, y, d, _p in G.holes() if "MOUNT" in nm]
+
+    def exempt(p):
+        return p[1] <= ko_h or any(math.dist(p, (x, y)) < r + 0.3 for x, y, r in rings)
+    # gap between neighbouring vias = the shorter of the straight distance (a fence round a concave corner is shorter than the
+    # outline arc) and the arc length outside the exempt spans (across the antenna keep-out the arc is mostly exempt)
+    worst, gaps = 0.0, []
+    for k in range(len(on)):
+        a_, pa = on[k]
+        c_, pc = on[k + 1] if k + 1 < len(on) else (on[0][0] + per, on[0][1])
+        eu = math.dist(pa, pc)
+        if eu <= lim:
+            worst = max(worst, eu)
+            continue
+        free = sum(0.2 for j in range(int((c_ - a_) / 0.2)) if not exempt(at(a_ + j * 0.2)))
+        g = min(eu, free)
+        worst = max(worst, g)
+        if g > lim:
+            gaps.append((round(g, 1), tuple(round(v, 1) for v in pa)))
+    rows = [("GND via fence along the outline (emi_check row, here)", bool(ss) and not gaps,
+             f"{len(ss)} GND vias within {band} mm of the outline, largest unexempted gap {worst:.1f} mm (max {lim})" + (f"; gaps {gaps}" if gaps else ""))]
+    filler = pcbnew.ZONE_FILLER(b)
+    filler.Fill(b.Zones())
+    zones = {b.GetLayerName(z.GetLayer()): z for z in b.Zones() if not z.GetIsRuleArea() and z.GetNetname() == "GND"}
+    ref = {"F.Cu": "In1.Cu", "B.Cu": "In2.Cu"}
+    own = {}
+    for t in b.GetTracks():
+        if t.GetClass() == "PCB_VIA":
+            own.setdefault(t.GetNetname(), []).append(((mm(t.GetPosition().x), mm(t.GetPosition().y)), mm(t.GetWidth()) / 2 + 0.45))
+    for fp in b.GetFootprints():
+        for pad in fp.Pads():
+            own.setdefault(pad.GetNetname(), []).append(((mm(pad.GetPosition().x), mm(pad.GetPosition().y)), max(mm(pad.GetSizeX()), mm(pad.GetSizeY())) / 2 + 0.45))
+    worst_run, at_ = 0.0, None
+    for t in b.GetTracks():
+        if t.GetClass() == "PCB_VIA" or t.GetNetname() == "GND":
+            continue
+        lay = b.GetLayerName(t.GetLayer())
+        z = zones.get(ref.get(lay, ""))
+        if z is None:
+            continue
+        a_p, c_p = (mm(t.GetStart().x), mm(t.GetStart().y)), (mm(t.GetEnd().x), mm(t.GetEnd().y))
+        L = math.dist(a_p, c_p)
+        k = max(1, int(L / 0.1))
+        run = 0.0
+        for i in range(k + 1):
+            p = (a_p[0] + (c_p[0] - a_p[0]) * i / k, a_p[1] + (c_p[1] - a_p[1]) * i / k)
+            covered = z.HitTestFilledArea(z.GetLayer(), pcbnew.VECTOR2I(pcbnew.FromMM(p[0]), pcbnew.FromMM(p[1])), 0) or \
+                any(math.dist(p, q) < r for q, r in own.get(t.GetNetname(), []))
+            run = 0.0 if covered else run + L / k
+            if run > worst_run:
+                worst_run, at_ = run, (t.GetNetname(), lay, round(p[0] - ORIGIN[0], 1), round(p[1] - ORIGIN[1], 1))
+    rows.append(("track over plane void (emi_check row, here)", worst_run <= vmax,
+                 f"longest run without its reference plane after a zone refill {worst_run:.2f} mm (max {vmax}; own antipads excluded)" +
+                 (f" at {at_}" if at_ and worst_run > vmax else "")))
+    return rows
 
 
 def proof(path: Path) -> bool:
@@ -560,6 +688,15 @@ def proof(path: Path) -> bool:
                 bad_net.append((ref, pad.GetNumber(), nn))
     rows.append(("pad positions = tree_geometry", worst < 1e-4 and n == 40, f"{n} pads, worst {worst:.6f} mm"))
     rows.append(("pad nets = tree_common / netlist.csv", not bad_net, f"{bad_net[:3] or 'all 40 equal'}"))
+    # no via in an SMD pad, own net included (rules/tree-b.kicad_dru 'via clear of SMD pads, also same net', drill edge to pad copper
+    # >= 0.2 mm): KiCad's DRC skips same-net pairs for hole clearance, so it is proved here from the vias of the board file
+    vias = [(mm(t.GetPosition().x) - ORIGIN[0], mm(t.GetPosition().y) - ORIGIN[1], mm(t.GetDrillValue())) for t in b.GetTracks()
+            if t.GetClass() == "PCB_VIA"]
+    spads = [(cx, cy, w, h) for ref_, fpn_, x_, y_, lay_, rot_ in placements() for _n, cx, cy, w, h in G.world_pads(fpn_, x_, y_, rot_, lay_)]
+    gap = min((math.hypot(max(abs(vx - cx) - w / 2, 0.0), max(abs(vy - cy) - h / 2, 0.0)) - d / 2 for vx, vy, d in vias
+               for cx, cy, w, h in spads), default=9.9)
+    rows.append(("via drill edge to SMD pad >= 0.2 (own net too)", gap >= 0.2 - 1e-6, f"{len(vias)} vias, smallest gap {gap:.3f} mm"))
+    rows.extend(plane_rows(b, pcbnew, vias))
     box = b.GetBoardEdgesBoundingBox()
     rows.append(("outline box", abs(mm(box.GetWidth()) - TO.W) < 0.2 and abs(mm(box.GetHeight()) - TO.H) < 0.2,
                  f"{mm(box.GetWidth()):.2f} x {mm(box.GetHeight()):.2f} mm (tree_outline {TO.W} x {TO.H})"))
@@ -605,16 +742,27 @@ def main():
     ap.add_argument("--proof", type=Path, help="run with $KICAD_PYTHON: compare this board file with tree_geometry / tree_common")
     ap.add_argument("--out", type=Path, default=BOARD_DIR)
     ap.add_argument("--no-routes", action="store_true")
+    ap.add_argument("--frozen", type=Path, help="replay this frozen-routes JSON instead of hardware/tree-b/frozen-routes.json (grading a router result)")
     ap.add_argument("--router-input", action="store_true", help="add the User.2 keep-out polygons KiCadRoutingTools reads")
+    ap.add_argument("--stub", type=float, default=0.0, help="with --no-routes: F.Cu escape stub length from each LED pad centre (experiment)")
+    ap.add_argument("--route", choices=("frozen", "krt"), default="frozen",
+                    help="frozen (default): replay frozen-routes.json; krt: re-run KiCadRoutingTools (gen/tree_b_krt.py run --write, about 10 s), "
+                         "replace frozen-routes.json when the result is clean, then build the board with it")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--inner", choices=("none", "floating"), help="inner layers: no copper (default) or a net-less pour on In1/In2")
     a = ap.parse_args()
-    global INNER_PLANES
+    global INNER_PLANES, STUB_LEN
+    STUB_LEN = a.stub
     if a.inner:
         INNER_PLANES = a.inner
     if a.proof:
         sys.exit(0 if proof(a.proof) else 1)
-    routes = None if a.no_routes else load_routes()
+    if a.route == "krt":
+        import subprocess
+        r = subprocess.run([sys.executable, str(HERE / "tree_b_krt.py"), "run", "--flow", "chain", "--write"])
+        if r.returncode:
+            sys.exit("tree_b_pcb: the KiCadRoutingTools run did not give a clean result; frozen-routes.json is unchanged")
+    routes = None if a.no_routes else load_routes(a.frozen)
     if a.check:
         h = []
         for _ in range(2):

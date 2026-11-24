@@ -1,11 +1,15 @@
-# Settings of calc/emi_check.py for tree-b (LED board: 8 LEDs, header J4, lines LED_L1..LED_L8, no ground net, no IC, no switch node,
-# no USB pair). Rows that make sense here: antenna strip (nothing in the antenna keep-out), and the plane row switched off below.
+# Settings of calc/emi_check.py for tree-b (LED board: 8 LEDs, header J4, lines LED_L1..LED_L8, GND planes since D31, no IC, no switch node,
+# no USB pair). Rows: edge GND fence, antenna strip (nothing in the antenna keep-out), track over plane void.
 antenna_area: antenna_keepout   # rule area written by gen/tree_b_pcb.py (tree_geometry.antenna_keepout_polygon, all 4 copper layers)
-# GND via fence and plane void rows: board B has no ground net (D13: the header carries 8 LED lines only), its inner layers are
-# copper-free (BOARD.md Floorplan), so there is no fence to build and no reference plane to void.
+# GND via fence and plane void rows (D31): board B has a GND net and solid GND planes on In1/In2, so both rows APPLY, but calc/emi_check.py
+# cannot measure them here: its fence walks the bounding box of the 70 x 105 box (the tree outline is not a box: 328 mm "gap"), and the
+# plane row reads zone fills from the board file, which the generator writes unfilled (31 mm "void" under LED_L8). Both limits are
+# therefore measured by `gen/tree_b_pcb.py --proof` (rows "GND via fence along the outline" along the true outline, exempt spans =
+# antenna keep-out and M2 rings; "track over plane void" after a pcbnew zone refill) with the SAME numbers (edge_pitch_mm,
+# edge_band_mm, void_max_mm below). Proposal for the shared tool (not made): emi_check reads a refilled copy and walks the true outline.
 edge_fence: false
-edge_fence_reason: "board B has no GND net and no ground plane (D13, BOARD.md Floorplan); the 8 LED lines are slow PWM lines driven through 22 ohm on board A"
-plane_ref: {}                   # no reference plane layers: the planes row skips every track
+edge_fence_reason: "measured by tree_b_pcb.py --proof along the true outline (66 GND vias, largest gap 4.7 mm of 5.0); emi_check walks the bounding box and cannot see the tree outline"
+plane_ref: {}                   # emi_check reads fills from the unfilled board file; tree_b_pcb.py --proof measures F.Cu over In1 and B.Cu over In2 after a refill
 edge_pitch_mm: 5.0
 edge_band_mm: 1.6
 void_max_mm: 1.0

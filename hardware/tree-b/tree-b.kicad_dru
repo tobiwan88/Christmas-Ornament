@@ -3,10 +3,10 @@
 # Fab floors and clearances are in the project file (rules/jlc-4layer.json, board.yaml net_classes), not here.
 # The router floor in rules/krt-fab.txt is pinned to the values below (board_edge 0.35).
 (rule "via to board edge"
-	(constraint edge_clearance (min 0.35))
+	(constraint edge_clearance (min 0.35mm))
 	(condition "A.Type == 'Via'"))
 # No via in an SMD pad (the LED land is 0.45 mm square: a via there would wick solder away from the LED); a via is
 # also kept clear of pads of its own net.
 (rule "via clear of SMD pads, also same net"
-	(constraint hole_clearance (min 0.2))
+	(constraint hole_clearance (min 0.2mm))
 	(condition "A.Type == 'Via' && B.Type == 'Pad' && B.Pad_Type == 'SMD'"))
