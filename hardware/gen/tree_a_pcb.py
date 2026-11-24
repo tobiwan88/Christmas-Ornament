@@ -71,7 +71,7 @@ BT1_ROT = 270.0               # pads 1 (BAT) and 2 (GND) at the top end, next to
 J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: the bottom edge is blocked by BT1's pads
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
 NO_POUR_PADS = (("C9", "2"), ("C11", "2"))   # 0201 GND pads: own via, no connection to GND_F_local
-POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"))                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
+POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"))                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
 MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
@@ -235,20 +235,22 @@ def floorplan(P):
         P.put(ref, xr_r, yk(k), 180.0)
     # gate 4 escape round 2 (engineer decision 1c): the neck left of J3 (y 28-29.5, 2.9 mm between the edge fillet and J3)
     # carries only the LED lines L5-L8 (+ VDD / GND); the other left-strip parts moved out:
-    #  - battery divider R40 / R41 + C14 as a column in the left wing between the edge and BT1, above Q1, next to VIN (Q1 source); VBAT_SENSE (pin 5, bottom
-    #    row) runs down J3's middle on B.Cu and under the holder; C14 sits right below R41 at the divider (review: C14 at the
-    #    divider or the pin; the pin side has no room: J3 courtyard 0.02 mm below U1)
-    #  - R10 (BTN_SW1 series) beside the divider: BTN_SW1 leaves on B.Cu under J3 like VBAT_SENSE, BTN_SW1_PAD runs on to
-    #    SW1 on the outer face
-    #  - R43 (VBUS_DET pull-down) on the right next to its partner R42 (VBUS_DET pads stacked)
-    P.put("R40", 22.55, 40.20, 0.0)           # battery divider top (VIN pad 1 left, towards Q1 / BT1 pad 1)
-    P.put("R41", 22.55, 41.30, 0.0)           # battery divider bottom (VBAT_SENSE pad 1 left, GND right)
-    P.put("C14", 22.55, 42.40, 0.0)           # VBAT_SENSE filter 100 nF below R41 (pads stacked)
-    P.put("R10", 22.55, 43.50, 0.0)           # BTN_SW1 series 1 k (pin 37)
-    P.put("R43", xr_r + 2.1, yk(3) + 0.78, 0.0)   # VBUS_DET pull-down, pad 1 above R42.2 (VBUS_DET)
+    #  - left wing column at x 22.55 between the edge and BT1 (one topology for the three inner nets: they leave the left
+    #    row / bottom row on B.Cu between the via row and the exposed pad, run under J3 and under the holder, and cross
+    #    no LED line): R43 / R42 (VBUS_DET, pin 38) and R10 (BTN_SW1, pin 37) above Q1; the battery divider R40 / R41 with
+    #    C14 right below R41 under Q1 (R40's VIN pad next to Q1's source; VBAT_SENSE from pin 5 down J3's middle). C14 at
+    #    the divider (review: at the divider or the pin; the pin side has no room, J3 courtyard 0.02 mm below U1)
+    #  - first try (R43 at the right strip next to R42): VBUS_DET then crossed the bottom-row LED lines L1-L4: 23/28
+    P.put("R43", 22.55, 40.20, 0.0)           # VBUS_DET pull-down (pin 38)
+    T([(23.06, 40.20), (23.10, 39.35)])
+    V(23.10, 39.35)                           # R43 GND via into In1 (escape proof: the pad was walled in by BTN / VBUS_DET)
+    P.put("R42", 22.55, 41.30, 0.0)           # variant B VBUS_DET divider top (VBUS from J1 under the holder)
+    P.put("R10", 22.55, 42.40, 0.0)           # BTN_SW1 series 1 k (pin 37)
+    P.put("R40", 22.55, 48.60, 0.0)           # battery divider top, VIN pad 1 next to Q1's source
+    P.put("R41", 22.55, 49.70, 0.0)           # battery divider bottom (VBAT_SENSE pad 1 left, GND right)
+    P.put("C14", 22.55, 50.80, 0.0)           # VBAT_SENSE filter 100 nF right below R41 (pads stacked)
     P.put("R45", xr_r, yk(4.6), 180.0)        # CHG_STAT bottom (pin 23, right row)
     P.put("R9", 41.80, 22.40, 180.0)         # nRESET series to TC1 pad 3: next to C13 at the top-right corner (gate 4)
-    P.put("R42", xr_r + 2.1, yk(4.6), 180.0)  # variant B divider tops
     P.put("R44", xr_r + 2.1, yk(5.6), 180.0)
     # ---- 4. power: Q1 at BT1 pad 1 (BAT), TPS63900 stage in the left wing ------------------------------------------------
     b1 = P.pad("BT1", "1")
@@ -583,9 +585,11 @@ ESC_STARTS = (("VDD", *_L, "/mcu/BTN_SW1", "/charger/VBUS_DET", "/mcu/VBAT_SENSE
               ("VDD", *_L, "/charger/VBUS_DET", "/mcu/VBAT_SENSE", "/mcu/BTN_SW1"),
               ("VDD", "/mcu/BTN_SW1", "/charger/VBUS_DET", *_L, "/mcu/VBAT_SENSE"),
               ("/mcu/BTN_SW1", "/charger/VBUS_DET", "VDD", *_L, "/mcu/VBAT_SENSE"),
-              ("VDD", *_L, "/mcu/VBAT_SENSE", "/charger/VBUS_DET", "/mcu/BTN_SW1", "GND"),
-              ("VDD", "/mcu/VBAT_SENSE", *_L, "/charger/VBUS_DET", "/mcu/BTN_SW1"))
+              ("/mcu/BTN_SW1", "/charger/VBUS_DET", "/mcu/VBAT_SENSE", *_L, "VDD"),
+              ("/mcu/VBAT_SENSE", "/mcu/BTN_SW1", "/charger/VBUS_DET", "VDD", *_L))
 ESC_FIRST = ESC_STARTS[0]
+# Nets left out of pass 1 (routed in the repair passes). Tried GND here (2026-11-24): 19/28 instead of 23/28, so empty.
+ESC_LAST = ()
 ESC_PASSES = (("--ordering", "original"),
               ("REPAIR", "--ordering", "original", "--max-ripup", "10"),
               ("REPAIR", "--ordering", "original", "--max-ripup", "12", "--via-cost", "10"))
@@ -646,6 +650,7 @@ def escape_proof(pcb: Path, extra=(), outdir: Path = None, first=ESC_FIRST, pass
             for suf in (".kicad_pro", ".kicad_dru"):
                 shutil.copy(pcb.with_suffix(suf), o.with_suffix(suf))
             nets = [n for n in st if n in u1nets] + [n for n in u1nets if n not in st]
+            nets = [n for n in nets if n not in ESC_LAST]
             cmd = [str(py), str(KRT / "py_router" / "route.py"), str(src), str(o), "--nets", *nets, *ESC_ARGS,
                    *passes[0], *extra, "--json-out", str(d_out / f"summary_pass1_s{k}.json")]
             cmds.append(" ".join(cmd).replace(str(HW.parent) + "/", ""))
@@ -682,6 +687,8 @@ def escape_proof(pcb: Path, extra=(), outdir: Path = None, first=ESC_FIRST, pass
         for suf in (".kicad_pro", ".kicad_dru"):
             shutil.copy(pcb.with_suffix(suf), out.with_suffix(suf))
         nets, pargs = list(todo), list(pargs)
+        if i == 1:
+            nets = [n for n in nets if n not in ESC_LAST]
         if pargs and pargs[0] == "REPAIR":
             pargs = pargs[1:]
             blk = []
