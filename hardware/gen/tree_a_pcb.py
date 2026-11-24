@@ -402,12 +402,14 @@ def _opt(args, name, default=None):
     return args[args.index(name) + 1] if name in args else default
 
 
-def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None) -> Path:
+def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False, escapes=None, keepout=None) -> Path:
     """Build the board into another directory (router input, grading copy): board + project + rules + library table +
     schematic (for the parity check). The committed board is never touched."""
     r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--out", str(out_dir), "--stub", str(stub)]
                        + (["--frozen", str(routes)] if routes else ["--no-routes"])
-                       + (["--escapes", ",".join(escapes) or "none"] if escapes is not None else []), capture_output=True, text=True)
+                       + (["--escapes", ",".join(escapes) or "none"] if escapes is not None else [])
+                       + (["--router-keepout", ";".join(",".join(str(v) for v in b) for b in keepout)] if keepout else []),
+                       capture_output=True, text=True)
     if r.returncode:
         sys.exit(f"build_into {out_dir}: {r.stdout[-800:]}{r.stderr[-800:]}")
     if not quiet:
@@ -448,7 +450,8 @@ def stage1(args):
         variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
                "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
-               "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPES]}
+               "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPES],
+               "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b]}
         jf = Path(td) / "job.json"
         jf.write_text(json.dumps(job))
         r = PS.run_isolated([kpy, str(Path(__file__).resolve()), "--pcbnew", str(jf)], capture_output=True, text=True)
@@ -1134,6 +1137,20 @@ def stage2(job_file):
                 tr.SetLayer(pcbnew.B_Cu)
                 tr.SetNet(pd.GetNet())
                 board.Add(tr)
+    # router input only (--no-routes --router-keepout BOXES): rectangles on User.3 that KiCadRoutingTools reads with
+    # --keepout --keepout-layer User.3 in the passes that ask for it (gen/tree_a_krt.py); never on a committed board
+    if job.get("router_keepout") and not routes:
+        ls = board.GetEnabledLayers()
+        ls.AddLayer(pcbnew.User_3)
+        board.SetEnabledLayers(ls)
+        for x0, y0, x1, y1 in job["router_keepout"]:
+            r = pcbnew.PCB_SHAPE(board)
+            r.SetShape(pcbnew.SHAPE_T_RECT)
+            r.SetStart(V(x0, y0))
+            r.SetEnd(V(x1, y1))
+            r.SetLayer(pcbnew.User_3)
+            r.SetWidth(mm(0.05))
+            board.Add(r)
     for ref, fp in fps.items():                 # silk reference on the fab layer for 0201/0402-dense parts would hide
         fp.Reference().SetTextSize(V(0.6, 0.6))  # designators; 0.6 mm silk is below the 0.8 floor: keep them on Fab
         fp.Reference().SetTextThickness(mm(0.1))

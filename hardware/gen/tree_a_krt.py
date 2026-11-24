@@ -195,7 +195,7 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
     cfg = {**CHAIN, **(cfg or {})}
     workdir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    inp = A.build_into(workdir / "in", stub=cfg["stub"], quiet=True, escapes=cfg.get("escapes"))
+    inp = A.build_into(workdir / "in", stub=cfg["stub"], quiet=True, escapes=cfg.get("escapes"), keepout=cfg.get("keepout"))
     times = [("build unrouted board (tree_a_pcb.py --no-routes)", time.time() - t0, 0)]
     py, rt = KRT_PY, KRT / "py_router"
     common = ["--clearance", cfg["clearance"], "--via-size", cfg["via"], "--via-drill", cfg["drill"],
@@ -222,6 +222,8 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
     for i, ps in enumerate(cfg["passes"], start=1):
         out = workdir / f"s{i}_route.kicad_pcb"
         lc = ["--layer-costs", *ps["layer_costs"]] if ps.get("layer_costs") else []
+        if ps.get("keepout"):                              # this pass stays out of the User.3 boxes of cfg["keepout"]
+            lc += ["--keepout", "--keepout-layer", "User.3"]
         rc, t = sh([py, rt / "route.py", cur, out, "--nets", *ps["nets"], *base, *lc, *ps["args"],
                     "--json-out", workdir / f"s{i}_route.json"], workdir / f"s{i}_route.log")
         times.append((f"route.py pass {i} ({' '.join(str(a) for a in ps['args'])})", t, rc))
