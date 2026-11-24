@@ -177,7 +177,10 @@ def grade(frozen: Path, workdir: Path, escapes=None, in2_zone=None, in2_net=None
 # ------------------------------------------------------------------------------------------------------------------
 # the flow
 # ------------------------------------------------------------------------------------------------------------------
-def sh(cmd: list, log: Path) -> tuple[int, float]:
+def sh(cmd: list, log: Path, nets=None) -> tuple[int, float]:
+    if nets is not None:                                   # replace the '--nets *' of a route.py command
+        k = cmd.index("--nets")
+        cmd = cmd[:k + 1] + list(nets) + cmd[k + 2:]
     t0 = time.time()
     with open(log, "w") as fh:
         r = subprocess.run([str(x) for x in cmd], stdout=fh, stderr=subprocess.STDOUT, cwd=str(KRT),
@@ -273,7 +276,8 @@ def stamp_snpc(pro: Path, value: float) -> None:
 
 def patch_rules(pro: Path, rules: dict | None) -> None:
     """Experiment hook: the Default net class and the board minimums of a project copy (router input or grading copy)
-    set to rules = {clearance, track, via, drill}; never used on the committed project (board.yaml is the source)."""
+    set to rules = {clearance, track, via, drill[, min_clearance, min_track]} (--board-rules narrows a net that cannot
+    complete at the class down to the minimums only); never used on the committed project (board.yaml is the source)."""
     if not rules:
         return
     d = json.loads(pro.read_text())
@@ -281,7 +285,8 @@ def patch_rules(pro: Path, rules: dict | None) -> None:
         if c["name"] == "Default":
             c.update(clearance=rules["clearance"], track_width=rules["track"], via_diameter=rules["via"], via_drill=rules["drill"])
     r = d["board"]["design_settings"]["rules"]
-    r.update(min_clearance=min(r["min_clearance"], rules["clearance"]), min_track_width=min(r["min_track_width"], rules["track"]),
+    r.update(min_clearance=rules.get("min_clearance", min(r["min_clearance"], rules["clearance"])),
+             min_track_width=rules.get("min_track", min(r["min_track_width"], rules["track"])),
              min_via_diameter=min(r["min_via_diameter"], rules["via"]),
              min_through_hole_diameter=min(r["min_through_hole_diameter"], rules["drill"]))
     pro.write_text(json.dumps(d, indent=2))
@@ -364,6 +369,165 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
     return 0 if clean else 2
 
 
+# ------------------------------------------------------------------------------------------------------------------
+# the default flow since the engineer's plane decision (gate 5 round 3, D34 proposed): autoroute.py's own plan with ONLY
+# the plane map changed. autoroute.py picks GND on In1 and the dominant rail (VDD) on In2 by itself and has no option or
+# plan field for the plane map (docs/utilities.md "Deterministic Plan Router", autoroute.analyze: plane_layers + rails),
+# so its steps are run here one by one: planes (GND on In1 AND In2) -> U1 fan-out (qfn_fanout.py, as its fanout step) ->
+# route.py passes at its standard rung (0.1 / 0.1, via 0.45 / 0.2) -> the same passes from the fan-out board at its floor
+# rung (clearance 0.09) -> the better rung ships -> GND edge fence + a last route.py on GND (plane finalize).
+# Difference to autoroute.py on purpose: the inner layers stay off-limits for signals in EVERY pass (autoroute's passes 2-3
+# price them 3.0) so both GND planes stay solid; "in2_fallback" = "open": after the outer-layer passes stop
+# improving, only the nets still open may use In2 (cost 3.0, In1 stays closed), or a list of net patterns (the engineer's
+# fallback: local power / signal on In2 only if routing needs it, reported per net).
+# ------------------------------------------------------------------------------------------------------------------
+PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=True, fence=True,
+            rules={"clearance": 0.1, "track": 0.1, "via": 0.45, "drill": 0.2, "min_clearance": 0.09, "min_track": 0.09},
+            standard=0.1, floor_clearance=0.09, track=0.1, via=0.45, drill=0.2, grid=0.05, in2_fallback=[],
+            power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
+                   ["/mcu/DCC", 0.3], ["/mcu/VSS_PA", 0.3]])
+
+
+def _route_summary(js: Path) -> dict:
+    try:
+        d = json.loads(js.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return d if isinstance(d, dict) else {}
+
+
+def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
+    import tree_a_pcb as A
+    workdir.mkdir(parents=True, exist_ok=True)
+    times, info = [], {"rungs": {}}
+    t0 = time.time()
+    inp = A.build_into(workdir / "in", quiet=True, escapes=cfg["escapes"], in2_net="GND", hand=cfg["hand"])
+    times.append((f"build router input (hand {','.join(cfg['hand']) or 'none'}, In1 + In2 GND)", time.time() - t0, 0))
+    patch_rules(inp.with_suffix(".kicad_pro"), cfg["rules"])
+    stamp_snpc(inp.with_suffix(".kicad_pro"), cfg["snpc"])
+    py, rt = KRT_PY, KRT / "py_router"
+    s1 = workdir / "s1_planes.kicad_pcb"
+    rc, t = sh([py, "-u", rt / "route_planes.py", inp, s1, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",
+                "--clearance", cfg["standard"]], workdir / "s1_planes.log")
+    times.append(("route_planes.py GND on In1 + In2", t, rc))
+    cur = s1
+    if cfg["fanout"] and "fanout" not in cfg["hand"]:
+        s2 = workdir / "s2_fanout_U1.kicad_pcb"
+        rc, t = sh([py, "-u", rt / "qfn_fanout.py", s1, "--output", s2, "--component", "U1", "--nets", "*", "!GN[D/]",
+                    "--width", cfg["track"], "--grid-step", cfg["grid"], "--clearance", cfg["standard"],
+                    "--clearance-ceiling", cfg["standard"]], workdir / "s2_fanout_U1.log")
+        times.append(("qfn_fanout.py U1 (autoroute's fanout step)", t, rc))
+        if s2.exists():
+            cur = s2
+    base = ["--nets", "*", "--no-bga-zones", "--track-width", cfg["track"], "--via-size", cfg["via"], "--via-drill", cfg["drill"],
+            "--grid-step", cfg["grid"], "--escalation", "board",
+            "--power-nets", *[q[0] for q in cfg["power"]], "--power-nets-widths", *[q[1] for q in cfg["power"]],
+            "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
+    best = None
+
+    def one_pass(prev, out, ceil, nets, lc, label):
+        rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance-ceiling", ceil, "--layer-costs", *lc,
+                    "--json-out", out.with_suffix(".json")], out.with_suffix(".log"), nets=nets)
+        times.append((f"route.py {label}", t, rc))
+        if not out.exists():
+            return None
+        g, names = _krt_open(out)
+        info["passes"].append((label, g, names, round(t, 1)))
+        print(f"   {label}: {g} open {names} (KRT check_connected), {t:.1f} s", flush=True)
+        return g, names
+
+    info["passes"] = []
+    for rung, ceil in (("standard", cfg["standard"]), ("floor", cfg["floor_clearance"])):
+        if rung == "floor" and (not cfg["floor"] or (best and best[1] == 0)):
+            continue
+        prev, last = cur, None
+        for k in range(1, cfg["passes"] + 1):          # signals on F.Cu / B.Cu only; a pass that does not improve ends it
+            out = workdir / f"s3_{rung}_p{k}.kicad_pcb"
+            r = one_pass(prev, out, ceil, ["*"], ["1.0", "-1", "-1", "1.0"], f"{rung} rung (clearance {ceil}) pass {k}, outer layers")
+            if r is None:
+                break
+            if best is None or r[0] < best[1]:
+                best = (out, r[0], r[1])
+            if r[0] == 0 or (last is not None and r[0] >= last):
+                break
+            prev, last = out, r[0]
+    if best and best[1] and cfg["in2_fallback"]:       # engineer's fallback: only the still-open nets (or the listed ones) may
+        prev = best[0]                                  # use In2 (3.0), In1 stays closed
+        for k in (1, 2):
+            nets = best[2] if cfg["in2_fallback"] == "open" else list(cfg["in2_fallback"])
+            out = workdir / f"s4_in2_fallback_p{k}.kicad_pcb"
+            r = one_pass(prev, out, cfg["standard"], nets, ["1.0", "-1", "3.0", "1.0"], f"In2 fallback pass {k} for {nets}")
+            if r is None or r[0] >= best[1]:
+                break
+            best, prev = (out, r[0], r[1]), out
+            if r[0] == 0:
+                break
+    cur = best[0] if best else cur
+    if cfg["fence"]:
+        f = workdir / "s8_fence.kicad_pcb"
+        rc, t = sh([py, "-u", rt / "route_planes.py", cur, f, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",
+                    "--clearance", cfg["standard"], "--stitch-edge-fence", "--stitch-fence-pitch", "4.2"], workdir / "s8_fence.log")
+        times.append(("route_planes.py edge fence round the routed signals", t, rc))
+        out = workdir / "s9_final.kicad_pcb"
+        rc, t = sh([py, "-u", rt / "route.py", f, out, *base[:0], "--nets", "GND", "--no-bga-zones", "--track-width", cfg["track"],
+                    "--via-size", cfg["via"], "--via-drill", cfg["drill"], "--grid-step", cfg["grid"], "--escalation", "board",
+                    "--clearance-ceiling", cfg["standard"], "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu",
+                    "--layer-costs", "1.0", "-1", "-1", "1.0", "--json-out", out.with_suffix(".json")], workdir / "s9_final.log")
+        times.append(("route.py GND (plane finalize, the chain ends on route.py)", t, rc))
+        if out.exists():
+            info["final_open"] = _krt_open(out)[0]
+            cur = out
+    return cur, times, info
+
+
+def _krt_open(board: Path) -> tuple[int, list]:
+    """Open nets by KRT's check_connected (as autoroute grades a pass): (count, net names)."""
+    r = subprocess.run([str(KRT_PY), str(KRT / "py_router" / "check_connected.py"), str(board)], capture_output=True,
+                       text=True, cwd=str(KRT))
+    if "ALL NETS FULLY CONNECTED" in r.stdout:
+        return 0, []
+    m = re.search(r"FOUND (\d+) ISSUE", r.stdout)
+    names = sorted(set(re.findall(r"^\s{2}(\S+) \(net \d+\):", r.stdout, re.M)))
+    return (int(m.group(1)) if m else 999), names
+
+
+def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
+    cfg = {**PLAN, **cfg}
+    t0 = time.time()
+    out, times, info = plan_flow(workdir, cfg)
+    for step, sec, rc in times:
+        print(f"TIME {sec:7.1f} s  rc {rc}  {step}")
+    print(f"TIME {time.time() - t0:7.1f} s  total (build + planes + fanout + route + fence)")
+    if not out.exists():
+        print("FAIL: no board; logs in", workdir)
+        return 1
+    frozen = workdir / "routes.json"
+    frozen.write_text(json.dumps(extract(out.read_text()), indent=1) + "\n")
+    print_metrics(metrics(json.loads(frozen.read_text())))
+    t1 = time.time()
+    res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"], cfg["rules"])
+    print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC, all severities, parity)")
+    print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
+          f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")
+    for i in res["items"][:30]:
+        print("   ", i)
+    clean = res["errors"] == res["warnings"] == res["unconnected"] == 0
+    (workdir / "grade.json").write_text(json.dumps({**res, "clean": clean, "cfg": cfg, "info": info}, indent=1, default=str))
+    if write and clean:
+        doc = {"_comment": "Frozen router result of gen/tree_a_krt.py plan (KiCadRoutingTools v%s: autoroute.py's plan run "
+                           "step by step with GND on In1 and In2, settings tree_a_krt.PLAN + 'build'). Board coordinates of "
+                           "tree_outline. Replayed as locked copper by gen/tree_a_pcb.py with the 'build' options. Re-freeze "
+                           "only on purpose: tree_a_pcb.py --route krt." % (KRT / "VERSION").read_text().strip(),
+               "build": {"in2_net": "GND", "hand": cfg["hand"], "escapes": cfg["escapes"]},
+               **json.loads(frozen.read_text())}
+        FROZEN.write_text(json.dumps(doc, indent=1) + "\n")
+        print("wrote", FROZEN.relative_to(HW.parent))
+    elif write:
+        print("NOT written: the result is not clean (DRC / unconnected)")
+        return 1
+    return 0 if clean else 2
+
+
 def run(workdir: Path, cfg: dict, write: bool) -> int:
     t0 = time.time()
     out, times = run_flow(workdir, cfg)
@@ -415,6 +579,10 @@ def main() -> int:
     r.add_argument("--workdir", type=Path, default=None)
     r.add_argument("--cfg", default="{}", help="JSON overrides of CHAIN")
     r.add_argument("--write", action="store_true")
+    pl = sub.add_parser("plan")
+    pl.add_argument("--workdir", type=Path, default=None)
+    pl.add_argument("--cfg", default="{}", help="JSON overrides of PLAN")
+    pl.add_argument("--write", action="store_true")
     au = sub.add_parser("auto")
     au.add_argument("--workdir", type=Path, default=None)
     au.add_argument("--cfg", default="{}", help="JSON overrides of AUTO")
@@ -434,6 +602,8 @@ def main() -> int:
         print(json.dumps({k: v for k, v in res.items()}, indent=1)[:3000])
     elif a.cmd == "run":
         return run(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-krt-")), json.loads(a.cfg), a.write)
+    elif a.cmd == "plan":
+        return run_plan(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-plan-")), json.loads(a.cfg), a.write)
     elif a.cmd == "auto":
         return run_auto(a.workdir or Path(tempfile.mkdtemp(prefix="tree-a-auto-")), json.loads(a.cfg), a.write)
     elif a.cmd == "sweep":
@@ -447,7 +617,7 @@ def main() -> int:
                 d = base / (c.get("name") or f"v{k}")
                 d.mkdir(parents=True, exist_ok=True)
                 c2 = {x: y for x, y in c.items() if x not in ("name", "flow")}
-                cmd = "run" if c.get("flow") == "chain" else "auto"     # sweeps run the autoroute flow unless flow=chain
+                cmd = {"chain": "run", "auto": "auto"}.get(c.get("flow"), "plan")   # sweeps run the plan flow by default
                 procs.append((k, d, subprocess.Popen([sys.executable, __file__, cmd, "--workdir", str(d), "--cfg", json.dumps(c2)],
                                                      stdout=open(d / "run.log", "w"), stderr=subprocess.STDOUT)))
             time.sleep(2)
