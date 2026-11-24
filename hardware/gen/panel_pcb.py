@@ -1642,9 +1642,12 @@ def main(argv):
     do_drc = "--no-drc" not in argv
     if "--check" in argv:
         with tempfile.TemporaryDirectory(prefix="panel-check-") as td:
-            run(Path(td), rows, do_drc, preview=False)
+            # same depth as hardware/panel, so the fp-lib-table entry ${KIPRJMOD}/../lib/tree.pretty resolves in the temp build
+            os.symlink(ROOT / "hardware/lib", Path(td) / "lib")
+            out = Path(td) / "panel"
+            run(out, rows, do_drc, preview=False)
             for f in ("panel.kicad_pcb", "panel.kicad_pro", "panel.kicad_dru", "drc-waivers.csv"):
-                new, old = Path(td) / f, PANEL_DIR / f
+                new, old = out / f, PANEL_DIR / f
                 same = old.exists() and new.read_bytes() == old.read_bytes()
                 rows.add("OK" if same else "WARN!", "committed %s fresh" % f,
                          "identical to a rebuild from the current board files" if same else
