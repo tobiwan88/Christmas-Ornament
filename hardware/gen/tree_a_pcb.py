@@ -552,9 +552,22 @@ ESC_ARGS = ["--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu", "--layer-costs", "1.
             "--same-net-pad-clearance", "0.15"]   # rules/tree-a.kicad_dru "via to SMD pad" (KRT does not read that rule)
 
 
-ESC_PASSES = (("--ordering", "inside_out"),
-              ("--ordering", "original", "--rip-existing-nets", "*", "--max-ripup", "10"),
-              ("--ordering", "mps", "--rip-existing-nets", "*", "--max-ripup", "10"))
+# Pass 1: ordering "original" with the hard nets first (the left via row / left strip: VDD, then LED L8..L5, VBUS_DET,
+# VBAT_SENSE, BTN_SW1; found by the sweep in NOTES-routing-lessons.md "tree-a U1 escape"). Repair passes: the nets still
+# open go first, together with the nets KRT names as their blockers, which may be ripped and re-routed ("REPAIR").
+# KRT's result depends on the net order (sweep: 20-27 of 28 for different orders on the same board), so pass 1 runs several
+# start orders in parallel and keeps the board with the most connected U1 nets (ties: fewer DRC errors, then the first).
+_L = ("/leds/LED_L8_MCU", "/leds/LED_L7_MCU", "/leds/LED_L6_MCU", "/leds/LED_L5_MCU")
+ESC_STARTS = (("VDD", *_L, "/mcu/BTN_SW1", "/charger/VBUS_DET", "/mcu/VBAT_SENSE"),
+              ("VDD", *_L, "/charger/VBUS_DET", "/mcu/VBAT_SENSE", "/mcu/BTN_SW1"),
+              ("VDD", "/mcu/BTN_SW1", "/charger/VBUS_DET", *_L, "/mcu/VBAT_SENSE"),
+              ("/mcu/BTN_SW1", "/charger/VBUS_DET", "VDD", *_L, "/mcu/VBAT_SENSE"),
+              ("VDD", *_L, "/mcu/VBAT_SENSE", "/charger/VBUS_DET", "/mcu/BTN_SW1", "GND"),
+              ("VDD", "/mcu/VBAT_SENSE", *_L, "/charger/VBUS_DET", "/mcu/BTN_SW1"))
+ESC_FIRST = ESC_STARTS[0]
+ESC_PASSES = (("--ordering", "original"),
+              ("REPAIR", "--ordering", "original", "--max-ripup", "10"),
+              ("REPAIR", "--ordering", "original", "--max-ripup", "12", "--via-cost", "10"))
 
 
 def KRT_VERSION():                                         # noqa: N802
@@ -587,7 +600,7 @@ def _esc_verdict(board: Path, dj: Path):
     return unc, [v for v in d["violations"] if v["severity"] == "error"]
 
 
-def escape_proof(pcb: Path, extra=(), outdir: Path = None, first=(), passes=ESC_PASSES) -> bool:
+def escape_proof(pcb: Path, extra=(), outdir: Path = None, first=ESC_FIRST, passes=ESC_PASSES) -> bool:
     """Pass 1 routes every U1 net (ESC_ORDER_1); each further pass re-routes only the nets still open on the previous
     pass's board, may rip the router's own (unlocked) copper and uses the next ordering. Verdict on the last board."""
     import time
@@ -604,11 +617,60 @@ def escape_proof(pcb: Path, extra=(), outdir: Path = None, first=(), passes=ESC_
     for suf in (".kicad_pcb", ".kicad_pro", ".kicad_dru"):
         shutil.copy(pcb.with_suffix(suf), src.with_suffix(suf))
     todo, cur, log, cmds, t0 = list(u1nets), src, [], [], time.time()
+    starts = [first] if first is not ESC_FIRST else list(ESC_STARTS)
+    if len(starts) > 1:                                    # pass 1: several start orders in parallel, keep the best board
+        procs = []
+        for k, st in enumerate(starts):
+            o = d_out / f"{NAME}_pass1_s{k}.kicad_pcb"
+            for suf in (".kicad_pro", ".kicad_dru"):
+                shutil.copy(pcb.with_suffix(suf), o.with_suffix(suf))
+            nets = [n for n in st if n in u1nets] + [n for n in u1nets if n not in st]
+            cmd = [str(py), str(KRT / "py_router" / "route.py"), str(src), str(o), "--nets", *nets, *ESC_ARGS,
+                   *passes[0], *extra, "--json-out", str(d_out / f"summary_pass1_s{k}.json")]
+            cmds.append(" ".join(cmd).replace(str(HW.parent) + "/", ""))
+            procs.append((k, o, subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                                 cwd=str(KRT))))
+        best, t1 = None, time.time()
+        for k, o, pr in procs:
+            log.append(pr.communicate()[0])
+            if pr.returncode not in (0, 3) or not o.exists():
+                print(f"escape proof pass 1 start {k}: route.py exit {pr.returncode}")
+                continue
+            unc, errs = _esc_verdict(o, d_out / f"drc_pass1_s{k}.json")
+            n_ok = sum(1 for n in u1nets if not unc.get(n))
+            print(f"escape proof pass 1 start {k}: {n_ok}/{len(u1nets)} nets connected, {len(errs)} DRC errors "
+                  f"(open: {' '.join(n for n in u1nets if unc.get(n)) or '-'})")
+            if best is None or (n_ok, -len(errs)) > best[0]:
+                best = ((n_ok, -len(errs)), k, o, unc, errs)
+        if best is None:
+            print("FAIL escape proof: no pass 1 start finished")
+            return False
+        _, k, o, unc, errs = best
+        for suf in (".kicad_pcb", ".kicad_pro", ".kicad_dru"):
+            shutil.copy(o.with_suffix(suf), (d_out / f"{NAME}_pass1").with_suffix(suf))
+        shutil.copy(d_out / f"summary_pass1_s{k}.json", d_out / "summary_pass1.json")
+        cur, todo = d_out / f"{NAME}_pass1.kicad_pcb", [n for n in u1nets if unc.get(n)]
+        print(f"escape proof pass 1 (best of {len(starts)} start orders: start {k}): {len(u1nets) - len(todo)}/"
+              f"{len(u1nets)} nets connected, {len(errs)} DRC errors, {time.time() - t1:.0f} s")
     for i, pargs in enumerate(passes, start=1):
+        if i == 1 and len(starts) > 1:
+            if not todo:
+                break
+            continue
         out = d_out / f"{NAME}_pass{i}.kicad_pcb"
         for suf in (".kicad_pro", ".kicad_dru"):
             shutil.copy(pcb.with_suffix(suf), out.with_suffix(suf))
-        cmd = [str(py), str(KRT / "py_router" / "route.py"), str(cur), str(out), "--nets", *todo, *ESC_ARGS, *pargs,
+        nets, pargs = list(todo), list(pargs)
+        if pargs and pargs[0] == "REPAIR":
+            pargs = pargs[1:]
+            blk = []
+            sj = d_out / f"summary_pass{i - 1}.json"
+            for b in (json.loads(sj.read_text()).get("blockers") or []) if sj.exists() else []:
+                blk += [x["net"] for x in b.get("blocked_by", []) if x["net"] not in nets + blk]
+            if blk:
+                nets += blk
+                pargs += ["--rip-existing-nets", *blk]
+        cmd = [str(py), str(KRT / "py_router" / "route.py"), str(cur), str(out), "--nets", *nets, *ESC_ARGS, *pargs,
                *extra, "--json-out", str(d_out / f"summary_pass{i}.json")]
         cmds.append(" ".join(cmd).replace(str(HW.parent) + "/", ""))
         t1 = time.time()
