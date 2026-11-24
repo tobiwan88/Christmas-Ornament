@@ -9,10 +9,12 @@ What it builds (single source; never edit the .kicad_pcb):
   - every footprint of the netlist with its nets, value, LCSC field, DNP / BOM flags and schematic path (parity)
   - placement: LEDs D9-D16 and header J3 from tree_geometry (kicad_place: B.Cu flip), BT1 in the D24 window, the rest
     by the floorplan below; passives are placed relative to the PADS of their IC (a moved IC takes them along)
-  - zones: In1.Cu and In2.Cu GND planes (board.yaml roles), the antenna keep-out on every layer (F.Cu with a notch for the
-    antenna land and feed only), M2 keep-outs, the inner-plane cut-out and bottom GND under the RF matching network
-    (Nordic QFAA reference layout v0.8), silk text with ${GIT_SHA}
-  - no tracks (gate 5 routes)
+  - zones: In1.Cu and In2.Cu solid GND planes (board.yaml roles, D29), a local F.Cu GND pour around U1 / RF / X2 (gate 4,
+    solid pad connection), the antenna keep-out on every layer (F.Cu with a notch for the antenna land and feed only),
+    M2 keep-outs, silk text with ${GIT_SHA}
+  - U1 fan-out as LOCKED copper (gate 4, engineer decision 1): stubs, dog-bone vias and exit tracks per used pin, the RF
+    column tracks, the ANT_FEED line, the GND stitching row along y 17.35; gate 5 routes the rest from these ends
+  - paste: none on pads of parts not fitted in the built variant (B10; variant A = committed board)
 Stable UUIDs (uuid5 per item in file order) and a fixed generator stamp make a rebuild byte-identical.
 
 Run (repository root, after `source scripts/kicad-env.sh`):
@@ -20,6 +22,9 @@ Run (repository root, after `source scripts/kicad-env.sh`):
   .venv/bin/python hardware/gen/tree_a_pcb.py --drc      also run kicad-cli DRC (schematic parity, all severities) with the
                                                          waivers of hardware/tree-a/drc-waivers.csv; exit 1 on an error
   .venv/bin/python hardware/gen/tree_a_pcb.py --render   also write review PNGs to hardware/out/review/tree-a/
+  .venv/bin/python hardware/gen/tree_a_pcb.py --escape-proof   also route every U1 net on a copy with KiCadRoutingTools
+                                                         (hardware/out/tree-a-escape/; feasibility, not gate 5)
+  .venv/bin/python hardware/gen/tree_a_pcb.py --variant B      variant B paste set into hardware/out/tree-a-variant-b/
 Stage 2 runs inside KiCad's Python ($KICAD_PYTHON, pcbnew): this script re-executes itself with `--pcbnew <job.json>`
 because KiCad's Python has no yaml (kicad-layout pitfall: pass board.yaml as JSON).
 """
@@ -43,6 +48,7 @@ OUT_REVIEW = HW / "out" / "review" / "tree-a"
 sys.path.insert(0, str(HERE))
 import tree_geometry as G  # noqa: E402
 import tree_outline as TO  # noqa: E402
+import pcbnew_safe as PS  # noqa: E402  (crash-safe pcbnew calls: subprocess + crash summary, kicad-cli zone fill)
 
 NS = uuid.uuid5(uuid.NAMESPACE_URL, "tree-a/pcb")
 
@@ -118,13 +124,13 @@ def floorplan(P):
     T([(35.00, 17.45), (35.00, 14.20)], RF_W)                       # ANT_FEED up the keep-out notch to ANT1 pad 1
     # HFXO X2 and DECA C5 above pins 33-35. DECA pin 33 gets a dog-bone via (its only way out: XC1 and VSS_PA enclose
     # it) that also links it to DECA pin 43 on B.Cu; C5 (DECRF 2.2 nF) above the via
-    P.put("X2", 30.70, 19.00, 180.0)         # pad 1 (XC1) top-right, pad 3 (XC2) bottom-left
+    P.put("X2", 30.70, 19.10, 180.0)         # pad 1 (XC1) top-right, pad 3 (XC2) bottom-left
     P.put("C5", 32.75, 18.30, 90.0)          # DECA pad 1 down at the via
     T([(34.00, 20.75), (34.00, 19.76), (33.52, 19.76), (33.30, 19.50)])             # DECA pin 33 to its via
     V(33.30, 19.50)
     T([(33.30, 19.50), (32.75, 19.00)])                             # into C5.1
-    T([(33.60, 20.75), (33.60, 20.07), (32.10, 20.07), (32.10, 18.45), (31.40, 18.45)])   # XC1 into X2.1
-    T([(33.20, 20.75), (33.20, 20.37), (30.40, 20.37), (30.00, 19.97)])                   # XC2 into X2.3
+    T([(33.60, 20.75), (33.60, 20.07), (32.13, 20.07), (32.13, 18.45), (31.45, 18.45)])   # XC1 into X2.1
+    T([(33.20, 20.75), (33.20, 20.37), (30.45, 20.37), (30.05, 19.97)])                   # XC2 into X2.3
     # VDD pin 36: side stub to the top-left corner via, C4 left of the via row
     P.put("C4", 29.60, 20.95, 180.0)         # pad 1 (VDD) right
     T([(32.80, 21.00), (32.05, 21.00)])
@@ -166,7 +172,7 @@ def floorplan(P):
         V(vx, vy)
     # power cluster on the left row: DECA 43, GND 44 (to the exposed pad), DECD 45, DCC 46, VDD 47/48
     P.put("L1", 29.40, 25.45, 180.0)         # pad 1 (DCC) right at pin 46
-    P.put("C10", 30.32, 26.82, 180.0)        # VDD 47/48, pad 1 right
+    P.put("C10", 30.40, 26.82, 180.0)        # VDD 47/48, pad 1 right
     P.put("C3", 28.48, 26.82, 0.0)           # VDD 10 uF 0402 (B6), pad 1 (VDD) left, GND next to C10's GND
     P.put("FB1", 27.05, 24.90, 90.0)         # pad 2 (DECA) up on the DECA line, pad 1 (DECD) down to L1.2
     P.put("C1", 27.05, 26.80, 270.0)         # DECD, pad 1 up (below FB1.1) (B7: via spot at its GND pad)
@@ -178,7 +184,7 @@ def floorplan(P):
     T([(31.80, 25.35), (30.60, 25.35)], 0.25)                       # DCC 46 into L1.1
     T([(31.80, 25.75), (31.50, 25.75), (31.50, 26.15), (31.80, 26.15)])                   # VDD 47 + 48
     T([(31.50, 26.15), (31.30, 26.28), (28.00, 26.28), (28.00, 26.60)])                   # VDD to C10.1 / C3.1
-    T([(30.80, 26.28), (30.80, 26.60)])
+    T([(30.88, 26.28), (30.88, 26.60)])
     T([(28.34, 25.45), (27.05, 25.40)])                             # DECD: L1.2 - FB1.1
     T([(27.05, 25.40), (27.05, 26.32)])                             # DECD: FB1.1 - C1.1
     T([(27.05, 24.39), (25.90, 24.42)])                             # DECA: FB1.2 - C12.1
@@ -264,16 +270,26 @@ def stage1(args):
         net = Path(td) / "a.net"
         subprocess.run(["kicad-cli", "sch", "export", "netlist", "-o", str(net), str(BOARD_DIR / f"{NAME}.kicad_sch")],
                        check=True, capture_output=True)
+        variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
-               "layout": prof["layout"]}
+               "layout": prof["layout"], "variant": variant}
         jf = Path(td) / "job.json"
         jf.write_text(json.dumps(job))
-        r = subprocess.run([kpy, str(Path(__file__).resolve()), "--pcbnew", str(jf)], capture_output=True, text=True)
+        r = PS.run_isolated([kpy, str(Path(__file__).resolve()), "--pcbnew", str(jf)], capture_output=True, text=True)
         out = "\n".join(l for l in (r.stdout + r.stderr).splitlines() if "Fontconfig" not in l and "stdpbase" not in l)
         print(out)
         if r.returncode:
             sys.exit(f"stage 2 (pcbnew) failed, exit code {r.returncode}")
         # saved in the temp dir: pcbnew's Save also rewrites the .kicad_pro next to the board (schematic sections)
+        if variant == "B":                     # variant B paste set (B10): a fab copy, never the committed board
+            vb = HW / "out" / "tree-a-variant-b"
+            vb.mkdir(parents=True, exist_ok=True)
+            shutil.copy(Path(td) / f"{NAME}.kicad_pcb", vb / f"{NAME}.kicad_pcb")
+            postprocess(vb / f"{NAME}.kicad_pcb", prof)
+            for suf in (".kicad_pro", ".kicad_dru"):
+                shutil.copy(BOARD_DIR / f"{NAME}{suf}", vb / f"{NAME}{suf}")
+            print(f"variant B board (paste on the charger parts, none on BT1): {vb / (NAME + '.kicad_pcb')}")
+            return 0
         shutil.copy(Path(td) / f"{NAME}.kicad_pcb", BOARD_DIR / f"{NAME}.kicad_pcb")
     pcb = BOARD_DIR / f"{NAME}.kicad_pcb"
     postprocess(pcb, prof)
@@ -489,15 +505,15 @@ def render(pcb: Path):
     OUT_REVIEW.mkdir(parents=True, exist_ok=True)
     kpy = os.environ["KICAD_PYTHON"]
     gj = OUT_REVIEW / "geom.json"
-    subprocess.run([kpy, str(HW / "tools" / "board_geom.py"), str(pcb), str(gj)], check=True, capture_output=True)
+    if PS.run_isolated([kpy, str(HW / "tools" / "board_geom.py"), str(pcb), str(gj)], capture_output=True).returncode:
+        sys.exit("render: tools/board_geom.py failed")
     subprocess.run([sys.executable, str(HW / "tools" / "render_review.py"), str(gj), str(OUT_REVIEW),
                     "tip=22,4,48,40", "wingL=8,38,30,78", "trunk=20,72,50,105", "wingR=40,38,62,78"], check=True)
     filled = OUT_REVIEW / "filled" / pcb.name             # filled copy for the plots (the board file stays unfilled)
     filled.parent.mkdir(exist_ok=True)
     shutil.copy(pcb, filled)
     shutil.copy(pcb.with_suffix(".kicad_pro"), filled.with_suffix(".kicad_pro"))
-    subprocess.run([kpy, "-c", "import pcbnew,sys; b=pcbnew.LoadBoard(sys.argv[1]); pcbnew.ZONE_FILLER(b).Fill(b.Zones()); "
-                    "b.Save(sys.argv[1])", str(filled)], capture_output=True)
+    PS.fill_zones_cli(str(filled))                   # kicad-cli refill (in-process ZONE_FILLER segfaulted, pcbnew_safe.py)
     for layers, nm in (("F.Cu,F.Silkscreen,F.Courtyard,Edge.Cuts,F.Fab", "F"), ("B.Cu,B.Silkscreen,B.Courtyard,Edge.Cuts,B.Fab", "B"),
                        ("In1.Cu,Edge.Cuts", "In1"), ("In2.Cu,Edge.Cuts", "In2")):
         svg = OUT_REVIEW / f"layer_{nm}.svg"
@@ -550,8 +566,9 @@ def board_geometry(pcb: Path) -> dict:
     """Pads with nets (tools/board_geom.py, KiCad's Python)."""
     OUT_REVIEW.mkdir(parents=True, exist_ok=True)
     gj = OUT_REVIEW / "geom.json"
-    subprocess.run([os.environ["KICAD_PYTHON"], str(HW / "tools" / "board_geom.py"), str(pcb), str(gj)], check=True,
-                   capture_output=True)
+    if PS.run_isolated([os.environ["KICAD_PYTHON"], str(HW / "tools" / "board_geom.py"), str(pcb), str(gj)],
+                       capture_output=True).returncode:
+        sys.exit("escape proof: tools/board_geom.py failed")
     return json.loads(gj.read_text())
 
 
@@ -708,6 +725,18 @@ def stage2(job_file):
             if n:
                 pad.SetNet(nets[n])
         fps[ref] = fp
+    # B10 (review): no solder paste on pads of parts that are not fitted in the built variant. Variant A (default, the
+    # committed board): every DNP part of the netlist (charger parts, pi-slot C50/C51). Variant B (--variant B, a copy in
+    # hardware/out/tree-a-variant-b/): paste back on the charger parts, none on BT1 (holder not fitted).
+    variant = job.get("variant", "A")
+    for ref, fp in fps.items():
+        no_paste = comps[ref]["dnp"] and not (variant == "B" and ref in VARIANT_B) or (variant == "B" and ref == "BT1")
+        if no_paste:
+            for pad in fp.Pads():
+                ls = pad.GetLayerSet()
+                ls.RemoveLayer(pcbnew.F_Paste)
+                ls.RemoveLayer(pcbnew.B_Paste)
+                pad.SetLayerSet(ls)
 
     # KiCad 10 quirk (bisected with saves): without a save at this point the final file writes drilled pads as "*.Cu"
     # only (no mask opening on J1's slots, BT1 / TC1 holes); a first save here makes "*.Cu" "*.Mask" persist.
@@ -741,6 +770,7 @@ def stage2(job_file):
     # ---- placement
     class Placer:
         def put(self, ref, x, y, rot=0.0, layer="F.Cu"):
+            assert fps[ref].GetBoard() is not None, ref       # Flip on a board-less footprint segfaults (pcbnew_safe.py)
             G.kicad_place(pcbnew, fps[ref], x, y, layer, rot)
 
         def pad(self, ref, num):

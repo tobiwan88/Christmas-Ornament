@@ -1806,7 +1806,7 @@
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "54751532-b5d4-57c9-81c1-df01fe4296ae")
-		(at 30.32 26.82 180)
+		(at 30.4 26.82 180)
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "capacitor")
 		(property "Reference" "C10"
@@ -3032,7 +3032,7 @@
 		(pad "1" smd roundrect
 			(at -0.775 0)
 			(size 0.9 0.95)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "VBUS")
 			(uuid "89b040f9-0990-5cb6-a2cb-183628b51214")
@@ -3040,7 +3040,7 @@
 		(pad "2" smd roundrect
 			(at 0.775 0)
 			(size 0.9 0.95)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "a1390422-f7ce-50c2-b89e-4d5361891c7e")
@@ -3180,7 +3180,7 @@
 		(pad "1" smd roundrect
 			(at -0.775 0)
 			(size 0.9 0.95)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "VIN")
 			(uuid "fe271324-0729-5a3b-8fa8-217158d1556f")
@@ -3188,7 +3188,7 @@
 		(pad "2" smd roundrect
 			(at 0.775 0)
 			(size 0.9 0.95)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "4937ea3d-b4de-508c-998c-29efda332de8")
@@ -3328,7 +3328,7 @@
 		(pad "1" smd roundrect
 			(at -0.48 0)
 			(size 0.56 0.62)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/rf/RF_50")
 			(uuid "03188cf9-d925-5a3a-ab03-3ec783d504d1")
@@ -3336,7 +3336,7 @@
 		(pad "2" smd roundrect
 			(at 0.48 0)
 			(size 0.56 0.62)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "931aeeee-afdf-54f5-9d8d-6350636ef4bd")
@@ -3476,7 +3476,7 @@
 		(pad "1" smd roundrect
 			(at -0.48 0 180)
 			(size 0.56 0.62)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/rf/ANT_FEED")
 			(uuid "58a72960-c3c1-57e3-b0ae-89e8f9cdfe94")
@@ -3484,7 +3484,7 @@
 		(pad "2" smd roundrect
 			(at 0.48 0 180)
 			(size 0.56 0.62)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "4529cb36-0403-5726-8a18-e31ede9ad771")
@@ -5147,42 +5147,42 @@
 		(pad "A5" smd rect
 			(at -0.5 0 90)
 			(size 0.7 1.2)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(net "/charger/CC1")
 			(uuid "35a549ee-3376-5b2a-a773-b0ee271af600")
 		)
 		(pad "A9" smd rect
 			(at 1.52 0 90)
 			(size 0.8 1.2)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(net "VBUS")
 			(uuid "57a08bc8-7f7d-5e3a-8d43-78137e96b743")
 		)
 		(pad "A12" smd rect
 			(at 2.75 0 90)
 			(size 0.9 1.2)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(net "GND")
 			(uuid "c7c0873a-58eb-528d-b58f-40cfdfb2832e")
 		)
 		(pad "B5" smd rect
 			(at 0.5 0 90)
 			(size 0.7 1.2)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(net "/charger/CC2")
 			(uuid "26568d21-f97d-5d16-a23b-8d7d597c5488")
 		)
 		(pad "B9" smd rect
 			(at -1.52 0 90)
 			(size 0.8 1.2)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(net "VBUS")
 			(uuid "e08dd0e8-173e-5991-a738-1c2e6653b13a")
 		)
 		(pad "B12" smd rect
 			(at -2.75 0 90)
 			(size 0.9 1.2)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(net "GND")
 			(uuid "8b08c059-fb63-5627-8e5f-7d251d8de1c5")
 		)
@@ -5664,7 +5664,7 @@
 		(pad "1" smd roundrect
 			(at -1 -2.85)
 			(size 1 3.5)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "BAT")
 			(uuid "b6449f32-38e9-592f-bca0-f240e4bade61")
@@ -5672,7 +5672,7 @@
 		(pad "2" smd roundrect
 			(at 1 -2.85)
 			(size 1 3.5)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "0be6cccf-9b96-5f05-9daa-82d3d15e026b")
@@ -5680,7 +5680,7 @@
 		(pad "MP" smd roundrect
 			(at -3.35 2.9)
 			(size 1.5 3.4)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.166667)
 			(net "unconnected-(J2-MountPin-PadMP)")
 			(uuid "aa759179-6781-5c50-aef0-4d1e01801d8d")
@@ -5688,7 +5688,7 @@
 		(pad "MP" smd roundrect
 			(at 3.35 2.9)
 			(size 1.5 3.4)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.166667)
 			(net "unconnected-(J2-MountPin-PadMP)")
 			(uuid "aa35de7d-a5f3-5013-b244-9df7e40d3d4f")
@@ -9450,7 +9450,7 @@
 		(pad "1" smd roundrect
 			(at -0.51 0)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/CC1")
 			(uuid "8637e511-b3f5-5af5-a37a-b7bb1550f5a3")
@@ -9458,7 +9458,7 @@
 		(pad "2" smd roundrect
 			(at 0.51 0)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "96dc1d5c-15e7-530d-9a47-cadf83aaf17a")
@@ -9598,7 +9598,7 @@
 		(pad "1" smd roundrect
 			(at -0.51 0)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/CC2")
 			(uuid "63cffe03-e6f1-5590-9817-f5818f13471b")
@@ -9606,7 +9606,7 @@
 		(pad "2" smd roundrect
 			(at 0.51 0)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "e48733eb-4d7f-5f52-9ef1-378f121c0a26")
@@ -9746,7 +9746,7 @@
 		(pad "1" smd roundrect
 			(at -0.51 0)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/PROG")
 			(uuid "e25d7182-23df-500e-a361-01ce12d4846d")
@@ -9754,7 +9754,7 @@
 		(pad "2" smd roundrect
 			(at 0.51 0)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "ac6deab1-e9ec-5715-b4a6-01b8fa9237b7")
@@ -10212,7 +10212,7 @@
 		(pad "1" smd roundrect
 			(at -0.51 0 180)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "VBUS")
 			(uuid "66b2e3a5-6f87-55b8-be2f-7cb439c1c8b8")
@@ -10220,7 +10220,7 @@
 		(pad "2" smd roundrect
 			(at 0.51 0 180)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/VBUS_DET")
 			(uuid "8dd6b44f-e183-543d-842f-2acf18ba6cab")
@@ -10519,7 +10519,7 @@
 		(pad "1" smd roundrect
 			(at -0.51 0 180)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/STAT")
 			(uuid "22442c1d-0dc2-5e9d-a0cd-0472526bcace")
@@ -10527,7 +10527,7 @@
 		(pad "2" smd roundrect
 			(at 0.51 0 180)
 			(size 0.54 0.64)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/CHG_STAT")
 			(uuid "c4dac582-3945-573f-8e2e-0f16bb95451e")
@@ -13037,7 +13037,7 @@
 		(pad "1" smd roundrect
 			(at -1.1375 -0.95)
 			(size 1.325 0.6)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/STAT")
 			(uuid "140df4d4-eac3-585d-9d52-9cdd8232a17f")
@@ -13045,7 +13045,7 @@
 		(pad "2" smd roundrect
 			(at -1.1375 0)
 			(size 1.325 0.6)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "GND")
 			(uuid "04ef4c05-dafd-5106-a1c9-b2f814c7d83e")
@@ -13053,7 +13053,7 @@
 		(pad "3" smd roundrect
 			(at -1.1375 0.95)
 			(size 1.325 0.6)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "VIN")
 			(uuid "a42017dd-b7ba-56da-a633-751bb5eab9aa")
@@ -13061,7 +13061,7 @@
 		(pad "4" smd roundrect
 			(at 1.1375 0.95)
 			(size 1.325 0.6)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "VBUS")
 			(uuid "b0e2082c-e095-5c7c-be0d-e17edfdada71")
@@ -13069,7 +13069,7 @@
 		(pad "5" smd roundrect
 			(at 1.1375 -0.95)
 			(size 1.325 0.6)
-			(layers "F.Cu" "F.Mask" "F.Paste")
+			(layers "F.Cu" "F.Mask")
 			(roundrect_rratio 0.25)
 			(net "/charger/PROG")
 			(uuid "1894237d-966f-5a35-94f5-e70490e6480c")
@@ -13270,7 +13270,7 @@
 	(footprint "Crystal:Crystal_SMD_2016-4Pin_2.0x1.6mm"
 		(layer "F.Cu")
 		(uuid "ad7d9293-dde2-592b-b1b7-c839daa7266f")
-		(at 30.7 19 180)
+		(at 30.7 19.1 180)
 		(descr "SMD2016/4, Crystal, 2.0x1.6mm package, SMD, http://www.q-crystal.com/upload/5/2015552223166229.pdf")
 		(property "Reference" "X2"
 			(at 0 -2 180)
@@ -14178,8 +14178,8 @@
 		(uuid "d2efdc20-2513-5419-9606-c80723b233e9")
 	)
 	(segment
-		(start 30.4 20.37)
-		(end 30 19.97)
+		(start 30.45 20.37)
+		(end 30.05 19.97)
 		(width 0.15)
 		(locked yes)
 		(layer "F.Cu")
@@ -14187,8 +14187,8 @@
 		(uuid "02e647a7-e3e0-5e30-bd96-36373ebf9267")
 	)
 	(segment
-		(start 32.1 18.45)
-		(end 31.4 18.45)
+		(start 32.13 18.45)
+		(end 31.45 18.45)
 		(width 0.15)
 		(locked yes)
 		(layer "F.Cu")
@@ -14196,8 +14196,8 @@
 		(uuid "b56503c7-8339-5f55-9957-aad19e8e89a3")
 	)
 	(segment
-		(start 32.1 20.07)
-		(end 32.1 18.45)
+		(start 32.13 20.07)
+		(end 32.13 18.45)
 		(width 0.15)
 		(locked yes)
 		(layer "F.Cu")
@@ -14224,7 +14224,7 @@
 	)
 	(segment
 		(start 33.2 20.37)
-		(end 30.4 20.37)
+		(end 30.45 20.37)
 		(width 0.15)
 		(locked yes)
 		(layer "F.Cu")
@@ -14242,7 +14242,7 @@
 	)
 	(segment
 		(start 33.6 20.07)
-		(end 32.1 20.07)
+		(end 32.13 20.07)
 		(width 0.15)
 		(locked yes)
 		(layer "F.Cu")
@@ -14628,8 +14628,8 @@
 		(uuid "5f21e23d-1b24-5b59-8753-20da99bf85a9")
 	)
 	(segment
-		(start 30.8 26.28)
-		(end 30.8 26.6)
+		(start 30.88 26.28)
+		(end 30.88 26.6)
 		(width 0.15)
 		(locked yes)
 		(layer "F.Cu")
