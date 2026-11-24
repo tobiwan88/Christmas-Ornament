@@ -181,3 +181,19 @@ Lessons:
   over no plane inside the antenna keep-out (y 15.5): the keep-out bars In1, so a GCPW reference is impossible there.
 - `PCB_VIA.GetWidth()` asserts in KiCad 10 without a layer: use `GetWidth(pcbnew.F_Cu)`.
 - KRT vias landed 0.029 mm into TC1.3 in the best run even with `--same-net-pad-clearance 0.15` (grader catches it).
+Round 2 (coordinator decisions on the gate-5 report: option a, then a bounded option c):
+| Run (board state) | Unconnected items | DRC errors | Time |
+|---|---|---|---|
+| sweep 13, R1-R4 / R5-R8 swapped (commit d7e5ff5), one pass `original` | 20 | 0 | 148.0 s |
+| sweep 13, swapped, LED first then the rest | 21 | 0 | 388.8 s |
+| sweep 13, swapped, CHAIN (mps, d9 + vdd lanes) / mps vc 50 / mps no lanes | 22 / 25 / 24 | 0 | 293.8 / 267.5 / 562.9 s |
+| sweep 14, + In2 signal tracks only in the LED-bus box x 27.9-42.2, y 28.6-38.6 (In2 cost 3.0) | 20-21 | 0-1 | 704-942 s |
+| sweep 14, + box x 27.9-44.0, y 28.6-41.0 | 20-22 | 0-1 | 708-934 s |
+| **sweep 14, box 1, LED first (In2 2.0 in the LED pass) then the rest** | **18** (VDD, LED_L8, all 8 LED_Lx_MCU, SWD x3, nRESET_TC, BTN_SW1_PAD, TPS_SEL, VBUS_DET) | 0 | 1044.7 s |
+U1 escape proof (`--escape-proof`, U1 nets only): 22/28 after the swap (244 s); but already 23/28 on the board before the swap
+(gate-5 hand copper: TPS63900 stage, XL lanes, D9 lanes, VDD links; 137 s) and 23/28 with the swap and no D9 / VDD lanes
+(228 s): the gate-4 28/28 does not survive the gate-5 hand copper, independent of the swap (TPS_SEL open in every run).
+Lessons: KRT honours a KiCad rule area on In2 (DoNotAllowTracks, hole = the allowed box): 0 In2 segments outside the box in
+all five runs; it used 16-43 In2 segments and did not close the gap (the open nets sit in the top tier and at the R columns,
+not in the box). The R swap moves the crossing from the LED lines to the MCU lines, it does not remove it. Parallel escape
+proofs share `hardware/out/review/tree-a/geom.json` (board_geometry): run them one after another.
