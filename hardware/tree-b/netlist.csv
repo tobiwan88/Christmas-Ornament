@@ -1,4 +1,6 @@
 net,ref,pin
+GND,MH3,1
+GND,MH4,1
 LED_L1,D1,3
 LED_L1,D2,4
 LED_L1,D6,2

@@ -29,8 +29,8 @@ stackup:                               # part of the order; calc/impedance.py re
   soldermask: {thickness_mm: 0.015, er: 3.8}
   layers:
     - {name: F.Cu,  role: signal, ref: In1.Cu, dielectric_mm: 0.2104, er: 4.4}                    # 7628 prepreg
-    - {name: In1.Cu, role: unused, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
-    - {name: In2.Cu, role: unused}     # D28: inner layers of B are copper-free (B has no ground net); same stackup as tree-a (one panel, one stackup, D1/D5). Was proposed: GND, same stackup as tree-a (one panel, one stackup, D1/D5): GND on both inner planes, so B.Cu (J4 header) references a solid plane. Net choice for In2 is decided on tree-a; no power on this board.
+    - {name: In1.Cu, role: plane, net: GND, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
+    - {name: In2.Cu, role: plane, net: GND}     # D31 (reverses D28): solid GND planes on both inner layers, same stackup roles as tree-a; GND reaches board A through the two plated M2 mount holes (MH1, MH2) and metal standoffs. No supply on this board.
     - {name: B.Cu,  role: signal, ref: In2.Cu, dielectric_mm: 0.2104, er: 4.4}
 
 net_classes:                           # full KiCad net names; widths checked by calc/track_width.py

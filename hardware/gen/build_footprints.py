@@ -334,6 +334,35 @@ def nettie_bridge():
         "land (pad 32 end / exposed pad edge); copper only")
 
 
+# ------------------------------------------------------------------ M2 mount hole with a GND ring (D31)
+# Plated Ø2.2 mm hole (M2 clearance, D3) with a Ø4.4 mm copper ring on both faces and the plated barrel: the brass standoff
+# (12.0 mm between the boards) stands on the inner-face ring and ties the GND of board B to board A; the nylon screw head
+# sits on the outer-face ring. Ø4.4 is KiCad's own MountingHole_2.2mm_M2_Pad ring; it must lie inside the Ø5.0 screw-head
+# keep-out (tree_outline.MOUNT_KEEPOUT_D), so the ring keeps (5.0 - 4.4) / 2 = 0.3 mm to the keep-out circle. Solid zone
+# connection (zone_connect 2): the inner GND planes join the barrel without thermal spokes (low-resistance standoff path).
+MOUNT_DRILL, MOUNT_RING, MOUNT_KEEPOUT = 2.2, 4.4, 5.0
+
+
+def mount_ring():
+    name = "MountingHole_2.2mm_M2_Pad"
+    r = MOUNT_KEEPOUT / 2
+    lines = [f'(footprint "{name}" (version 20241229) (generator "build_footprints") (generator_version "10.0") (layer "F.Cu")',
+             '\t(descr "M2 plated mount hole 2.2 mm drill with a 4.4 mm ring on both faces (GND, D31): brass standoff on the inner '
+             'face, nylon screw head on the outer face; ring inside the 5.0 mm screw-head keep-out")',
+             '\t(tags "mountinghole M2 pad")',
+             '\t(property "Reference" "REF**" (at 0 -3.15 0) (layer "F.Fab") (hide yes) (effects (font (size 0.8 0.8) (thickness 0.12))))',
+             f'\t(property "Value" "{name}" (at 0 3.15 0) (layer "F.Fab") (hide yes) (effects (font (size 0.8 0.8) (thickness 0.12))))',
+             '\t(property "Datasheet" "" (at 0 0 0) (layer "F.Fab") (hide yes) (effects (font (size 1 1))))',
+             '\t(attr exclude_from_pos_files exclude_from_bom)',
+             f'\t(fp_circle (center 0 0) (end {r} 0) (stroke (width 0.05) (type solid)) (fill no) (layer "F.CrtYd"))',
+             f'\t(pad "1" thru_hole circle (at 0 0) (size {MOUNT_RING} {MOUNT_RING}) (drill {MOUNT_DRILL}) (layers "*.Cu" "*.Mask") '
+             '(remove_unused_layers no) (zone_connect 2))']
+    (OUT / f"{name}.kicad_mod").write_text("\n".join(lines) + "\n)\n")
+    row("OK" if MOUNT_RING < MOUNT_KEEPOUT - 0.2 and MOUNT_RING > MOUNT_DRILL + 2 * 0.5 else "FAIL", name,
+        f"ring {MOUNT_RING} inside keep-out {MOUNT_KEEPOUT} (margin {(MOUNT_KEEPOUT - MOUNT_RING) / 2:.2f} mm per side), "
+        f"annular ring {(MOUNT_RING - MOUNT_DRILL) / 2:.2f} mm, drill {MOUNT_DRILL}")
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     led()
@@ -352,6 +381,7 @@ def main() -> int:
     usbc()
     nettie_gap()
     nettie_bridge()
+    mount_ring()
     for st, what, detail in ROWS:
         print(f"{st:5} {what}: {detail}")
     bad = any(r[0] == "FAIL" for r in ROWS)

@@ -7,7 +7,8 @@ ERC and net-intent check) and <board>/bom.csv (+ tree-a/bom-variant-b.csv). Prov
   3. J3 (A) and J4 (B) mate by position: for every row of tree_common.mate_table() the J3 pin and the J4 pin carry the same
      line, and that line is the one in the table (pin map of both headers as built);
   4. designators are unique over both boards (netlists and BOMs);
-  5. board B carries only the eight lines LED_L1..LED_L8 (no supply, no ground), and both headers carry all eight;
+  5. board B carries only the eight lines LED_L1..LED_L8 plus GND (D31): GND has exactly the pins of the two mount holes
+     (B_GND_PINS), no LED pad, no header pin and no other part on it; both headers carry all eight lines; no supply net;
   6. tree_common.mate_fault_rows(): a 180 degree turn, a mirror-x / mirror-y footprint and a one-row shift each show up as
      swapped or open lines, with the max number of dies in parallel per firmware slot.
 Rows: OK / FAIL; ends with `tree_split_check: OK|FAILED`; exit 1 on FAIL or a missing file (run the generators first).
@@ -27,6 +28,7 @@ sys.path.insert(0, str(HERE))
 import tree_common as tc  # noqa: E402
 
 BOARDS = {"A": HW / "tree-a", "B": HW / "tree-b"}
+B_GND_PINS = {("MH3", "1"), ("MH4", "1")}     # D31: board B's only ground pins, the plated M2 mount holes (tree_b.MOUNT_REFS)
 
 
 def load_netlist(path: Path) -> dict:
@@ -84,7 +86,9 @@ def rows(data: dict) -> list:
     row(not both, "designators unique over both boards", f"{len(a_all)} on A, {len(b_all)} on B" + (f", shared {both}" if both else ""))
     # 5. board B nets
     b_nets = set(data["B"]["net"].values())
-    row(b_nets == set(tc.LINE_NETS), "board B nets = LED_L1..LED_L8 only", f"{sorted(b_nets)}")
+    row(b_nets == set(tc.LINE_NETS) | {"GND"}, "board B nets = LED_L1..LED_L8 + GND only", f"{sorted(b_nets)}")
+    b_gnd = {rp for rp, n in data["B"]["net"].items() if n == "GND"}
+    row(b_gnd == B_GND_PINS, "board B GND pins = the two mount holes only", f"{sorted(b_gnd)} (want {sorted(B_GND_PINS)})")
     return out
 
 
@@ -109,6 +113,21 @@ def selftest() -> bool:
     faults.append(d)
     d = copy.deepcopy(good)                                  # R1 on both boards
     d["B"]["bom"].append("R1")
+    faults.append(d)
+    d = copy.deepcopy(good)                                  # extra net on B (a supply rail on a header pin)
+    d["B"]["net"][("J4", "1")] = "VDD"
+    faults.append(d)
+    d = copy.deepcopy(good)                                  # extra net on B: a new net on a fresh pin
+    d["B"]["net"][("TP1", "1")] = "VBUS"
+    faults.append(d)
+    d = copy.deepcopy(good)                                  # GND on an LED pad (B's ground must sit on the mount holes only)
+    d["B"]["net"][("D1", "3")] = "GND"
+    faults.append(d)
+    d = copy.deepcopy(good)                                  # GND missing on one mount hole
+    d["B"]["net"][("MH4", "1")] = "LED_L1"
+    faults.append(d)
+    d = copy.deepcopy(good)                                  # GND on a third pin
+    d["B"]["net"][("J4", "8")] = "GND"
     faults.append(d)
     return all(any(r[0] == "FAIL" for r in rows(f)) for f in faults)
 

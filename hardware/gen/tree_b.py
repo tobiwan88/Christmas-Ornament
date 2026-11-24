@@ -2,7 +2,8 @@
 
 Single source: PARTS and NETS below; the LED matrix (pad -> line) and the J4 pin map come from tree_common (imported, never
 copied): led_pad_nets() for D1-D8 and j4_pin_net() for J4 (the net of the J3 pad at the same physical position, D14).
-No supply, no ground, no IC on this board: the eight lines LED_L1..LED_L8 are the only nets.
+No supply and no IC on this board: the eight lines LED_L1..LED_L8 plus GND (D31: the two plated M2 mount holes MH3/MH4 are the
+only GND pins, board B's GND reaches board A through metal standoffs) are the only nets.
 Run (from the repo root, after `source scripts/kicad-env.sh`):  .venv/bin/python hardware/gen/tree_b.py
 Writes hardware/tree-b/tree-b.kicad_sch (one flat sheet: LEDs, J4 and the board notes; review RR-B merged the near-empty
 root and the leds sheet), tree-b.kicad_pro, lib tables, bom.csv, and runs ERC, the
@@ -39,9 +40,14 @@ for _ref in LEDS_B:
 P("J4", "Connector_Generic:Conn_02x04_Odd_Even", "2x4 M", "tree:PinHeader_2x04_SMD_Boom_PZ254", "C192300", "Extended",
   "2.54-2x4 vertical SMD pin (SMD 2x4 2.54)", "male header to board A (D3), inner face (B.Cu); mates J3 by position (D14)")
 assert LEDS_B == [f"D{i}" for i in range(1, 9)], LEDS_B
+MOUNT_REFS = ["MH3", "MH4"]        # D31: plated M2 holes with a GND ring on both faces (board-only parts, not in the BOM); B takes MH3/MH4 so designators stay unique over both boards (board A: MH1/MH2)
+for _ref in MOUNT_REFS:
+    P(_ref, "Mechanical:MountingHole_Pad", "MountingHole_Pad", "tree:MountingHole_2.2mm_M2_Pad", "", "n/a",
+      "M2 mount hole + GND ring", "plated hole with a 4.4 mm GND ring on both faces; brass standoff ties GND to board A (D31)")
 
 J4_NETS = tc.j4_pin_net()                       # {pin: net}
 NETS: dict[str, list] = {n: [] for n in tc.LINE_NETS}
+NETS["GND"] = [(r, "1") for r in MOUNT_REFS]       # D31
 for _p, _n in sorted(J4_NETS.items()):
     NETS[_n].append(("J4", str(_p)))
 for _ref in LEDS_B:
@@ -80,13 +86,24 @@ def leds_sheet():
     s.text(7, 47, "Pads: 3 anode, 1 R, 2 G, 4 B cathode. Board B: R on a+2, G on a+3, B on a+7 (tree_common.LED_MATRIX).\n"
                   "LED -> (R, G, B cathode line):\n" + ts.led_table(tc, "B"), 1.0)
     s.frame(66, 12, 106, 46, "J4 to board A (D3, D14)")
+    s.frame(66, 48, 106, 66, "Ground to board A (D31): M2 mount holes with a GND ring")
+    for ref, x in ((MOUNT_REFS[0], 76), (MOUNT_REFS[1], 92)):
+        s.part(ref, x, 52)
+        s.tag(ref, reference=(2.8, -2.0), value=(2.8, 0.5))
+        s.wire((ref, "1"), (x, 55), (x, 56))
+        s.rail("GND", x, 56, 270)
+        if ref == MOUNT_REFS[0]:                      # one PWR_FLAG per net: two power outputs on one net are an ERC error
+            s.pflag(x, 55, rot=90)
+    s.text(68, 61.0, "MH3 / MH4: plated Ø2.2 mm holes at the M2 positions of both boards (tree_outline.MOUNT_HOLES), 4.4 mm ring on "
+                     "both faces. Brass standoffs (12.0 mm) between the boards carry GND to the matching rings on board A's inner "
+                     "face; nylon screws. Not assembled, not in the BOM or the position file. PWR_FLAG = ERC marker.", 1.0)
     pl = [f"{p}={n[4:]}" for p, n in sorted(J4_NETS.items())]
     mates = ", ".join(f"J3.{a}-J4.{b}" for a, b, _, _ in tc.mate_table()[:4])
     s.text(67, 28, f"J4 male 2x4 SMD (Boom PZ254, C192300), inner face = B.Cu.\nPin=line: {', '.join(pl[:4])}\n{', '.join(pl[4:])}\n"
                    f"Mirrored by B.Cu: J4 pin n mates J3 pin n+1 (n odd) / n-1\n(n even): {mates}, ...\n"
                    "Net of each pin = net of the J3 pad it touches\n(tree_common.j4_pin_net / mate_table).\n"
-                   "No supply, no ground: the lines are the only nets.\nJ4 plastic height 3.2 mm: UNVERIFIED (PARTS-REVIEW B1).", 1.0)
-    s.text(6, 57, "Mounting holes and the outline are board-only (layout generator). Same LED part as board A (one unique "
+                   "No supply, no ground on J4: the 8 lines (GND is on MH3/MH4 only).\nJ4 plastic height 3.2 mm: UNVERIFIED (PARTS-REVIEW B1).", 1.0)
+    s.text(6, 57, "The outline and the Ø1.4 hanging hole are board-only (layout generator). Same LED part as board A (one unique "
                   "Extended part per order).", 1.1)
     s.raw.append(ts.triangle(px / 2.54, py / 2.54 - 0.7, 270))          # pin 1 marker over pin 1, after the frames so their tint does not cover it (round 2)
     return s
@@ -110,7 +127,7 @@ def main() -> int:
         print("GEOM", w)
     rc = ts.check(BOARD, f, NETS, [])
     rc |= bool(warnings)
-    n = ts.write_bom(BOARD / "bom.csv", PARTS, lambda r: True)
+    n = ts.write_bom(BOARD / "bom.csv", PARTS, lambda r: None if r in MOUNT_REFS else True)
     print(f"OK    bom.csv {n} rows")
     print(f"tree_b: {'OK' if rc == 0 else 'FAILED'}")
     return rc

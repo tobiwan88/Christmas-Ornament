@@ -5,7 +5,9 @@ WHAT IT BUILDS (gates 4 and 5, one build):
   - outline (Edge.Cuts), hanging hole D1.4 and the two M2 holes: all numbers from tree_outline / tree_geometry (imported);
   - antenna keep-out as a rule area on ALL copper layers (tree_geometry.antenna_keepout_polygon: no tracks, vias, pads or
     pours) plus a track/via keep-out ring round each M2 hole (nylon screw head and standoff, tree_outline.MOUNT_KEEPOUT_D);
-  - 4-layer stackup JLC04101H-7628 1.0 mm (board.yaml stackup); In1/In2 carry NO copper by default (INNER_PLANES, see below);
+  - 4-layer stackup JLC04101H-7628 1.0 mm (board.yaml stackup); In1/In2 are solid GND planes (D31, INNER_PLANES = "gnd");
+  - the two M2 holes are plated mount holes MH3/MH4 (project footprint tree:MountingHole_2.2mm_M2_Pad, 4.4 mm ring on both
+    faces and a plated barrel, net GND): brass standoffs tie B's GND to A's; the Ø1.4 hanging hole stays an NPTH in the keep-out;
   - LEDs D1-D8 on F.Cu at the tree_geometry positions and rotation, header J4 on B.Cu at file orientation 180 (the J4 trap in
     tree_geometry's docstring: B.Cu footprints are stored mirrored top-bottom, the generator writes pads at (px, -py));
   - copper: frozen routes (hardware/tree-b/frozen-routes.json, written by gen/tree_b_route.py from a router run or from the
@@ -14,10 +16,10 @@ WHAT IT BUILDS (gates 4 and 5, one build):
   - project: net classes and fab floors merged into tree-b.kicad_pro (tools/write_project.py), custom DRC rules copied next to
     the board (board.yaml fab.custom_drc).
 
-INNER LAYERS (decision for the engineer, see BOARD.md "Floorplan"): board B has no ground net in its schematic (D13: the header
-carries 8 LED lines, no supply, no ground), so a GND plane would be an orphan net. INNER_PLANES = "none" (default) leaves In1/In2
-without copper; "floating" pours a net-less copper zone on both layers (copper balance for the panel), cut out under the antenna
-keep-out, 0.5 mm back from the outline and from the holes. Both are DRC-clean.
+INNER LAYERS (D31 reverses D28): board B has a GND net (the two mount-hole rings MH3/MH4). INNER_PLANES = "gnd" (default) pours a
+solid GND zone on In1 and In2, cut out under the antenna keep-out (rule area: no pour), 0.5 mm back from the outline; the plated
+barrels join both planes. "none" (no inner copper) and "floating" (net-less pour) are the old D28 fallbacks, kept for
+`--inner`; they leave the mount rings without a plane.
 
 Net names: the schematic uses local labels on the root sheet, so KiCad's net names are "/LED_L1" .. "/LED_L8".
 Footprints link to the schematic symbols by uuid path (read from tree-b.kicad_sch), so the DRC parity check matches them.
@@ -56,8 +58,8 @@ BOARD_DIR = HW / "tree-b"
 NAME = "tree-b"
 ORIGIN = (100.0, 50.0)         # board origin in the KiCad sheet (the outline box top-left); tree_geometry coordinates + this
 FROZEN = BOARD_DIR / "frozen-routes.json"
-INNER_PLANES = "none"          # "none" | "floating"; see the docstring
-POUR_EDGE_MM = 0.5             # floating pour: back from the outline, the holes and the keep-out
+INNER_PLANES = "gnd"           # "gnd" (D31) | "none" | "floating"; see the docstring
+POUR_EDGE_MM = 0.5             # inner pours: back from the outline (the keep-out is a rule area, the hanging hole lies inside it)
 TRACK_W_DEFAULT = 0.2          # only used by the hand route fallback; routes come with their own widths
 EDGE_W = 0.1
 SILK_TEXT_THICK = 0.15         # rules/jlc-4layer.json min_text_thickness
@@ -148,7 +150,12 @@ def schematic_symbols() -> dict:
 
 
 def net_name(line_net: str) -> str:
+    if line_net == "GND":
+        return "GND"                 # power symbol: a global net, no sheet path
     return "/" + line_net            # local label on the root sheet: KiCad's net name carries the sheet path
+
+MOUNT_REF = {"H_MOUNT1": "MH3", "H_MOUNT2": "MH4"}      # tree_b.MOUNT_REFS, in tree_outline.MOUNT_HOLES order
+MOUNT_FP = "MountingHole_2.2mm_M2_Pad"
 
 
 def pad_nets() -> dict:
@@ -160,6 +167,8 @@ def pad_nets() -> dict:
                 want[(ref, pad)] = net_name(n)
     for pin, n in TC.j4_pin_net().items():
         want[("J4", str(pin))] = net_name(n)
+    for ref in MOUNT_REF.values():
+        want[(ref, "1")] = "GND"
     with open(BOARD_DIR / "netlist.csv", newline="") as f:
         have = {(r["ref"], r["pin"]): net_name(r["net"]) for r in csv.DictReader(f)}
     if have != want:
@@ -265,8 +274,9 @@ def footprint(ref: str, fpname: str, x: float, y: float, layer: str, rot: float,
 
 
 def hole_footprint(name: str, x: float, y: float, d: float, plated: bool) -> list:
-    """Board-only hole: no copper at all (pad on the mask layers only), so it is allowed inside the antenna keep-out."""
-    assert not plated, "plated holes are not used on this board"
+    """Board-only NPTH (the Ø1.4 hanging hole): no copper at all (pad on the mask layers only), so it is allowed inside the
+    antenna keep-out. The M2 holes are the plated MH3/MH4 footprints (footprint())."""
+    assert not plated, "plated holes are footprints of the schematic (MH3/MH4)"
     ctr = ["fp_circle", ["center", "0", "0"], ["end", num(d / 2 + 0.25), "0"], ["stroke", ["width", "0.05"], ["type", "solid"]],
            ["fill", "no"], ["layer", Q("F.CrtYd")], ["uuid", uid("hole", name, "crt")]]
     return ["footprint", Q("MountingHole_%.1fmm" % d), ["layer", Q("F.Cu")], ["uuid", uid("hole", name)], ["at", num(x), num(y)],
@@ -331,6 +341,8 @@ def zones():
                                footprints=False))
     if INNER_PLANES == "floating":
         z += floating_pours()
+    elif INNER_PLANES == "gnd":
+        z += gnd_pours()
     return z
 
 
@@ -363,6 +375,21 @@ def floating_pours():
                     ["name", Q("floating_" + layer.split(".")[0].lower())], ["hatch", "edge", "0.5"],
                     ["connect_pads", ["clearance", "0.2"]], ["min_thickness", "0.2"], ["filled_areas_thickness", "no"],
                     ["fill", "yes", ["thermal_gap", "0.25"], ["thermal_bridge_width", "0.3"], ["island_removal_mode", "0"]],
+                    ["polygon", ["pts"] + [["xy"] + xy(p) for p in pts]]])
+    return out
+
+
+def gnd_pours():
+    """D31: solid GND zone on In1 and In2 (board.yaml stackup roles), outline pulled in by POUR_EDGE_MM, solid connection to the
+    mount-hole barrels (pad zone_connect 2), islands removed (mode 0). The antenna keep-out rule area (pour not allowed on all
+    four layers) cuts the tip out of the fill."""
+    pts = pour_outline()
+    out = []
+    for layer in ("In1.Cu", "In2.Cu"):
+        out.append(["zone", ["net", Q("GND")], ["layer", Q(layer)], ["uuid", uid("pour", "gnd", layer)],
+                    ["name", Q("GND_" + layer.split(".")[0])], ["hatch", "edge", "0.5"],
+                    ["connect_pads", ["clearance", "0.2"]], ["min_thickness", "0.2"],
+                    ["fill", ["thermal_gap", "0.25"], ["thermal_bridge_width", "0.3"], ["island_removal_mode", "0"]],
                     ["polygon", ["pts"] + [["xy"] + xy(p) for p in pts]]])
     return out
 
@@ -476,7 +503,11 @@ def build(routes: dict | None, router_input: bool = False) -> str:
         body.append(footprint(ref, fpn, px, py, layer, rot, nets, syms[ref]))
     for name, x, y, d, plated in G.holes():
         px, py = P((x, y))
-        body.append(hole_footprint(name, px, py, d, plated))
+        if name in MOUNT_REF:                         # D31: plated M2 hole with a GND ring (MH3 / MH4)
+            ref = MOUNT_REF[name]
+            body.append(footprint(ref, MOUNT_FP, px, py, "F.Cu", 0.0, nets, syms[ref]))
+        else:
+            body.append(hole_footprint(name, px, py, d, plated))
     body += text_items()
     body += zones()
     body += route_items(routes)
@@ -534,8 +565,17 @@ def proof(path: Path) -> bool:
                  f"{mm(box.GetWidth()):.2f} x {mm(box.GetHeight()):.2f} mm (tree_outline {TO.W} x {TO.H})"))
     holes = sorted((round(mm(p.GetPosition().x) - ORIGIN[0], 3), round(mm(p.GetPosition().y) - ORIGIN[1], 3),
                     round(mm(p.GetDrillSize().x), 3)) for fp in b.GetFootprints() for p in fp.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH)
-    want = sorted((round(x, 3), round(y, 3), round(d, 3)) for _n, x, y, d, _p in G.holes())
-    rows.append(("holes = tree_outline", holes == want, f"{holes}"))
+    want = sorted((round(x, 3), round(y, 3), round(d, 3)) for n_, x, y, d, _p in G.holes() if n_ not in MOUNT_REF)
+    rows.append(("NPTH (hanging hole) = tree_outline", holes == want, f"{holes}"))
+    mh = sorted((fp.GetReference(), round(mm(p.GetPosition().x) - ORIGIN[0], 3), round(mm(p.GetPosition().y) - ORIGIN[1], 3),
+                 round(mm(p.GetDrillSize().x), 3), round(mm(p.GetSizeX()), 3), p.GetNetname(), p.GetAttribute() == pcbnew.PAD_ATTRIB_PTH)
+                for fp in b.GetFootprints() if fp.GetReference() in MOUNT_REF.values() for p in fp.Pads())
+    want_mh = sorted((MOUNT_REF[n_], round(x, 3), round(y, 3), round(d, 3), 4.4, "GND", True) for n_, x, y, d, _p in G.holes() if n_ in MOUNT_REF)
+    rows.append(("M2 mount holes plated, ring 4.4, net GND", mh == want_mh and all(r[4] < G.MOUNT_KEEPOUT_D for r in mh), f"{mh}"))
+    gz = sorted((z.GetFirstLayerName() if hasattr(z, "GetFirstLayerName") else b.GetLayerName(z.GetLayer()), z.GetNetname())
+                for z in b.Zones() if not z.GetIsRuleArea())
+    want_z = [("In1.Cu", "GND"), ("In2.Cu", "GND")] if INNER_PLANES == "gnd" else []
+    rows.append(("In1 / In2 GND zones (D31)", gz == want_z, f"{gz}"))
     ko = [z for z in b.Zones() if z.GetIsRuleArea() and z.GetZoneName() == "antenna_keepout"]
     ok = bool(ko) and ko[0].GetDoNotAllowTracks() and ko[0].GetDoNotAllowVias() and ko[0].GetDoNotAllowPads() and \
         ko[0].GetLayerSet().CuStack().__len__() == 4
