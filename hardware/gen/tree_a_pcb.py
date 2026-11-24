@@ -460,7 +460,7 @@ def stage1(args):
     if not kpy or not shutil.which("kicad-cli"):
         sys.exit("source scripts/kicad-env.sh first (needs kicad-cli and $KICAD_PYTHON)")
     if _opt(args, "--route") == "krt":                     # re-run KiCadRoutingTools, freeze a clean result, then build
-        r = subprocess.run([sys.executable, str(HERE / "tree_a_krt.py"), "run", "--write"])
+        r = subprocess.run([sys.executable, str(HERE / "tree_a_krt.py"), "plan", "--write"])   # autoroute's plan, GND / GND (D34)
         if r.returncode:
             sys.exit("tree_a_pcb: the KiCadRoutingTools run did not give a clean result; frozen-routes.json is unchanged")
     out_dir = Path(_opt(args, "--out", BOARD_DIR)).resolve()

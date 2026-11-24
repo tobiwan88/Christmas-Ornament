@@ -232,3 +232,23 @@ autoroute.py facts (v0.24.2, docs/utilities.md "Deterministic Plan Router"):
   minimums 0.09 / 0.09 and via 0.45 / 0.2 holds every descent at our floors (fine via = 0.45 / 0.2 then).
 - Passes 2-3 price the inner planes 3.0, so signals cross them (VDD-plane run: 34.6 mm on In1; GND-finish run: 155 mm on
   In1 + In2).
+Measured (KRT v0.24.2, 10-core Mac, 4-6 runs in parallel; "open" = KRT check_connected over ALL nets, "err" = kicad-cli
+DRC errors on the rebuilt board with board.yaml classes; hand copper "rf" = RF column + ANT_FEED + stitching row only):
+| Run | Planes | Hand copper | Rules | Open | kicad-cli err | Time |
+|---|---|---|---|---|---|---|
+| coordinator ar1, autoroute.py | GND In1 / VDD In2 | all (no D9 / VDD lanes) | its ladder, floor 0.09 | 0 | 63 via-to-pad + 4 starved | 189 s |
+| a4 autoroute.py --keep-placement, both via guards | GND / VDD | rf | its ladder; floor rung shipped: 0.0889 tracks, 0.25 / 0.15 vias, Power / RF clamped to 0.1 | 0 | 554 (classes, sizes) | 404 s |
+| a1 / a3 / a5 same, all hand copper (full / --finish / In2 GND) | GND / VDD | all | its ladder | 3 / 3 / 3 (+VDD with GND In2) | 627-670 | 325-378 s |
+| b1-b6 autoroute.py --board-rules (Default 0.1 or 0.127, via 0.45 / 0.2) | GND / VDD | rf ... all | board, no floor below | 4-6 | 0-5 | 116-316 s |
+| c1-c8 --board-rules, minimums 0.09 | GND / VDD (c5: GND / GND --finish) | rf ... all | board + 0.09 floor | 2-8 (c5: 2, but 155 mm signals on In1 + In2) | 2-28 | 330-598 s |
+| plan, outer layers only (t4, v0) | GND / GND | rf | standard 0.1, Power / RF 0.15 | 8-9 | 3 | 316-335 s |
+| plan + local VDD pour on In2 under U1 (v1) | GND / GND + VDD box | rf | same | 8 (VDD closes, others open) | 1 | 335 s |
+| plan, max-ripup 5 / mps / inside_out / no fan-out (w1-w5) | GND / GND (+VDD box) | rf | same | 7-11 | 1-2 | 318-560 s |
+| plan + In2 only for the still-open nets (x1-x3, t1) | GND / GND (+VDD box) | rf | same | 4-6 | 1-2 | 342-704 s |
+| plan + In2 for the open nets, Power / RF clamped to 0.1 by mistake (r1) | GND / GND | rf | Power 0.1 | 2 (LED_L2, LED_L8) | 51 (Power clearance) | 676 s |
+| plan + In2 for EVERY net in passes 2-3 (p4) | GND / GND | rf | Power 0.1 | 1, with 120 mm on In2 (VDD 54 mm, 8 signal nets) | n/a | ~400 s |
+Lessons: the locked hand copper costs completion in every pairing (rf-only beats all: a4 0 vs a1 3, p1 6 vs p3 8). The
+open nets sit around U1 / D9 / D10 / the R columns (LED_L1, L2, L6, L7, L8, SWD, BTN_SW1, VBUS_DET, CHG_STAT, VDD);
+24 non-GND nets cross the neck at y 28.5 (14.0 mm between the notches) from the top tier to the rest of the board. With
+GND on both inner layers and Power at its 0.15 class clearance no run closed below 7 open on the outer layers and below 4
+with In2 signals for the open nets. The VDD plane frees VDD from the outer layers and is the difference in autoroute's 0.

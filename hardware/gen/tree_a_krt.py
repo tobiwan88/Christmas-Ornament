@@ -8,15 +8,17 @@ only an intermediate in a work dir: its zones, rules and project are NOT taken, 
 not locked: the generator's own copper, the U1 fan-out, the RF column, the TPS63900 stage and the XL lanes, is locked).
 
 Commands (repo root, after `source scripts/kicad-env.sh`; KRT's own venv from hardware/tools/setup_tools.sh):
-  python3 hardware/gen/tree_a_krt.py run [--workdir DIR] [--cfg JSON] [--write]   one timed run of the CHAIN, graded;
-                                                         --write replaces frozen-routes.json when the result is clean
-  python3 hardware/gen/tree_a_krt.py sweep --cfgs JSON_LIST [--jobs N]           variants of CHAIN in parallel, a table
+  python3 hardware/gen/tree_a_krt.py plan [--workdir DIR] [--cfg JSON] [--write]  DEFAULT (gate 5 round 3): autoroute.py's
+                                                         plan step by step with GND on In1 AND In2 (D34), timed, graded;
+                                                         --write replaces frozen-routes.json only when the result is clean
+  python3 hardware/gen/tree_a_krt.py auto [--workdir DIR] [--cfg JSON] [--write]  autoroute.py itself (README Option C):
+                                                         --dry-run plan.json + AUTOROUTE_SUMMARY; it puts VDD on In2
+  python3 hardware/gen/tree_a_krt.py run [--workdir DIR] [--cfg JSON]             the old hand CHAIN (rounds 1-2, superseded)
+  python3 hardware/gen/tree_a_krt.py sweep --cfgs JSON_LIST [--jobs N]           variants in parallel ("flow": plan / auto / chain)
   python3 hardware/gen/tree_a_krt.py extract KRT_OUT.kicad_pcb OUT.json          unlocked copper -> frozen JSON
   python3 hardware/gen/tree_a_krt.py metrics FROZEN.json                         tracks, vias, length per net class
   python3 hardware/gen/tree_a_krt.py grade FROZEN.json [--workdir DIR]           build with it, DRC + parity
-Flow (README "pours first", #562): route_planes.py keeps the generator's GND planes (In1 / In2), then route.py passes over
-all nets (plane nets included), then the GND edge fence as a re-run of the pour round the finished signals (README:
-stitching goes after routing), and a last route.py on GND (the chain ends on route.py: its in-run plane finalize).
+Measured results and why each knob is what it is: hardware/NOTES-routing-lessons.md "tree-a gate 5 round 3".
 """
 from __future__ import annotations
 
@@ -384,7 +386,7 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # ------------------------------------------------------------------------------------------------------------------
 PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=True, fence=True,
             rules={"clearance": 0.1, "track": 0.1, "via": 0.45, "drill": 0.2, "min_clearance": 0.09, "min_track": 0.09},
-            standard=0.1, floor_clearance=0.09, track=0.1, via=0.45, drill=0.2, grid=0.05, in2_fallback=[], in2_vdd=[],
+            standard=0.1, floor_clearance=0.09, track=0.1, via=0.45, drill=0.2, grid=0.05, in2_fallback=[], in2_vdd=[], route_args=[],
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
                    ["/mcu/DCC", 0.3], ["/mcu/VSS_PA", 0.3]])
 
@@ -427,7 +429,7 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
     base = ["--nets", "*", "--no-bga-zones", "--track-width", cfg["track"], "--via-size", cfg["via"], "--via-drill", cfg["drill"],
             "--grid-step", cfg["grid"], "--escalation", "board",
             "--power-nets", *[q[0] for q in cfg["power"]], "--power-nets-widths", *[q[1] for q in cfg["power"]],
-            "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
+            "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu", *[str(x) for x in cfg["route_args"]]]
     best = None
 
     def one_pass(prev, out, ceil, nets, lc, label):

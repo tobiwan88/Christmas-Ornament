@@ -39,7 +39,7 @@ stackup:                               # part of the order; calc/impedance.py re
   layers:
     - {name: F.Cu,  role: signal, ref: In1.Cu, dielectric_mm: 0.2104, er: 4.4}                    # 7628 prepreg
     - {name: In1.Cu, role: plane, net: GND, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
-    - {name: In2.Cu, role: plane, net: GND}     # DECISION (proposed): GND, so B.Cu references a solid plane (LED lines, SW1, TC2030). Nordic's reference layout has two solid inner planes with the same cut-out under the matching network; the net of its 3rd layer is not labelled: UNVERIFIED. VDD is routed on the outer layers.
+    - {name: In2.Cu, role: plane, net: GND}     # D34 (engineer, 2026-11-24, proposed text in the gate-5 report): stackup S / GND / GND / S, power on the outer layers; a LOCAL VDD pour on In2 only if routing needs it (tree_a_pcb.IN2_VDD, none so far). Nordic's reference has two solid inner planes with the same cut-out under the matching network
     - {name: B.Cu,  role: signal, ref: In2.Cu, dielectric_mm: 0.2104, er: 4.4}
 
 net_classes:                           # full KiCad net names; widths checked by calc/track_width.py

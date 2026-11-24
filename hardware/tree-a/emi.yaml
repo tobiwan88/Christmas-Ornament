@@ -11,7 +11,7 @@ edge_exempt:                # rectangles {box: [x0, y0, x1, y1], reason}
   - {box: [40.0, 80.5, 48.5, 91.5], reason: "J1 USB-C (variant B, DNP) shell overhangs the right trunk edge at x 48; its plated slots are the GND there"}
   - {box: [22.0, 95.0, 48.0, 105.0], reason: "trunk bottom: BT1 pads 3/4 (BT_LINK, 7.45 x 6.10) reach y 102.7, no room for an edge via row under them"}
 void_max_mm: 1.0            # longest signal run over a plane void (emi_check default)
-plane_ref: {F.Cu: In1.Cu, B.Cu: In2.Cu}   # board.yaml stackup: In1 and In2 both solid GND (In2 = proposed decision)
+plane_ref: {F.Cu: In1.Cu, B.Cu: In2.Cu}   # board.yaml stackup: In1 and In2 both solid GND (D34, engineer 2026-11-24)
 loop_max_mm: 12.0           # emi_check default; TPS63900 loops are placed at 1.4-3.3 mm pad to pad (critical.yaml)
 sw_nets: [/power/LX1, /power/LX2]   # TPS63900 switch nodes (netlist names)
 sw_area_max_mm2: 3.0        # emi_check default: L2 pads sit 2.06 mm from LX1 / LX2 (critical.yaml), short stubs only
