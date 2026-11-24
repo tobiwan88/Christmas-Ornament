@@ -290,7 +290,7 @@ def floorplan(P):
 
 
 ESCAPES = ("d9", "vdd")      # groups of led_escapes on the board; "d10" measured worse (walls the left neck); --escapes
-ESCAPE_GROUPS = ("d9", "d10", "vdd")
+ESCAPE_GROUPS = ("d9", "d10", "vdd", "rdog")
 
 
 def led_escapes(P, groups=None):
@@ -319,6 +319,22 @@ def led_escapes(P, groups=None):
         _d10_lanes(T, d10)
     if "vdd" in groups:
         _vdd_links(P, T, V)
+    if "rdog" in groups:
+        _r_dogbones(P, T, V)
+
+
+def _r_dogbones(P, T, V):
+    """MCU side of the LED series resistors: R(n) pad 1 faces the board edge (pad 2 faces J3), and in every KRT run the
+    outer strip beside the columns (0.67-0.88 mm at the neck fillet, 1-2 tracks) was taken by other nets, so the MCU
+    lines looped round U1 (LED_L3/L4_MCU over the top, boxing D9 in). A dog-bone via on the outer side of each pad 1
+    (0.15 mm via-to-own-pad gap, rule 'via to SMD pad') lets the line arrive on B.Cu under the resistor columns."""
+    for k in range(1, 9):
+        q = P.pad(f"R{k}", "1")
+        o = P.pad(f"R{k}", "2")
+        sx = 1.0 if q[0] > o[0] else -1.0                       # outward = away from pad 2
+        vx = round(q[0] + sx * (0.32 + 0.15 + 0.30 + 0.01), 3)   # pad half width (0402 land 0.64 wide incl. rotation) + gap 0.15 + via r 0.30
+        T([q, (vx, q[1])], 0.15)
+        V(vx, q[1])
 
 
 def _d9_lanes(T, d9, xe, lanes):
