@@ -273,6 +273,7 @@ def floorplan(P):
     for k, ref in enumerate(("R23", "R20", "R21", "R22")):   # SEL pull-down, CFG1, CFG2, CFG3 under pins 2-5
         P.put(ref, ux - 1.575 + 1.05 * k, yb, 270.0)
     power_stage(P)
+    led_escapes(P)
     # ---- 5. variant B (DNP in order 1, D10): J2 and U3 under the holder (D15 rule), passives in the right wing ----------
     P.put("J2", TO.CX, 58.0, 0.0)
     P.put("U3", 44.0, 78.5, 0.0)
@@ -281,6 +282,48 @@ def floorplan(P):
     P.put("R32", 55.0, 74.6, 0.0)
     P.put("R30", 49.5, 72.9, 0.0)
     P.put("R31", 52.0, 72.9, 0.0)
+
+
+def led_escapes(P):
+    """Gate 5 hand-led bottlenecks (kicad-layout stuck protocol), locked B.Cu copper from the placed pads:
+    - D9 (star LED under the RF column, 0.5 mm below the antenna keep-out): in every KRT run that routed U1 first, U1's
+      escapes looped over the top of the exposed pad on B.Cu and boxed D9 in (LED_L1 / L2 / L6 / L7 open). Its four lines
+      leave to the RIGHT in four lanes (0.32 mm pitch, below C11's GND via, above C9's GND via and the SWD vias) and end
+      at x 41.8 near the right tier edge; the router continues from the lane ends.
+    - D10 (left of U1, inside the left-row escape fan): its four lines go straight DOWN in four lanes to y 28.6 (under
+      the neck level, beside J3); LED_L8 (top right pad) goes round the top of the LED to the outermost lane, so the
+      corridor right of D10 (x 31.9-32.2, 0.8 mm to the XL1 lane) stays free for BTN_SW1 / VBUS_DET (escape proof path).
+    - VDD: pin 10's via joined to C7.1 (decoupling through the cap pad) by a B.Cu run and a via at the pad; VDD 36's
+      via joined to VDD 22's via over the exposed pad on B.Cu (0.2 mm: 0.12 mm needed for 0.5 A, calc/track_width.py),
+      so the four VDD decoupling points are one node before the router runs (VDD was the most frequent open net)."""
+    T, V = P.track, P.via
+    d9 = {k: P.pad("D9", str(k)) for k in range(1, 5)}
+    d10 = {k: P.pad("D10", str(k)) for k in range(1, 5)}
+    # orientation relied on: pad 1 top right, 2 top left, 3 bottom right, 4 bottom left (B.Cu, rot 180)
+    for d in (d9, d10):
+        assert d[1][0] > d[2][0] and d[3][0] > d[4][0] and d[1][1] < d[3][1] and d[2][1] < d[4][1], d
+    xe, lanes = 41.80, (18.30, 18.62, 18.94, 19.26)                 # D9 lanes top to bottom: L7, L1, L2, L6
+    T([d9[1], (36.40, d9[1][1]), (36.40 + lanes[0] - d9[1][1], lanes[0]), (xe, lanes[0])], 0.15, "B.Cu")      # LED_L7
+    T([d9[3], (36.00, d9[3][1]), (36.00 + lanes[1] - d9[3][1], lanes[1]), (xe, lanes[1])], 0.15, "B.Cu")      # LED_L1
+    T([d9[4], (d9[4][0], lanes[2]), (xe, lanes[2])], 0.15, "B.Cu")                                             # LED_L2
+    xl6 = round(d9[2][0] - 0.55, 3)
+    T([d9[2], (xl6, d9[2][1]), (xl6, lanes[3]), (xe, lanes[3])], 0.15, "B.Cu")                                 # LED_L6
+    yd = 28.60                                                      # D10 lane ends (outline neck starts at y 28.0)
+    xl8 = round(d10[2][0] - 0.90, 3)                                 # LED_L8 outermost lane (left)
+    xl7 = round(d10[2][0] - 0.60, 3)
+    ytop = round(d10[1][1] - 0.55, 3)
+    T([d10[1], (d10[1][0], ytop), (xl8, ytop), (xl8, yd)], 0.15, "B.Cu")                                       # LED_L8
+    T([d10[2], (xl7, d10[2][1]), (xl7, yd)], 0.15, "B.Cu")                                                     # LED_L7
+    T([d10[4], (d10[4][0], yd)], 0.15, "B.Cu")                                                                 # LED_L3
+    T([d10[3], (d10[3][0], yd)], 0.15, "B.Cu")                                                                 # LED_L2
+    # VDD: pin 10 via (36.55, 28.00) -> B.Cu below the TPS_SEL via -> via at C7.1 -> C7.1 (F.Cu)
+    c7 = P.pad("C7", "1")
+    vx, vy = c7[0], round(c7[1] + 0.85, 3)
+    T([(36.55, 28.00), (36.55, 28.60), (vx - 0.30, 28.60), (vx, 28.30), (vx, vy)], 0.3, "B.Cu")
+    V(vx, vy)
+    T([(vx, vy), c7], 0.3)
+    # VDD: pin 36 via (32.05, 21.00) over the exposed pad (B.Cu pad top 21.90) to pin 22's via (39.10, 23.55)
+    T([(32.05, 21.00), (32.65, 21.60), (38.20, 21.60), (38.40, 21.80), (38.40, 23.20), (38.75, 23.55), (39.10, 23.55)], 0.2, "B.Cu")
 
 
 def power_stage(P):
@@ -984,7 +1027,8 @@ def stage2(job_file):
         def track(self, pts, w=0.15, layer="F.Cu"):
             """Locked fan-out copper (hw-check: unlocked copper counts as router copper). Net = the pad or locked via at
             either end (first match)."""
-            net = self._net_at(pts[0]) or self._net_at(pts[-1]) or self._end_net(pts[0]) or self._end_net(pts[-1])
+            lid = board.GetLayerID(layer)
+            net = self._net_at(pts[0], lid) or self._net_at(pts[-1], lid) or self._end_net(pts[0]) or self._end_net(pts[-1])
             if net is None:
                 raise SystemExit(f"fan-out track {pts}: no pad / via at either end")
             for a, b in zip(pts, pts[1:]):
@@ -1018,11 +1062,11 @@ def stage2(job_file):
             """net of a locked via or track end already drawn at q (B.Cu runs between generator vias)"""
             return next((n for (e, n) in self.ends if abs(e[0] - q[0]) < 1e-6 and abs(e[1] - q[1]) < 1e-6), None)
 
-        def _net_at(self, q):
+        def _net_at(self, q, layer=pcbnew.F_Cu):
             pt = V(*q)
             for fp in fps.values():
                 for pd in fp.Pads():
-                    if pd.GetNetCode() > 0 and pd.IsOnLayer(pcbnew.F_Cu) and pd.HitTest(pt):
+                    if pd.GetNetCode() > 0 and pd.IsOnLayer(layer) and pd.HitTest(pt):
                         return pd.GetNet()
             return None
     P = Placer()
@@ -1166,7 +1210,221 @@ def stage2(job_file):
         print(f"PLACE {r:5} {x:8.3f} {y:8.3f} {lay} {rot:6.1f}{'  DNP' if comps[r]['dnp'] else ''}")
 
 
+# ======================================================================================================================
+# Proof rows of the routed board (gate 5), run with $KICAD_PYTHON: `tree_a_pcb.py --proof [board]`. calc/emi_check.py
+# cannot measure two rows on this outline (its edge fence walks the bounding box; its plane row reads zone fills from the
+# board file, which is saved unfilled): measured here with the same limits from emi.yaml, as tree_b_pcb.py --proof does.
+# ======================================================================================================================
+def _emi_yaml():
+    import ast
+    txt = (BOARD_DIR / "emi.yaml").read_text()
+
+    def num(key, default):
+        m = re.search(rf"^{key}:\s*([0-9.]+)", txt, re.M)
+        return float(m.group(1)) if m else default
+    boxes = [ast.literal_eval(m.group(1)) for m in re.finditer(r"\{box:\s*(\[[0-9., ]+\])", txt)]
+    return num("edge_pitch_mm", 5.0), num("edge_band_mm", 1.6), num("void_max_mm", 1.0), boxes
+
+
+def proof(path: Path) -> bool:
+    import pcbnew
+    b = PS.load_board(str(path))
+    mm = pcbnew.ToMM
+    lim, band, vmax, boxes = _emi_yaml()
+    rows = []
+    poly = [tuple(p) for p in TO.OUTLINE_POLY]
+    n = len(poly)
+    cum = [0.0]
+    for i in range(n):
+        cum.append(cum[-1] + math.dist(poly[i], poly[(i + 1) % n]))
+    per = cum[-1]
+
+    def near(pt):                        # (arc position, distance) of the nearest outline point
+        best = (1e9, 0.0)
+        for i in range(n):
+            a, c = poly[i], poly[(i + 1) % n]
+            dx, dy = c[0] - a[0], c[1] - a[1]
+            t = max(0.0, min(1.0, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / (dx * dx + dy * dy)))
+            d = math.dist(pt, (a[0] + t * dx, a[1] + t * dy))
+            if d < best[0]:
+                best = (d, cum[i] + t * math.sqrt(dx * dx + dy * dy))
+        return best[1], best[0]
+
+    def at(s):
+        s %= per
+        for i in range(n):
+            if s <= cum[i + 1]:
+                t = (s - cum[i]) / (cum[i + 1] - cum[i])
+                return (poly[i][0] + t * (poly[(i + 1) % n][0] - poly[i][0]), poly[i][1] + t * (poly[(i + 1) % n][1] - poly[i][1]))
+        return poly[0]
+    vias = [t for t in b.GetTracks() if t.GetClass() == "PCB_VIA"]
+    gnd = [(mm(v.GetPosition().x), mm(v.GetPosition().y)) for v in vias if v.GetNetname() == "GND"]
+    on = sorted((s_, p) for p, (s_, d_) in ((p, near(p)) for p in gnd) if d_ <= band)
+    rings = [(x, y, G.MOUNT_KEEPOUT_D / 2) for nm, x, y, d, _p in G.holes() if "MOUNT" in nm]
+    ko_h = TO.ANT_KEEPOUT_H_MM + 0.3
+
+    def exempt(p):                       # antenna keep-out span, M2 rings, emi.yaml edge_exempt boxes (with reasons there)
+        return p[1] <= ko_h or any(math.dist(p, (x, y)) < r + 0.3 for x, y, r in rings) or \
+            any(bx[0] <= p[0] <= bx[2] and bx[1] <= p[1] <= bx[3] for bx in boxes)
+    worst, gaps = 0.0, []
+    for k in range(len(on)):
+        a_, pa = on[k]
+        c_, pc = on[k + 1] if k + 1 < len(on) else (on[0][0] + per, on[0][1])
+        eu = math.dist(pa, pc)
+        if eu <= lim:
+            worst = max(worst, eu)
+            continue
+        free = sum(0.2 for j in range(int((c_ - a_) / 0.2)) if not exempt(at(a_ + j * 0.2)))
+        g = min(eu, free)
+        worst = max(worst, g)
+        if g > lim:
+            gaps.append((round(g, 1), tuple(round(v, 1) for v in pa)))
+    rows.append(("GND via fence along the outline", bool(on) and not gaps,
+                 f"{len(on)} GND vias within {band} mm of the outline, largest unexempted gap {worst:.1f} mm (max {lim})"
+                 + (f"; gaps {gaps}" if gaps else "")))
+    # via copper to SMD pad copper, own net included (rule 'via to SMD pad' 0.15 mm; KiCad's DRC skips same-net pairs)
+    spads = [(p, fp.GetReference()) for fp in b.GetFootprints() for p in fp.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD]
+    best = (9.9, "")
+    for v in vias:
+        vx, vy, r = mm(v.GetPosition().x), mm(v.GetPosition().y), mm(v.GetWidth(pcbnew.F_Cu)) / 2
+        for p, ref in spads:
+            if p.GetNetname() != v.GetNetname():       # other nets: KiCad's DRC checks them (exact pad shapes)
+                continue
+            bb = p.GetBoundingBox()
+            x0, y0, x1, y1 = mm(bb.GetLeft()), mm(bb.GetTop()), mm(bb.GetRight()), mm(bb.GetBottom())
+            if vx < x0 - 3 or vx > x1 + 3 or vy < y0 - 3 or vy > y1 + 3:
+                continue
+            g = math.hypot(max(x0 - vx, 0, vx - x1), max(y0 - vy, 0, vy - y1)) - r
+            if g < best[0]:
+                best = (g, f"via ({vx:.2f}, {vy:.2f}) {v.GetNetname()} to {ref}.{p.GetNumber()} {p.GetNetname()}")
+    rows.append(("via copper to own-net SMD pad >= 0.15", best[0] >= 0.15 - 1e-6,
+                 f"{len(vias)} vias, smallest {best[0]:.3f} mm: {best[1]} (pad bounding boxes: conservative)"))
+    # track over plane void after a kicad-cli refill of a temporary copy (F.Cu over In1, B.Cu over In2)
+    tmpd = tempfile.mkdtemp(prefix="tree-a-fill-")
+    try:
+        filled = Path(tmpd) / f"{NAME}.kicad_pcb"
+        shutil.copyfile(str(path), filled)
+        for suf in (".kicad_pro", ".kicad_dru"):
+            if Path(path).with_suffix(suf).exists():
+                shutil.copyfile(str(Path(path).with_suffix(suf)), filled.with_suffix(suf))
+        PS.fill_zones_cli(str(filled))
+        bf = PS.load_board(str(filled))
+        zones = {bf.GetLayerName(z.GetLayer()): z for z in bf.Zones() if not z.GetIsRuleArea() and z.GetNetname() == "GND"
+                 and bf.GetLayerName(z.GetLayer()) in ("In1.Cu", "In2.Cu")}
+        ref = {"F.Cu": "In1.Cu", "B.Cu": "In2.Cu"}
+        own = {}
+        for t in bf.GetTracks():
+            if t.GetClass() == "PCB_VIA":
+                own.setdefault(t.GetNetname(), []).append(((mm(t.GetPosition().x), mm(t.GetPosition().y)), mm(t.GetWidth(pcbnew.F_Cu)) / 2 + 0.45))
+        for fp in bf.GetFootprints():
+            for pad in fp.Pads():
+                own.setdefault(pad.GetNetname(), []).append(((mm(pad.GetPosition().x), mm(pad.GetPosition().y)),
+                                                              max(mm(pad.GetSizeX()), mm(pad.GetSizeY())) / 2 + 0.45))
+        worst_run, at_ = 0.0, None
+        for t in bf.GetTracks():
+            if t.GetClass() == "PCB_VIA" or t.GetNetname() == "GND":
+                continue
+            lay = bf.GetLayerName(t.GetLayer())
+            z = zones.get(ref.get(lay, ""))
+            if z is None:
+                continue
+            a_p, c_p = (mm(t.GetStart().x), mm(t.GetStart().y)), (mm(t.GetEnd().x), mm(t.GetEnd().y))
+            L = math.dist(a_p, c_p)
+            k = max(1, int(L / 0.1))
+            run = 0.0
+            for i in range(k + 1):
+                p = (a_p[0] + (c_p[0] - a_p[0]) * i / k, a_p[1] + (c_p[1] - a_p[1]) * i / k)
+                covered = z.HitTestFilledArea(z.GetLayer(), pcbnew.VECTOR2I(pcbnew.FromMM(p[0]), pcbnew.FromMM(p[1])), 0) or \
+                    any(math.dist(p, q) < r for q, r in own.get(t.GetNetname(), []))
+                run = 0.0 if covered else run + L / k
+                if run > worst_run:
+                    worst_run, at_ = run, (t.GetNetname(), lay, round(p[0], 2), round(p[1], 2))
+        rows.append(("track over plane void (refilled copy)", worst_run <= vmax,
+                     f"longest run without its reference plane {worst_run:.2f} mm (max {vmax}; own antipads excluded)"
+                     + (f" at {at_}" if at_ and worst_run > 0 else "")))
+    finally:
+        shutil.rmtree(tmpd, ignore_errors=True)
+    fails = 0
+    for what, ok, detail in rows:
+        print(f"{'OK  ' if ok else 'FAIL'} {what:44} {detail}")
+        fails += not ok
+    print("tree_a_pcb proof:", "OK" if not fails else "FAILED")
+    return not fails
+
+
+def stack_proof(a_path: Path, b_path: Path) -> bool:
+    """A-vs-B stack proof on the two REAL board files (run with $KICAD_PYTHON): J3 on A F.Cu rotation 0 and J4 on B B.Cu
+    file orientation 180 (D27), every mated contact pair carries the same LED line (by position, as the pins touch), the
+    LED pairs D(n) on B / D(n+8) on A back to back, the M2 mounts and the hanging hole at the same points, same outline box.
+    Board B sits at ORIGIN (100, 50) in its file (tree_b_pcb.ORIGIN); A at (0, 0)."""
+    import pcbnew
+    a, b = PS.load_board(str(a_path)), PS.load_board(str(b_path))
+    mm = pcbnew.ToMM
+    ob = (100.0, 50.0)
+    fa = {f.GetReference(): f for f in a.GetFootprints()}
+    fb = {f.GetReference(): f for f in b.GetFootprints()}
+    rows = []
+
+    def side(f):
+        return "B.Cu" if f.IsFlipped() else "F.Cu"
+    j3, j4 = fa["J3"], fb["J4"]
+    rows.append(("J3 on A: F.Cu, rotation 0", side(j3) == "F.Cu" and abs(j3.GetOrientationDegrees() % 360) < 1e-6,
+                 f"{side(j3)} {j3.GetOrientationDegrees():.0f}"))
+    rows.append(("J4 on B: B.Cu, file orientation 180", side(j4) == "B.Cu" and abs(abs(j4.GetOrientationDegrees()) - 180) < 1e-6,
+                 f"{side(j4)} {j4.GetOrientationDegrees():.0f}"))
+    pitch2 = TO.HEADER_PITCH / 2
+    cx, _cy = TO.HEADER_CENTER
+
+    def contacts(f, o):
+        out = {}
+        for p in f.Pads():
+            x, y = mm(p.GetPosition().x) - o[0], mm(p.GetPosition().y) - o[1]
+            out[(round(math.copysign(pitch2, x - cx) + cx, 2), round(y, 2))] = (p.GetNumber(), p.GetNetname().split("/")[-1])
+        return out
+    c3, c4 = contacts(j3, (0, 0)), contacts(j4, ob)
+    pairs = sorted((c3[k][0], v[0], c3[k][1], v[1]) for k, v in c4.items() if k in c3)
+    bad = [p for p in pairs if p[2] != p[3]]
+    rows.append(("mated contacts carry the same line (real pads)", len(pairs) == 8 and not bad,
+                 f"{len(pairs)} pairs, " + (f"MISMATCH {bad}" if bad else " ".join(f"J3.{p[0]}-J4.{p[1]} {p[2]}" for p in pairs))))
+    worst = 0.0
+    for n in range(1, 9):
+        da, db = fa[f"D{n + 8}"], fb[f"D{n}"]
+        pa = (mm(da.GetPosition().x), mm(da.GetPosition().y))
+        pb = (mm(db.GetPosition().x) - ob[0], mm(db.GetPosition().y) - ob[1])
+        worst = max(worst, math.dist(pa, pb))
+        if side(da) != "B.Cu" or side(db) != "F.Cu":
+            worst = 99.0
+    rows.append(("LED pairs D(n) B F.Cu / D(n+8) A B.Cu back to back", worst < 1e-3, f"worst centre offset {worst:.4f} mm"))
+
+    def holes(bd, o):
+        return sorted((round(mm(p.GetPosition().x) - o[0], 3), round(mm(p.GetPosition().y) - o[1], 3), round(mm(p.GetDrillSize().x), 2))
+                      for f in bd.GetFootprints() for p in f.Pads() if p.GetDrillSize().x > 0 and f.GetReference().startswith(("H", "MH")))
+    ha, hb = holes(a, (0, 0)), holes(b, ob)
+    rows.append(("mount and hanging holes at the same points", ha == hb, f"A {ha} / B {hb}"))
+    ba, bb_ = a.GetBoardEdgesBoundingBox(), b.GetBoardEdgesBoundingBox()
+    da_ = (mm(ba.GetLeft()), mm(ba.GetTop()), mm(ba.GetRight()), mm(ba.GetBottom()))
+    db_ = (mm(bb_.GetLeft()) - ob[0], mm(bb_.GetTop()) - ob[1], mm(bb_.GetRight()) - ob[0], mm(bb_.GetBottom()) - ob[1])
+    rows.append(("outline box equal", max(abs(x - y) for x, y in zip(da_, db_)) < 0.01,
+                 f"A {tuple(round(v, 2) for v in da_)} / B {tuple(round(v, 2) for v in db_)}"))
+    fails = 0
+    for what, ok, detail in rows:
+        print(f"{'OK  ' if ok else 'FAIL'} {what:50} {detail}")
+        fails += not ok
+    print("tree_a_pcb stack proof (real boards):", "OK" if not fails else "FAILED")
+    return not fails
+
+
 if __name__ == "__main__":
+    if "--stack-proof" in sys.argv:
+        i = sys.argv.index("--stack-proof")
+        rest = [x for x in sys.argv[i + 1:i + 3] if not x.startswith("--")]
+        pa = Path(rest[0]) if rest else BOARD_DIR / f"{NAME}.kicad_pcb"
+        pb = Path(rest[1]) if len(rest) > 1 else HW / "tree-b" / "tree-b.kicad_pcb"
+        sys.exit(0 if stack_proof(pa, pb) else 1)
+    if "--proof" in sys.argv:
+        i = sys.argv.index("--proof")
+        arg = sys.argv[i + 1] if len(sys.argv) > i + 1 and not sys.argv[i + 1].startswith("--") else str(BOARD_DIR / f"{NAME}.kicad_pcb")
+        sys.exit(0 if proof(Path(arg)) else 1)
     if "--pcbnew" in sys.argv:
         stage2(sys.argv[sys.argv.index("--pcbnew") + 1])
         sys.exit(0)

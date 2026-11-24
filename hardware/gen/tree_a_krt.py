@@ -204,9 +204,14 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
               cfg["track"], *common]
     fence = ["--stitch-edge-fence", "--stitch-fence-pitch", cfg["fence_pitch"]]
     cur = workdir / "s0_planes.kicad_pcb"
-    _copy_siblings(inp, cur)
-    rc, t = sh([py, rt / "route_planes.py", inp, cur, *planes, *(fence if cfg["fence"] == "pre" else [])], workdir / "s0_planes.log")
-    times.append(("route_planes.py (GND In1/In2" + (" + edge fence" if cfg["fence"] == "pre" else "") + ")", t, rc))
+    if cfg.get("start"):                                   # resume from an earlier stage's KRT board (sweeps of later passes)
+        shutil.copy(cfg["start"], cur)
+        _copy_siblings(Path(cfg["start"]), cur)
+        times.append((f"start from {Path(cfg['start']).parent.name}/{Path(cfg['start']).name}", 0.0, 0))
+    else:
+        _copy_siblings(inp, cur)
+        rc, t = sh([py, rt / "route_planes.py", inp, cur, *planes, *(fence if cfg["fence"] == "pre" else [])], workdir / "s0_planes.log")
+        times.append(("route_planes.py (GND In1/In2" + (" + edge fence" if cfg["fence"] == "pre" else "") + ")", t, rc))
     pw = [p[0] for p in cfg["power"]]
     base = ["--no-bga-zones", "--power-nets", *pw, "--power-nets-widths", *[p[1] for p in cfg["power"]],
             "--track-width", cfg["track"], "--grid-step", cfg["grid"], "--fab-tier", "standard", "--escalation", "off",
@@ -216,7 +221,8 @@ def run_flow(workdir: Path, cfg: dict | None = None) -> tuple[Path, list]:
         base += ["--keep-away", *cfg["keep_away"]]
     for i, ps in enumerate(cfg["passes"], start=1):
         out = workdir / f"s{i}_route.kicad_pcb"
-        rc, t = sh([py, rt / "route.py", cur, out, "--nets", *ps["nets"], *base, *ps["args"],
+        lc = ["--layer-costs", *ps["layer_costs"]] if ps.get("layer_costs") else []
+        rc, t = sh([py, rt / "route.py", cur, out, "--nets", *ps["nets"], *base, *lc, *ps["args"],
                     "--json-out", workdir / f"s{i}_route.json"], workdir / f"s{i}_route.log")
         times.append((f"route.py pass {i} ({' '.join(str(a) for a in ps['args'])})", t, rc))
         if not out.exists():
