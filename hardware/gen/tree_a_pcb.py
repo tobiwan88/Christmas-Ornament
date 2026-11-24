@@ -201,6 +201,8 @@ def stage1(args):
         ok = drc() and ok
     if "--render" in args:
         render(pcb)
+    if "--escape-proof" in args:
+        ok = escape_proof(pcb) and ok
     print("tree_a_pcb:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 
@@ -427,6 +429,413 @@ def render(pcb: Path):
         subprocess.run(["kicad-cli", "pcb", "render", "--side", side, "--width", "1400", "--height", "2000", "--quality", "basic",
                         "-o", str(OUT_REVIEW / f"3d_{side}.png"), str(pcb)], capture_output=True)
     print("renders:", OUT_REVIEW)
+
+
+# ======================================================================================================================
+# Escape proof (gate 4 feasibility, not the final routing): can every U1 net reach its destination pads?
+# ======================================================================================================================
+# Grid router on F.Cu / B.Cu (In1 / In2 are GND planes): the A* core is gen/tree_b_astar.c (board neutral, ctypes).
+# Rules (board.yaml net_classes.Default, rules/jlc-4layer.json, rules/tree-a.kicad_dru): track 0.15, clearance 0.15,
+# via 0.6 / drill 0.3, copper to edge 0.3, hole to hole 0.5 (drill edges), via to any SMD pad 0.15 (custom rule), NPTH hole
+# clearance 0.2; antenna keep-outs from the board's rule areas (F.Cu with the feed notch; B.Cu full triangle).
+# Model: grid 0.05 mm, 8 directions; a cell is free for net n when every foreign copper cell is at least clearance + w/2 +
+# MARGIN away (MARGIN covers the raster: copper boxes are sampled at cell centres). Locked generator copper (fan-out
+# stubs and vias) is part of the board. Nets are grown pad by pad; several seeded net orders, best result kept.
+# GND: every GND pad around U1 must reach a GND via site (a via that is DRC-legal there, or a locked GND via / the exposed
+# pad) within GND_REACH_MAX mm of track: the planes do the rest.
+ESC_STEP = 0.05
+ESC_WIN = (14.0, 9.0, 58.0, 68.0)        # x0, y0, x1, y1 (mm): U1 to TC1 (52, 62), U2 (19.5, 61), SW1 nets end at R10
+ESC_TRACK, ESC_CLR, ESC_VIA, ESC_DRILL = 0.15, 0.15, 0.6, 0.3
+ESC_EDGE, ESC_H2H, ESC_VIA_PAD, ESC_HOLE = 0.30, 0.50, 0.15, 0.20
+ESC_MARGIN = 0.05
+GND_REACH_MAX = 1.5
+ESC_LAYERS = ("F.Cu", "B.Cu")
+
+
+def board_geometry(pcb: Path) -> dict:
+    """Pads (boxes, nets, layers), tracks, vias, rule areas of the board via tools/board_geom.py (KiCad's Python)."""
+    out = OUT_REVIEW / "geom.json"
+    OUT_REVIEW.mkdir(parents=True, exist_ok=True)
+    subprocess.run([os.environ["KICAD_PYTHON"], str(HW / "tools" / "board_geom.py"), str(pcb), str(out)], check=True,
+                   capture_output=True)
+    return json.loads(out.read_text())
+
+
+class EscGrid:
+    def __init__(self, geom, track=ESC_TRACK):
+        import numpy as np
+        self.np = np
+        x0, y0, x1, y1 = ESC_WIN
+        self.x0, self.y0 = x0, y0
+        self.nx, self.ny = int(round((x1 - x0) / ESC_STEP)) + 1, int(round((y1 - y0) / ESC_STEP)) + 1
+        self.w = track
+        self.pads = []
+        for p in geom["pads"]:
+            (ax, ay), (bx, by) = p["box"]
+            lay = [l for l, on in (("F.Cu", p["front"]), ("B.Cu", p["back"])) if on]
+            self.pads.append(dict(ref=p["ref"], num=p["num"], net=p["net"], box=(ax, ay, bx, by), layers=lay, tht=p["tht"]))
+        self.nets = sorted({p["net"] for p in self.pads if p["net"]} | {t["net"] for t in geom["tracks"]}
+                           | {v["net"] for v in geom["vias"]})
+        self.nid = {n: i + 1 for i, n in enumerate(self.nets)}
+        self.owner = {l: np.zeros((self.ny, self.nx), dtype=np.int16) for l in ESC_LAYERS}
+        self.smd = np.zeros((self.ny, self.nx), dtype=bool)
+        self.drill = np.zeros((self.ny, self.nx), dtype=bool)
+        for p in self.pads:
+            nid = self.nid.get(p["net"], -1) if p["net"] else -1      # no-net copper (NPTH ring, NC pad): foreign to all
+            for l in p["layers"]:
+                self._box(self.owner[l], p["box"], nid)
+            if not p["tht"]:
+                self._box(self.smd, p["box"], True)
+            else:
+                cx, cy = (p["box"][0] + p["box"][2]) / 2, (p["box"][1] + p["box"][3]) / 2
+                self._disk(self.drill, cx, cy, min(p["box"][2] - p["box"][0], p["box"][3] - p["box"][1]) / 2)
+        for t in geom["tracks"]:
+            if t["layer"] in self.owner:
+                self.add_track(t["layer"], t["a"], t["b"], t["net"], t["w"])
+        for v in geom["vias"]:
+            self.add_via(v["pos"], v["net"], v["d"])
+        inside = self._poly(TO.OUTLINE_POLY)
+        d_edge = self._edt(inside)
+        ko = {l: np.zeros_like(inside) for l in ESC_LAYERS}
+        for k in geom["keepouts"]:
+            if k["name"].startswith("antenna"):
+                m = self._poly(k["pts"])
+                for l in k["layers"]:
+                    if l in ko:
+                        ko[l] |= m
+        half, vr = self.w / 2, ESC_VIA / 2
+        self.static_t = {l: (d_edge < ESC_EDGE + half + ESC_MARGIN) | (self._edt(~ko[l]) < half + ESC_MARGIN) for l in ESC_LAYERS}
+        anyko = ko["F.Cu"] | ko["B.Cu"]
+        self.static_v = ((d_edge < ESC_EDGE + vr + ESC_MARGIN) | (self._edt(~anyko) < vr + ESC_MARGIN)
+                         | (self._edt(~self.smd) < ESC_VIA_PAD + vr + ESC_MARGIN))
+
+    # raster helpers (cell (i, j) = (y0 + i * STEP, x0 + j * STEP))
+    def cell(self, x, y):
+        return int(round((y - self.y0) / ESC_STEP)), int(round((x - self.x0) / ESC_STEP))
+
+    def xy(self, i, j):
+        return round(self.x0 + j * ESC_STEP, 4), round(self.y0 + i * ESC_STEP, 4)
+
+    def _box(self, arr, b, val):
+        i0 = max(int(math.ceil((b[1] - self.y0) / ESC_STEP - 1e-9)), 0)
+        j0 = max(int(math.ceil((b[0] - self.x0) / ESC_STEP - 1e-9)), 0)
+        i1 = int(math.floor((b[3] - self.y0) / ESC_STEP + 1e-9))
+        j1 = int(math.floor((b[2] - self.x0) / ESC_STEP + 1e-9))
+        if i1 >= i0 and j1 >= j0:
+            arr[i0:i1 + 1, j0:j1 + 1] = val
+        else:                                                   # thinner than a cell: mark the nearest cell
+            i, j = self.cell((b[0] + b[2]) / 2, (b[1] + b[3]) / 2)
+            if 0 <= i < self.ny and 0 <= j < self.nx:
+                arr[i, j] = val
+
+    def _disk(self, arr, cx, cy, r, val=True):
+        np = self.np
+        yy, xx = np.ogrid[:self.ny, :self.nx]
+        arr[((self.y0 + yy * ESC_STEP - cy) ** 2 + (self.x0 + xx * ESC_STEP - cx) ** 2) <= r * r] = val
+
+    def _poly(self, pts):
+        from PIL import Image, ImageDraw
+        im = Image.new("L", (self.nx, self.ny), 0)
+        ImageDraw.Draw(im).polygon([((x - self.x0) / ESC_STEP, (y - self.y0) / ESC_STEP) for x, y in pts], fill=1)
+        return self.np.array(im, dtype=bool)
+
+    def _edt(self, free):
+        from scipy import ndimage
+        return ndimage.distance_transform_edt(free) * ESC_STEP
+
+    def add_track(self, layer, a, b, net, w=None):
+        from PIL import Image, ImageDraw
+        w = w or self.w
+        im = Image.new("L", (self.nx, self.ny), 0)
+        pa = ((a[0] - self.x0) / ESC_STEP, (a[1] - self.y0) / ESC_STEP)
+        pb = ((b[0] - self.x0) / ESC_STEP, (b[1] - self.y0) / ESC_STEP)
+        r = w / 2 / ESC_STEP
+        d = ImageDraw.Draw(im)
+        d.line([pa, pb], fill=1, width=max(int(round(w / ESC_STEP)), 1))
+        for q in (pa, pb):
+            d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], fill=1)
+        m = self.np.array(im, dtype=bool)
+        o = self.owner[layer]
+        o[m & (o == 0)] = self.nid[net]
+
+    def add_via(self, c, net, d=ESC_VIA):
+        np = self.np
+        m = np.zeros((self.ny, self.nx), dtype=bool)
+        self._disk(m, c[0], c[1], d / 2)
+        for l in ESC_LAYERS:
+            o = self.owner[l]
+            o[m & (o == 0)] = self.nid[net]
+        self._disk(self.drill, c[0], c[1], ESC_DRILL / 2)
+
+    def masks(self, net):
+        n = self.nid[net]
+        half, vr = self.w / 2, ESC_VIA / 2
+        mv = self.static_v | (self._edt(~self.drill) < ESC_H2H + ESC_DRILL / 2 + ESC_MARGIN)
+        mt = {}
+        for l in ESC_LAYERS:
+            foreign = (self.owner[l] != 0) & (self.owner[l] != n)
+            d = self._edt(~foreign)
+            mt[l] = self.static_t[l] | (d < ESC_CLR + half + ESC_MARGIN)
+            mv = mv | (d < ESC_CLR + vr + ESC_MARGIN)
+        return mt, mv
+
+    def snapshot(self):
+        return {l: a.copy() for l, a in self.owner.items()}, self.drill.copy()
+
+    def restore(self, s):
+        self.owner = {l: a.copy() for l, a in s[0].items()}
+        self.drill = s[1].copy()
+
+
+_ESC_LIB = None
+
+
+def esc_lib():
+    """gen/tree_b_astar.c compiled on demand into hardware/out/tree-a-escape/ (same build as gen/tree_b_route.py)."""
+    global _ESC_LIB
+    if _ESC_LIB is None:
+        import ctypes
+        out = HW / "out" / "tree-a-escape"
+        out.mkdir(parents=True, exist_ok=True)
+        so = out / ("tree_b_astar.dylib" if sys.platform == "darwin" else "tree_b_astar.so")
+        src = HERE / "tree_b_astar.c"
+        if not so.exists() or so.stat().st_mtime < src.stat().st_mtime:
+            base = ["cc", "-O2", "-shared", "-fPIC", "-o", str(so), str(src), "-lm"]
+            sdks = sorted(Path("/Library/Developer/CommandLineTools/SDKs").glob("MacOSX*.sdk"), reverse=True) if sys.platform == "darwin" else []
+            for extra in [[]] + [["-isysroot", str(d)] for d in sdks]:
+                if subprocess.run(base[:1] + extra + base[1:], capture_output=True).returncode == 0:
+                    break
+            else:
+                sys.exit("cannot compile gen/tree_b_astar.c (needs cc)")
+        _ESC_LIB = ctypes.CDLL(str(so))
+    return _ESC_LIB
+
+
+def esc_astar(g, mt, mv, src, tgt, tpts, turn_cost=0.05, via_cost=1.0, max_nodes=6_000_000):
+    import ctypes
+    np = g.np
+    blk = np.ascontiguousarray(np.stack([mt[l] for l in ESC_LAYERS]).astype(np.uint8))
+    blv = np.ascontiguousarray(mv.astype(np.uint8))
+    src = np.ascontiguousarray(src.astype(np.uint8))
+    tgt = np.ascontiguousarray(tgt.astype(np.uint8))
+    ti = np.array([p[0] for p in tpts], dtype=np.int32)
+    tj = np.array([p[1] for p in tpts], dtype=np.int32)
+    out = np.zeros(4 * 400_000, dtype=np.int32)
+    ptr = lambda a: a.ctypes.data_as(ctypes.c_void_p)  # noqa: E731
+    L = esc_lib()
+    L.astar.restype = ctypes.c_int
+    n = L.astar(ctypes.c_int(g.ny), ctypes.c_int(g.nx), ptr(blk), ptr(blv), ptr(src), ptr(tgt), ptr(ti), ptr(tj),
+                ctypes.c_int(len(ti)), ctypes.c_float(turn_cost), ctypes.c_float(via_cost), ctypes.c_float(1.3),
+                ctypes.c_float(ESC_STEP), 0, g.ny - 1, 0, g.nx - 1, ctypes.c_long(max_nodes), ptr(out), ctypes.c_int(400_000))
+    if n < 0:
+        return None
+    return [tuple(int(v) for v in out[4 * k:4 * k + 4]) for k in range(n)][::-1]
+
+
+def esc_route_net(g, net):
+    """Grow `net` over its pads (locked copper of the net counts as connected to the pad it touches).
+    Returns (length_mm, vias, unreached pads)."""
+    np = g.np
+    from scipy import ndimage
+    pads = [p for p in g.pads if p["net"] == net]
+    n = g.nid[net]
+    mt, mv = g.masks(net)
+
+    def comp_of(seed_cells):
+        """All copper cells of the net connected to the seed cells (layers joined where both layers carry the net's copper
+        at a drill: vias and THT pads)."""
+        own = np.stack([g.owner[l] == n for l in ESC_LAYERS])
+        joint = own[0] & own[1] & g.drill
+        lab0, _ = ndimage.label(own[0], structure=np.ones((3, 3)))
+        lab1, _ = ndimage.label(own[1], structure=np.ones((3, 3)))
+        sel0, sel1 = set(), set()
+        for (l, i, j) in seed_cells:
+            (sel0 if l == 0 else sel1).add((lab0 if l == 0 else lab1)[i, j])
+        sel0.discard(0)
+        sel1.discard(0)
+        changed = True
+        while changed:
+            changed = False
+            for a in set(lab1[joint & np.isin(lab0, list(sel0))]) - sel1 - {0}:
+                sel1.add(a)
+                changed = True
+            for a in set(lab0[joint & np.isin(lab1, list(sel1))]) - sel0 - {0}:
+                sel0.add(a)
+                changed = True
+        return np.stack([np.isin(lab0, list(sel0)) & own[0], np.isin(lab1, list(sel1)) & own[1]])
+
+    def pad_cells(p):
+        out = []
+        b = p["box"]
+        cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        i, j = g.cell(cx, cy)
+        for l in p["layers"]:
+            out.append((ESC_LAYERS.index(l), i, j))
+        return out
+    start = next((p for p in pads if p["ref"] == "U1"), pads[0])
+    tree = comp_of(pad_cells(start))
+    length, vias = 0.0, 0
+    remaining = [p for p in pads if p is not start]
+    while True:
+        remaining = [p for p in remaining if not any(tree[c] for c in pad_cells(p))]
+        if not remaining:
+            return length, vias, []
+        src = tree & ~np.stack([mt[l] for l in ESC_LAYERS])
+        tgt = np.zeros_like(src)
+        tpts = []
+        for p in remaining:
+            b = p["box"]
+            for l in p["layers"]:
+                li = ESC_LAYERS.index(l)
+                i0, j0 = g.cell(b[0], b[1])
+                i1, j1 = g.cell(b[2], b[3])
+                tgt[li, max(i0, 0):i1 + 1, max(j0, 0):j1 + 1] = True
+            tpts.append(g.cell((b[0] + b[2]) / 2, (b[1] + b[3]) / 2))
+        tgt &= ~np.stack([mt[l] for l in ESC_LAYERS])
+        if not src.any() or not tgt.any():
+            return length, vias, remaining
+        path = esc_astar(g, mt, mv, src, tgt, tpts)
+        if path is None:
+            return length, vias, remaining
+        for a, b in zip(path, path[1:]):
+            if a[0] != b[0]:
+                g.add_via(g.xy(a[1], a[2]), net)
+                vias += 1
+            else:
+                pa, pb = g.xy(a[1], a[2]), g.xy(b[1], b[2])
+                g.add_track(ESC_LAYERS[a[0]], pa, pb, net)
+                length += math.dist(pa, pb)
+        tree = comp_of([(path[0][0], path[0][1], path[0][2])])
+        mt, mv = g.masks(net)
+
+
+def esc_gnd_reach(g, refs_window):
+    """Each GND pad in the window: shortest track length to a cell where a GND via is legal, or to locked GND copper that
+    already has a via / the exposed pad (thermal vias). Returns rows (ref.pad, mm or None)."""
+    np = g.np
+    net = "GND"
+    n = g.nid[net]
+    mt, mv = g.masks(net)
+    own_v = np.stack([g.owner[l] == n for l in ESC_LAYERS])
+    rows = []
+    x0, y0, x1, y1 = refs_window
+    for p in g.pads:
+        b = p["box"]
+        cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        if p["net"] != net or p["tht"] or not (x0 <= cx <= x1 and y0 <= cy <= y1) or p["ref"] in ("U1", "J3", "BT1"):
+            continue
+        li = ESC_LAYERS.index(p["layers"][0])
+        src = np.zeros((2, g.ny, g.nx), dtype=bool)
+        i, j = g.cell(cx, cy)
+        src[li, i, j] = True
+        tgt = np.zeros_like(src)
+        tgt[li] = ~mv | (own_v[li] & g.drill)
+        tgt[li, i, j] = tgt[li, i, j]
+        if tgt[li, i, j]:
+            rows.append((f"{p['ref']}.{p['num']}", 0.0))
+            continue
+        path = esc_astar(g, {"F.Cu": mt["F.Cu"], "B.Cu": np.ones_like(mt["B.Cu"])}, np.ones_like(mv), src, tgt, [(i, j)],
+                         max_nodes=200_000)
+        rows.append((f"{p['ref']}.{p['num']}", None if path is None else
+                     sum(math.dist(g.xy(a[1], a[2]), g.xy(b[1], b[2])) for a, b in zip(path, path[1:]))))
+    return rows
+
+
+def escape_proof(pcb: Path, trials=6, seed=1) -> bool:
+    """--escape-proof: per U1 pin the free corridor (distance to the nearest foreign copper beyond the pad tip) and per U1
+    net routed / unrouted by the grid router; GND via reach of the pads around U1. Prints rows, ends with a verdict."""
+    import random
+    import time
+    t0 = time.time()
+    geom = board_geometry(pcb)
+    g0 = EscGrid(geom)
+    np = g0.np
+    u1 = {p["num"]: p for p in g0.pads if p["ref"] == "U1" and p["num"].isdigit() and p["num"] != "49"}
+    nets = sorted({p["net"] for p in u1.values() if p["net"] and p["net"] != "GND" and not p["net"].startswith("unconnected")})
+    # corridor per pin: free length straight out from the pad tip for a 0.15 track of the pin's net (F.Cu) before a foreign
+    # obstacle, or the locked copper / via that already takes the pin out
+    print("ESC  pin  net            exit")
+    mt_cache = {}
+    cx, cy = U1_XY
+    for num in sorted(u1, key=int):
+        p = u1[num]
+        net = p["net"]
+        if not net or net.startswith("unconnected"):
+            continue
+        b = p["box"]
+        px, py = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        dx, dy = px - cx, py - cy
+        ux, uy = (math.copysign(1, dx), 0) if abs(dx) > abs(dy) else (0, math.copysign(1, dy))
+        tip = (px + ux * (b[2] - b[0]) / 2, py + uy * (b[3] - b[1]) / 2)
+        if net not in mt_cache:
+            mt_cache[net] = g0.masks(net)[0]["F.Cu"]
+        mt = mt_cache[net]
+        free = 0.0
+        while free < 3.0:
+            i, j = g0.cell(tip[0] + ux * (free + ESC_STEP), tip[1] + uy * (free + ESC_STEP))
+            if not (0 <= i < g0.ny and 0 <= j < g0.nx) or mt[i, j]:
+                break
+            free += ESC_STEP
+        own = [t for t in geom["tracks"] if t["net"] == net and (math.dist(t["a"], (px, py)) < 0.5 or math.dist(t["b"], (px, py)) < 0.5)]
+        how = f"locked exit track ({len(own)} seg)" if own else "no locked exit"
+        print(f"ESC  {num:>3}  {net[:14]:14} straight corridor {free:4.2f} mm beyond the tip; {how}")
+    # routing trials
+    best = None
+    rng = random.Random(seed)
+    order0 = sorted(nets, key=lambda n: (n != "VDD", n))
+    for t in range(trials):
+        order = list(order0) if t == 0 else rng.sample(order0, len(order0))
+        g = EscGrid(geom)
+        res = {}
+        for n in order:
+            res[n] = esc_route_net(g, n)
+        ok = sum(1 for r in res.values() if not r[2])
+        score = (ok, -sum(r[0] + 1.0 * r[1] for r in res.values()))
+        if best is None or score > best[0]:
+            best = (score, res, order, g)
+        if ok == len(nets):
+            break
+    _score, res, order, g = best
+    print(f"ESC  router: {len(nets)} U1 nets (GND excluded), best of {t + 1} net orders, grid {ESC_STEP} mm, "
+          f"track {ESC_TRACK} / clearance {ESC_CLR} / via {ESC_VIA}/{ESC_DRILL}")
+    allok = True
+    for n in order:
+        length, vias, left = res[n]
+        st = "OK" if not left else "FAIL"
+        allok &= not left
+        print(f"{st:4} route {n:16} {'routed' if not left else 'UNROUTED to ' + ', '.join(p['ref'] + '.' + p['num'] for p in left)}"
+              f"  {length:6.1f} mm, {vias} vias")
+    gr = esc_gnd_reach(g, (26.0, 15.0, 46.0, 29.0))
+    worst = max((r[1] if r[1] is not None else 99.0) for r in gr) if gr else 0.0
+    bad = [r for r in gr if r[1] is None or r[1] > GND_REACH_MAX]
+    allok &= not bad
+    for r in gr:
+        if r[1] is None or r[1] > 0.0:
+            print(f"{'OK' if r[1] is not None and r[1] <= GND_REACH_MAX else 'FAIL':4} gnd  {r[0]:8} via site at "
+                  f"{'none' if r[1] is None else f'{r[1]:.2f} mm'} (max {GND_REACH_MAX})")
+    print(f"{'OK' if not bad else 'FAIL':4} gnd  {len(gr)} GND pads around U1 / RF / X2: {len(gr) - len(bad)} reach a via site "
+          f"(worst {worst:.2f} mm)")
+    routed = sum(1 for r in res.values() if not r[2])
+    print(f"escape proof: {routed}/{len(nets)} U1 nets routed, {len(gr) - len(bad)}/{len(gr)} GND pads with a via site, "
+          f"{time.time() - t0:.0f} s: {'OK' if allok else 'FAILED'}")
+    esc_render(g, geom, OUT_REVIEW / "escape_proof.png")
+    return allok
+
+
+def esc_render(g, geom, path):
+    """PNG of the proof (F.Cu red, B.Cu blue, pads grey) around U1 for the review."""
+    from PIL import Image
+    np = g.np
+    img = np.full((g.ny, g.nx, 3), 255, dtype=np.uint8)
+    pad_f = np.zeros((g.ny, g.nx), dtype=bool)
+    for p in g.pads:
+        if "F.Cu" in p["layers"]:
+            g._box(pad_f, p["box"], True)
+    img[g.owner["B.Cu"] != 0] = (120, 150, 235)
+    img[g.owner["F.Cu"] != 0] = (225, 90, 90)
+    img[pad_f] = (110, 110, 110)
+    img[g.drill] = (0, 0, 0)
+    Image.fromarray(img).save(path)
 
 
 # ======================================================================================================================
