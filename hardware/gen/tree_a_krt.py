@@ -391,8 +391,9 @@ IN2_ALLOWED = ["/leds/LED_L*", "/mcu/SWD*", "/mcu/SWO", "/mcu/nRESET_TC", "/mcu/
                "/charger/CHG_STAT"]
 PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
             rules=None, gnd_via_mm=1.5,
-            standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="open",
-            in2_vdd=[], route_args=[],
+            standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="repair",
+            in2_vdd=[], route_args=["--max-ripup", "8", "--ordering", "inside_out"],   # best measured a + b arm (pz6 q3):
+            # 3 nets open (LED_L1, LED_L8, XL1), kicad-cli 0 errors; no arm of 20 closed (NOTES round 3, options a + b)
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
                    ["/mcu/DCC", 0.3], ["/mcu/VSS_PA", 0.3]])
 

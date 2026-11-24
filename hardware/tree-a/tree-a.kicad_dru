@@ -22,8 +22,8 @@
 # gate 4 except the footprints' own thermal-via pads). physical_clearance binds every net (KiCad grades it; KiCadRoutingTools
 # does not read that kind); the same 0.15 as a 'clearance' constraint is what the router reads for OTHER nets (its scoped
 # rule channel: Type / Pad_Type), and gen/tree_a_krt.py records same_net_pad_clearance 0.15 for the router's own-net vias.
-# Every net class has clearance 0.15 (board.yaml), so the clearance constraint lowers nothing; it can only raise a class
-# clearance below 0.15 to 0.15 between a via and an SMD pad.
+# It raises the Default / Power class clearance (0.10 since gate 5 round 3, board.yaml) to 0.15 between a via and an SMD
+# pad; RF and Crystal (0.15) are unchanged by it.
 (rule "via to SMD pad"
   (constraint physical_clearance (min 0.15mm))
   (constraint clearance (min 0.15mm))
