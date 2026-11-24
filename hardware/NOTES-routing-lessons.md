@@ -44,3 +44,12 @@ Rule from the user: use https://github.com/drandyhaas/KiCadRoutingTools for any 
 2. Add GND to board B (D31), re-route, compare.
 3. Board A: `qfn_fanout.py` for U1, then the pours-first chain, `check_complete.py`.
 4. Measure the wall-clock time of every router run and put it in the table.
+
+## Python crashes (2026-11-23/24, analysed from ~/Library/Logs/DiagnosticReports/Python-*.ips)
+All crashes were SIGSEGV inside KiCad's `_pcbnew.so` called from our generators (none in KiCadRoutingTools or the other scripts):
+| Cause | Where seen | Fix |
+|---|---|---|
+| `FOOTPRINT.Flip()` on a footprint not yet on a board (FlipLayer null board) | 2026-11-23 19:00-19:09 | `pcbnew_safe.safe_flip` (add to board first) |
+| `ZONE.SetOutline(poly)` then freeing `poly` in Python (CacheTriangulation, worker thread) | 2026-11-23 21:38 | fill `z.Outline()` in place (already done in tree_a_pcb.py) |
+| `ZONE_FILLER(board)` with a None/stale board (GetDesignSettings) | tree_a_pcb.py:493, tree_b_pcb.py:627, 2026-11-24 07:00 | `pcbnew_safe.fill_zones_cli` (kicad-cli drc --refill-zones --save-board, 1.2 s on tree-b, no SWIG) |
+Helper: `hardware/gen/pcbnew_safe.py` (`--selftest` causes one deliberate crash report: expected). Direction: prefer writing the board file as text (tree_b_pcb.py does) and use pcbnew read-only for proofs; run any pcbnew subprocess through `run_isolated` (crash detection, one retry, crash summary).
