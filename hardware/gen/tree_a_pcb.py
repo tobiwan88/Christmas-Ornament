@@ -284,7 +284,8 @@ def floorplan(P):
     P.put("R31", 52.0, 72.9, 0.0)
 
 
-ESCAPES = ("d9", "d10", "vdd")          # hand-led groups of led_escapes (build option --escapes for router sweeps)
+ESCAPES = ("d9", "vdd")      # groups of led_escapes on the board; "d10" measured worse (walls the left neck); --escapes
+ESCAPE_GROUPS = ("d9", "d10", "vdd")
 
 
 def led_escapes(P, groups=None):
@@ -450,7 +451,7 @@ def stage1(args):
         variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
                "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
-               "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPES],
+               "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
                "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b]}
         jf = Path(td) / "job.json"
         jf.write_text(json.dumps(job))

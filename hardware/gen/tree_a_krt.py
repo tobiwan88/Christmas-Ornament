@@ -56,9 +56,10 @@ KEEP_AWAY = ["/leds/*,/power/*,/mcu/DCC,VIN,BAT:/mcu/XC*,/mcu/XL*:0.5",
 
 # Accepted settings (measured, NOTES-routing-lessons.md "tree-a gate 5"); a pass = (nets, extra route.py args)
 CHAIN = dict(track=0.15, clearance=0.15, via=0.6, drill=0.3, grid=0.05, stub=0.0, same_net_pad=0.15, fence_pitch=4.2,
-             fence="post", power=POWER, keep_away=KEEP_AWAY, layer_costs=[1.0, -1, -1, 1.5],
-             passes=[dict(nets=U1_FIRST + U1_REST + ["*", "!unconnected-*"],
-                          args=["--ordering", "original", "--via-cost", "20", "--max-ripup", "6"])])
+             fence="post", power=POWER, keep_away=KEEP_AWAY, layer_costs=[1.0, -1, -1, 1.5], escapes=["d9", "vdd"],
+             # best measured so far (sweep 12, 2026-11-24): 20 unconnected items, 0 DRC errors, 86 s; NOT complete, so
+             # tree_a_krt.py run --write refuses to freeze it (gate 5 open, see NOTES-routing-lessons.md "tree-a gate 5")
+             passes=[dict(nets=["*"], args=["--ordering", "mps", "--via-cost", "20", "--max-ripup", "6"])])
 
 
 # ------------------------------------------------------------------------------------------------------------------

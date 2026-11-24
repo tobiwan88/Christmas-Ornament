@@ -138,3 +138,46 @@ What bit:
 - A DRC in a temp dir needs the `../lib` relation of `${KIPRJMOD}/../lib` or every project footprint shows lib_footprint_issues.
 - `kicad-cli pcb drc --schematic-parity` on a board without a schematic prints a warning and reports 0 parity items (rc 0).
 - DRC rule conditions: `A.Reference == 'MB*'` wildcards work; holes inside one footprint are checked against each other (hole_to_hole).
+
+## tree-a gate 5: full board with KiCadRoutingTools (2026-11-24, gate 5 agent; append only)
+Driver: `gen/tree_a_krt.py` (`run`, `sweep`, settings in `CHAIN`), KRT v0.24.2. Chain: build unrouted board -> `route_planes.py`
+(GND In1 + In2, `--skip-existing-zones`) -> `route.py` pass(es) -> `route_planes.py --stitch-edge-fence` -> `route.py --nets GND`
+(plane finalize) -> grade = rebuild with the extracted routes as locked copper + kicad-cli DRC (parity, refill). Wall clock on
+the developer's Mac; sweeps ran 4-8 runs in parallel on 10 cores, so a run's time is under load.
+| Run (board state) | Unconnected items after DRC | DRC errors | Time |
+|---|---|---|---|
+| e1: one route.py, all nets, gate-4 escape settings (`original`, via-cost 20) | 14 nets open | 0 | 136.5 s route.py |
+| r1: + hand power stage / XL lanes (commit 9175750), GND first | 23 | 0 | 204.4 s |
+| sweep 1: LED first / 1.3 mm LED pad stubs / two passes | 26-30 | 0-2 (stubs) | 575-608 s with stubs |
+| sweep 2: LED lines alone, board-B settings (via-cost 200, hw 1.5, F 1.5 / B 1.0) | 8 of 8 LED lines routed | 0 | 23.4 s |
+| sweep 3: staged LED / U1 / rest | 12-16 nets failed per pass | - | killed |
+| sweep 4: + hand D9 / D10 lanes + VDD links (commit 66a084a) | 24-28 | 0-1 | 233-525 s |
+| sweep 5: escape subsets (none / d9 / vdd / d9+vdd) x (one pass, LED first) | 22-24 | 0-1 | 230-1146 s |
+| sweep 6: `--rip-existing-nets "*"` repair passes from the best board | unchanged (23) | 0 | killed |
+| sweep 7: GND left out of the signal passes (`!GND`) | 22-29 | 0 | 411-513 s |
+| sweep 8: engineer options: In2 for signals at cost 3.0 | 13-16 | 0-1 | 120-330 s |
+| sweep 8: engineer options: 0.127 / 0.127 tracks | 22-24 | 19-29 (board rule 0.15) | 494 s |
+| sweep 9-11: LED pass kept out of the U1 escape box / R-column strips (User.3 keepouts) | 23-26 | 0-1 | 307-428 s |
+| **sweep 12: one pass `--ordering mps` (KRT default), escapes d9 + vdd (current CHAIN)** | **20** | 0 | **86.2 s** (route.py 70.7 s) |
+| sweep 12: `inside_out`, or mps with the D10 lanes | 22-29 | 0-2 | - |
+Result: no run completes the board; gate 5 is open. Best: 20 unconnected items (LED_L1/L2/L4-L8 at D9 / D10 / J3, LED_L5_MCU,
+LED_L6_MCU, BTN_SW1_PAD), 1394 tracks, 163 vias, 1422 mm.
+Lessons:
+- `--ordering mps` beat every hand order on the whole board (20 vs 22-29) and is 3-4 times faster; hand orders helped only
+  for the U1-only proof at gate 4.
+- Repair passes with `--rip-existing-nets "*"` gain nothing (same as gate 4). Staged passes lose: what the first pass routes
+  becomes a pre-existing blocker the later pass cannot rip ("ROUTE FAILED - no rippable blockers found").
+- Hand-led lanes are locked, so a lane in the wrong place costs more than it gives: the D10 lanes down the left neck
+  (x 29.8-31.45) walled off the LED_L5..L8_MCU path to R5-R8 (measured worse in every sweep; removed from the board).
+- Allowing In2 for signals or 0.127 mm tracks does not complete the board either (13 / 22 open): the limit is topology, not
+  copper area. The LED pass left alone routes F.Cu loops around the R5-R8 / R1-R4 columns that wall in the MCU-side pads.
+- Root cause candidates (for the engineer): (1) every LED line must cross the J3 column: R5-R8 (lines 5-8) sit left of J3
+  but J3's left column carries lines 1-4 (and the right side the other way round), so 8 lines cross under J3 between their
+  R pad and their J3 pad while the MCU lines come down to the outer R pads; (2) D9 sits boxed at the top (antenna keep-out
+  above, RF parts on F.Cu, X2 crystal guard left), its 4 lines can leave only over the RF column to the right; (3) the U1
+  left fan-out via row is a B.Cu wall (via gaps 0.36-0.49 mm, one 0.15 track needs 0.45; 0.92 mm to the outline at its end).
+- Fence and plane void cannot be graded by emi_check on the tree outline: `tree_a_pcb.py --proof` rows (outline fence,
+  via-to-own-pad gap, track over plane void on a refilled copy), like tree_b. On the unrouted board ANT_FEED runs 1.32 mm
+  over no plane inside the antenna keep-out (y 15.5): the keep-out bars In1, so a GCPW reference is impossible there.
+- `PCB_VIA.GetWidth()` asserts in KiCad 10 without a layer: use `GetWidth(pcbnew.F_Cu)`.
+- KRT vias landed 0.029 mm into TC1.3 in the best run even with `--same-net-pad-clearance 0.15` (grader catches it).
