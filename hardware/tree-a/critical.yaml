@@ -37,6 +37,6 @@ series_termination:
   - {source: "U1.31", part: "L3.1", max_mm: 0.86, known: "1.25 mm: L3 in row A right above the ANT pin (U1 courtyard to row A courtyard 0 mm); 0.39 over the reference"}
   - {source: "U1.32", part: "C6.2", max_mm: 0.86, known: "2.26 mm: C6 in row B behind L3 (VSS_PA also goes to the exposed pad through NT1, 0.31 mm); reference has C6 beside the pin"}
   - {source: "U1.32", part: "NT1.1", max_mm: 0.5}   # D25 bridge in the pad-32 to exposed-pad gap
-  - {source: "C9.2", part: "NT2.1", max_mm: 1.5}    # D21: GND_C9 via straight down to the bottom-layer net tie
+  - {source: "C9.2", part: "U1.32", max_mm: 0.0, known: "KNOWN deviation (engineer, gate 4): Nordic returns C9 ground on the bottom layer only; here C9.2 is GND with its own via into In1 at the pad (NT2 / GND_C9 dropped). Distance = C9 ground pad to the VSS_PA pin (the reference return point). Bring-up: VNA check of the match, pi slot C50/R50/C51 kept for retuning (ORDER.md)"}
 diff_pair: []
 thermal_distance: []

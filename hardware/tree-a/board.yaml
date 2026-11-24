@@ -74,6 +74,9 @@ alternates:                             # primary LCSC: {lcsc: alternate, note: 
   C23894:                               # TPS63900 inductor
     lcsc: C97005                        # WPN201610H2R2MT 2.0 x 1.6 x 1.0 mm
     note: "2.2 uH, Isat 1.90 A vs 1.85 A; different land (0806 class: pad 0.7 x 1.7, gap 0.7 mm instead of 0.85 x 2.0, gap 0.8); parts/WPN201610H2R2MT.yaml"
+  C15525:                               # C3 VDD bulk 10 uF 0402 (gate 4 fan-out, Basic)
+    lcsc: C19702                        # CL10A106KP8NNNC 10 uF 10 V X5R 0603, Basic (the part before gate 4)
+    note: "0603 footprint does not fit the U1 power cluster of the gate-4 fan-out; more capacitance left at 3 V DC bias"
   C63166:                               # nRF DC/DC inductor L1 (0805)
     lcsc: C7216321                      # LLBHB1608KKT4R7MG 0603 = the Nordic reference size, JLC stock 0
     note: "0603 footprint; 370 mA, 0.635 ohm; stock 0 on 2026-11-23, so only if it returns"

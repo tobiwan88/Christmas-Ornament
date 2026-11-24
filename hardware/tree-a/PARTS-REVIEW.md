@@ -33,6 +33,8 @@ Gate state of this review (2026-11-23): `scripts/hw-check.sh` prints `hardware c
 | 23 | B | U1 nRF54L10 (D2) | Memory (2026-11-23): nRF54L10 has 1 MB NVM and 192 kB RAM against 1.5 MB and 256 kB on the nRF54L15 (evidence: Nordic product pages, level page; the datasheet table gives 1012 kB RRAM per a search snippet, level snippet, not read from the PDF; the review round's 1022 kB was an estimate). Pin table is the same per the HTML summary (UNVERIFIED). MCUboot with two image slots plus the BLE host and the VPR coprocessor image must fit: bootloader size and VPR use were not read | Nordic product page nRF54L10 / nRF54L15 (page); nRF54L15 PS HTML (snippet); nRF card | before the order: size the firmware image (MCUboot + app + second slot or swap area) against 1012 kB and the RAM against 192 kB; read the part code and memory sizes over SWD at bring-up; if it does not fit, swap the BOM line to the L15 C42458750 when stock returns (same footprint) | none | D2 | UNVERIFIED |
 | 24 | C | LED alternate 18-239A (C17701865) | Datasheet not obtained (LCSC returned HTML); red Vf 1.7 V is a listing statement; not usable until the ghost rows are re-run with its own numbers | jlcparts; card note | read the Everlight sheet | none | | alternate |
 | 25 | C | HC-TYPE-C-6P-01A | Only sheet 1 of 2 of the maker drawing was obtained; the PCB-edge position of the mating face is estimated from the drawing | DS HCTL drawing | read sheet 2 or measure the part | none | D10 | UNVERIFIED |
+| 26 | B | C3 10 uF 0402 C15525 (gate 4) | Package change for the U1 fan-out (engineer lever 1: smaller decoupling, JLC Basic only): Samsung CL05A106MQ5NUNC 10 uF 6.3 V X5R 0402, Basic, stock 7.0 M (jlcparts 2026-11-24). No datasheet card; a 0402 10 uF X5R keeps maybe 30-50 % at 3 V DC bias (typical class value, UNVERIFIED for this part). Alternate: C19702 0603 (old part) | jlcparts listing | read Samsung's DC-bias curve; the VDD node also has C4, C7, C8, C10 and the 22 uF C21 at U2 | +0.01 USD per order (bom_check) | gate 4 | UNVERIFIED |
+| 27 | B | C9 ground return (gate 4) | NT2 and net GND_C9 dropped: C9.2 is GND with its own via into In1 at the pad. KNOWN deviation from Nordic's 'C9 ground on the bottom layer only' note | Nordic QFAA reference layout v0.8 note (card nRF54L15-QFAA.yaml) | VNA check of the match at bring-up, retune C9 and the pi slot (ORDER.md 5.7) | NT2 was a zero-cost net tie | gate 4 | known |
 
 ## Checked and clean
 - ANT1 land pattern numbers (feed pad 1.0, gap 3.9, stub pad 4.0 x 1.8, 8.9 overall) agree on the Rev 2.0 sheet (p3) and the legacy sheet (p1). Card: `parts/2450AT42A100E.yaml`.
@@ -71,14 +73,15 @@ Tables come from `bom.csv` (variant A) and `bom-variant-b.csv` (variant B) writt
 | ANT1 | 1 | 2450AT42A100E (5x2mm) | ANT_Johanson_2450AT42A100E | C2917719 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | chip antenna (D12), feed pad 1 at the mark end (UNVERIFIED) |
 | BT1 | 1 | BH-AAA-B5AA001 (SMT 2xAAA) | BAT_MYOUNG_BH-AAA-B5AA001 | C964881 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | cell holder, variant A (D4); pads 3/4 series link |
 | C1, C2 | 2 | 2.2uF 6.3V X5R (0402) | C_0402_1005Metric | C12530 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | DECD (ref C1); DECA/DECRF (ref C2) |
-| C3, C20 | 2 | 10uF 10V X5R (0603) | C_0603_1608Metric | C19702 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | VDD bulk at pins 47/48 (ref C3); TPS63900 Cin |
+| C3 | 1 | 10uF 6.3V X5R (0402) | C_0402_1005Metric | C15525 | Basic | JLC listing only (jlcparts 2026-11-24, Basic, Samsung CL05A106MQ5NUNC): no card, DC-bias derating UNVERIFIED | VDD bulk at pins 47/48 (ref C3; 0402 for the gate-4 fan-out, alternate C19702 0603) |
 | C4, C7, C8, C10, C14 | 5 | 100nF 50V X7R (0402) | C_0402_1005Metric | C1525 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | VDD pin 36; VDD pin 10; VDD pin 22; VDD 47/48; VBAT_SENSE filter (DS-B2) |
 | C5 | 1 | 2.2nF 50V X7R (0402) | C_0402_1005Metric | C1531 | Preferred | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | DECRF (ref C5) |
 | C6 | 1 | 1.5pF C0G +-0.05pF (0201) | C_0201_0603Metric | C435397 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RF shunt, ground only via VSS_PA |
-| C9 | 1 | 2.0pF C0G +-0.05pF (0201) | C_0201_0603Metric | C668326 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RF shunt, ground on the bottom layer only |
+| C9 | 1 | 2.0pF C0G +-0.05pF (0201) | C_0201_0603Metric | C668326 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RF shunt, GND via at the pad (KNOWN deviation: Nordic says bottom layer only) |
 | C11 | 1 | 0.3pF C0G (0201) | C_0201_0603Metric | C161289 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RF shunt at the 50 ohm node |
 | C12 | 1 | 10nF 50V X7R (0402) | C_0402_1005Metric | C15195 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | DECA/DECRF (ref C12) |
 | C13 | 1 | 3.9pF C0G (0402) | C_0402_1005Metric | C313081 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | nRESET filter (ref C13) |
+| C20 | 1 | 10uF 10V X5R (0603) | C_0603_1608Metric | C19702 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | TPS63900 Cin |
 | C21 | 1 | 22uF 25V X5R (0805) | C_0805_2012Metric | C45783 | Basic | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | TPS63900 Cout |
 | D9, D10, D11, D12, D13, D14, D15, D16 | 8 | XL-1010RGB-YG (1010) | LED_XL-1010RGB-YG | C965834 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | RGB LED, outer face (B.Cu) |
 | FB1 | 1 | 120R/0.2A GZ1005D121TF (0402) | L_0402_1005Metric | C38480 | Extended | datasheet card, stock 2026-11-23 (PARTS-REVIEW) | DECD to DECA/DECRF (ref FB1) |
@@ -112,7 +115,7 @@ Tables come from `bom.csv` (variant A) and `bom-variant-b.csv` (variant B) writt
 | TC1 | 1 | TC2030-NL footprint (pads) | Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical | - | n/a | DNP (DNL: footprint only, Tag-Connect cable) | SWD pads, outer face, no part (DNL) |
 | U3 | 1 | MCP73831T-2ACI/OT (SOT-23-5) | SOT-23-5 | (C424093) DNP | n/a | DNP (C424093) | Li-ion charger 100 mA (variant B) |
 
-43 lines, 34 unique fab parts, 22 unique Extended (Class column).
+44 lines, 35 unique fab parts, 22 unique Extended (Class column).
 <!-- /bom-table -->
 
 ### Variant B: lines of `bom-variant-b.csv` that `bom.csv` does not have (BT1 is not listed there; the charger parts are fitted)

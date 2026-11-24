@@ -96,7 +96,6 @@ def floorplan(P):
     P.put("L4", 37.32, ROW_A, 0.0)
     P.put("L5", 38.88, 19.28, 90.0)          # pad 1 (RF_N2) at row A, pad 2 (RF_50) at row B
     P.put("C9", 39.93, 19.28, 90.0)          # RF_N2 shunt; pad 2 (GND_C9) to its via and NT2 on the bottom (D21)
-    P.put("NT2", 41.10, 18.80, 0.0, "B.Cu")
     P.put("C11", 37.40, ROW_B, 180.0)        # 0.3 pF, pad 1 (RF_50) at L5 pad 2
     P.put("C50", 37.85, ROW_C, 0.0)          # pi slot: C50 (RF_50) | R50 | C51 (ANT_FEED); feed goes up at x 35
     P.put("R50", 35.90, ROW_C, 180.0)        # pad 2 (ANT_FEED) 35.42 below the antenna feed pad

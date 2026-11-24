@@ -83,6 +83,10 @@ carry the evidence.
 6. DC/DC: efficiency and ripple with the 0805 L1 (UNVERIFIED, finding 13); VDD lit and idle.
 7. Antenna: first reel sample, brown mark against pin 1 under the microscope (about 90 % sure, UNVERIFIED, finding 1); VNA sweep of S11 at
    2.4-2.5 GHz (return loss at least 9.5 dB per Johanson on its own board), bench tune with the R50/C50/C51 pi slots; keep-out check (finding 2).
+   C9 ground (KNOWN deviation, gate 4): C9.2 goes to GND through its own via into In1 at the pad, not Nordic's bottom-layer-only
+   return (NT2 / GND_C9 dropped). If S11 or the 2nd harmonic misses: first measure the network itself (U1 side, R50 lifted, port
+   at L5 / C11 with a coax pigtail), compare with Nordic's values, then retune C9 (2.0 pF, 0201 C0G) and the pi slot C50/R50/C51;
+   keep the pi slot pads on the board for this reason. Conducted TX power and harmonics with a spectrum analyser if one is at hand.
 8. Holder BT1: continuity and polarity with two cells; the series link (UNVERIFIED, finding 22). Exact steps (section 7; pad numbers of
    tree:BAT_MYOUNG_BH-AAA-B5AA001, nets from `tree-a/netlist.csv`: pad 1 BAT = pack +, pad 2 GND = pack -, pads 3/4 BT_LINK):
    (i) look first: the holder's locating peg sits in the 1.8 mm NPTH (board point (45.45, 47.65), next to pad 2 = GND);

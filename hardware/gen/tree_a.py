@@ -81,7 +81,8 @@ P("R45", "Device:R", _RB, R0402, "C25750", "Preferred", "120k 1% (0402)",
 # MCU (card nRF54L15-QFAA; Nordic reference schematic v0.8 config 1)
 P("U1", "tree:nRF54L15-QFAA", "nRF54L10-QFAA", "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.66x4.66mm_ThermalVias", "C44800139",
   "Extended", "nRF54L10-QFAA-R7 (QFN-48 6x6)", "BLE SoC (D2); alternate nRF54L15-QFAA-R C42458750, same footprint")
-P("C3", "Device:C", "10uF", C0402, "C15525", "Basic", "10uF 6.3V X5R (0402)", "VDD bulk at pins 47/48 (ref C3; 0402 as the Nordic reference, gate 4)")
+P("C3", "Device:C", "10uF", C0402, "C15525", "Basic", "10uF 6.3V X5R (0402)", "VDD bulk at pins 47/48 (ref C3; 0402 for the gate-4 fan-out, alternate C19702 0603)")
+PARTS["C3"]["status"] = "JLC listing only (jlcparts 2026-11-24, Basic, Samsung CL05A106MQ5NUNC): no card, DC-bias derating UNVERIFIED"
 for _r, _n in (("C10", "VDD 47/48"), ("C7", "VDD pin 10"), ("C8", "VDD pin 22"), ("C4", "VDD pin 36")):
     P(_r, "Device:C", "100nF", C0402, "C1525", "Basic", "100nF 50V X7R (0402)", _n)
 P("L1", "Device:L", "4.7uH", "Inductor_SMD:L_0805_2012Metric", "C63166", "Extended", "4.7uH MPL2012S4R7MHT (0805)", "nRF DC/DC DCC-DECD (ref L1)")

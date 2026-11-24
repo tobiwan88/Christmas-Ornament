@@ -2,14 +2,15 @@ Comment,Designator,Footprint,Quantity,LCSC Part #,Class,Status,Function / notes
 2450AT42A100E (5x2mm),ANT1,ANT_Johanson_2450AT42A100E,1,C2917719,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","chip antenna (D12), feed pad 1 at the mark end (UNVERIFIED)"
 BH-AAA-B5AA001 (SMT 2xAAA),BT1,BAT_MYOUNG_BH-AAA-B5AA001,1,C964881,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","cell holder, variant A (D4); pads 3/4 series link"
 2.2uF 6.3V X5R (0402),"C1,C2",C_0402_1005Metric,2,C12530,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECD (ref C1); DECA/DECRF (ref C2)
-10uF 10V X5R (0603),"C3,C20",C_0603_1608Metric,2,C19702,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VDD bulk at pins 47/48 (ref C3); TPS63900 Cin
+10uF 6.3V X5R (0402),C3,C_0402_1005Metric,1,C15525,Basic,"JLC listing only (jlcparts 2026-11-24, Basic, Samsung CL05A106MQ5NUNC): no card, DC-bias derating UNVERIFIED","VDD bulk at pins 47/48 (ref C3; 0402 for the gate-4 fan-out, alternate C19702 0603)"
 100nF 50V X7R (0402),"C4,C7,C8,C10,C14",C_0402_1005Metric,5,C1525,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",VDD pin 36; VDD pin 10; VDD pin 22; VDD 47/48; VBAT_SENSE filter (DS-B2)
 2.2nF 50V X7R (0402),C5,C_0402_1005Metric,1,C1531,Preferred,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECRF (ref C5)
 1.5pF C0G +-0.05pF (0201),C6,C_0201_0603Metric,1,C435397,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RF shunt, ground only via VSS_PA"
-2.0pF C0G +-0.05pF (0201),C9,C_0201_0603Metric,1,C668326,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RF shunt, ground on the bottom layer only"
+2.0pF C0G +-0.05pF (0201),C9,C_0201_0603Metric,1,C668326,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RF shunt, GND via at the pad (KNOWN deviation: Nordic says bottom layer only)"
 0.3pF C0G (0201),C11,C_0201_0603Metric,1,C161289,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",RF shunt at the 50 ohm node
 10nF 50V X7R (0402),C12,C_0402_1005Metric,1,C15195,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECA/DECRF (ref C12)
 3.9pF C0G (0402),C13,C_0402_1005Metric,1,C313081,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",nRESET filter (ref C13)
+10uF 10V X5R (0603),C20,C_0603_1608Metric,1,C19702,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",TPS63900 Cin
 22uF 25V X5R (0805),C21,C_0805_2012Metric,1,C45783,Basic,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",TPS63900 Cout
 XL-1010RGB-YG (1010),"D9,D10,D11,D12,D13,D14,D15,D16",LED_XL-1010RGB-YG,8,C965834,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)","RGB LED, outer face (B.Cu)"
 120R/0.2A GZ1005D121TF (0402),FB1,L_0402_1005Metric,1,C38480,Extended,"datasheet card, stock 2026-11-23 (PARTS-REVIEW)",DECD to DECA/DECRF (ref FB1)
