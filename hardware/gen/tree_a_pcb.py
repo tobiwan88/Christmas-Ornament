@@ -70,6 +70,8 @@ ANT_XY = (35.0, 11.65)        # rot 90: stub pad y 5.7..9.7 at the tip side, fee
 BT1_ROT = 270.0               # pads 1 (BAT) and 2 (GND) at the top end, next to the power stage; peg hole (45.45, 47.65)
 J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: the bottom edge is blocked by BT1's pads
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
+NO_POUR_PADS = (("C9", "2"), ("C11", "2"))   # 0201 GND pads: own via, no connection to GND_F_local
+POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"))                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
 MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
@@ -121,6 +123,8 @@ def floorplan(P):
     T([(36.20, 19.28), (36.20, 18.53)], 0.20)                       # RF_N2: C9.1 up to the node
     T([(36.20, 19.92), (36.85, 19.80)], 0.20)
     V(36.85, 19.80)                                                 # C9 GND via into In1 at the pad (decision 2)
+    T([(37.97, 17.50), (38.70, 17.72)], 0.20)
+    V(38.70, 17.72)                                                 # C11 GND via at the pad (0201: no pour connection)
     T([(37.24, 18.53), (38.12, 18.53)], 0.20)                       # RF_50: L5.2 - C50.1
     T([(37.24, 18.53), (37.33, 17.50)], 0.20)                       # RF_50: L5.2 - C11.1
     T([(37.33, 17.50), (36.51, 17.45)], 0.20)                       # RF_50: C11.1 - R50.1
@@ -197,6 +201,11 @@ def floorplan(P):
     T([(25.90, 25.38), (26.475, 25.38), (26.475, 27.28), (27.05, 27.28)])
     T([(25.90, 27.28), (26.475, 27.28)])
     T([(25.90, 27.28), (25.00, 27.30)])
+    # X2 case pads 4 - 2 (GND) through the crystal's centre (0.20 mm clear of pads 1 / 3): pad 4 sits in a pour piece
+    # walled in by XC1 / XC2 that had no via (an island)
+    T([(31.20, 19.50), (30.30, 18.80)])
+    # C3 / C10 GND (their pour piece between the VDD tie and the shelf had no via: an island) joined to C1.2 under C3
+    T([(28.96, 26.82), (28.96, 27.50), (27.30, 27.50), (27.05, 27.28)])
     V(25.00, 27.30)
     # bottom row: stubs straight down (XL1/XL2 1/2, VBAT_SENSE 5, LED_L4..L1 6-9, VDD 10, TPS_SEL 11)
     for k in (5, 6, 7, 8, 9):
@@ -211,7 +220,7 @@ def floorplan(P):
     T([(33.20, 27.15), (33.20, 27.60), (33.40, 28.00)])
     V(33.40, 28.00)                                                 # XL2
     # F.Cu GND stitching row along y 17.35 under the keep-out line (decision 4), clear of the RF parts and C5
-    for x in (28.40, 29.40, 30.40, 31.40, 39.40, 40.40, 41.40):
+    for x in (28.40, 29.40, 30.40, 31.40, 39.55, 40.40, 41.40):
         V(x, 17.35, "GND")
     # ---- 3. LED line resistors beside J3 (tier 2 strips) -------------------------------------------------------------
     j = {n: P.pad("J3", str(n)) for n in range(1, 9)}
@@ -224,11 +233,19 @@ def floorplan(P):
         P.put(ref, xl_r, yk(k), 0.0)
     for k, ref in enumerate(("R1", "R2", "R3", "R4")):
         P.put(ref, xr_r, yk(k), 180.0)
-    P.put("R40", xl_r, yk(4.6), 0.0)          # battery divider (VIN top, VBAT_SENSE pin 5) + C14
-    P.put("R41", xl_r, yk(5.6), 0.0)
-    P.put("C14", xl_r - 2.1, yk(5.6), 0.0)
-    P.put("R10", xl_r, yk(6.6), 0.0)          # BTN_SW1 series 1 k (pin 37, left row)
-    P.put("R43", xl_r - 2.1, yk(4.6), 0.0)    # VBUS_DET bottom (pin 38, left row)
+    # gate 4 escape round 2 (engineer decision 1c): the neck left of J3 (y 28-29.5, 2.9 mm between the edge fillet and J3)
+    # carries only the LED lines L5-L8 (+ VDD / GND); the other left-strip parts moved out:
+    #  - battery divider R40 / R41 + C14 as a column in the left wing between the edge and BT1, above Q1, next to VIN (Q1 source); VBAT_SENSE (pin 5, bottom
+    #    row) runs down J3's middle on B.Cu and under the holder; C14 sits right below R41 at the divider (review: C14 at the
+    #    divider or the pin; the pin side has no room: J3 courtyard 0.02 mm below U1)
+    #  - R10 (BTN_SW1 series) beside the divider: BTN_SW1 leaves on B.Cu under J3 like VBAT_SENSE, BTN_SW1_PAD runs on to
+    #    SW1 on the outer face
+    #  - R43 (VBUS_DET pull-down) on the right next to its partner R42 (VBUS_DET pads stacked)
+    P.put("R40", 22.55, 40.20, 0.0)           # battery divider top (VIN pad 1 left, towards Q1 / BT1 pad 1)
+    P.put("R41", 22.55, 41.30, 0.0)           # battery divider bottom (VBAT_SENSE pad 1 left, GND right)
+    P.put("C14", 22.55, 42.40, 0.0)           # VBAT_SENSE filter 100 nF below R41 (pads stacked)
+    P.put("R10", 22.55, 43.50, 0.0)           # BTN_SW1 series 1 k (pin 37)
+    P.put("R43", xr_r + 2.1, yk(3) + 0.78, 0.0)   # VBUS_DET pull-down, pad 1 above R42.2 (VBUS_DET)
     P.put("R45", xr_r, yk(4.6), 180.0)        # CHG_STAT bottom (pin 23, right row)
     P.put("R9", 41.80, 22.40, 180.0)         # nRESET series to TC1 pad 3: next to C13 at the top-right corner (gate 4)
     P.put("R42", xr_r + 2.1, yk(4.6), 180.0)  # variant B divider tops
@@ -898,6 +915,18 @@ def stage2(job_file):
     placed = {r: (pcbnew.ToMM(f.GetPosition().x), pcbnew.ToMM(f.GetPosition().y), f.GetOrientationDegrees(),
                   "B.Cu" if f.IsFlipped() else "F.Cu") for r, f in fps.items()}
 
+    # 0201 GND pads take no connection from the local F.Cu pour (engineer, gate 4 round 2: no thermal spokes, no solid
+    # pad = no tombstoning, no starved spokes); their own GND via at the pad is the connection. 0402 and larger keep the
+    # pour connection: thermal, solid only where two spokes do not fit (POUR_SOLID_PADS).
+    for ref, num in NO_POUR_PADS:
+        for pad in fps[ref].Pads():
+            if pad.GetNumber() == num:
+                pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_NONE)
+    for ref, num in POUR_SOLID_PADS:
+        for pad in fps[ref].Pads():
+            if pad.GetNumber() == num:
+                pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
+
     # ---- zones
     def zone(pts, layers, net=None, name="", rule=None, priority=0, solid=False):
         z = pcbnew.ZONE(board)
@@ -938,9 +967,8 @@ def stage2(job_file):
     # keep-out line (y 17.0) to the shelf (y 28); stitched to In1 by the generator's GND vias and the router's taps.
     # The ANT_FEED gap to it = the 0.30 'RF feed track clearance' rule (GCPW gap, board.yaml net_classes.RF.cpw_gap_mm)
     (_t, (kxr, kyr), (kxl, kyl)) = G.antenna_keepout_polygon()     # keep-out base corners (y 17.0) on the tier-1 edges
-    zone([(kxl, kyl), (kxr, kyr), (47.0, 28.0), (23.0, 28.0)], ["F.Cu"], "GND", "GND_F_local", priority=1,
-         solid=True)   # solid pad connection: RF shunt grounds direct (Nordic), and pads at the pour edge (keep-out line,
-                       # NT1 in the exposed pad) cannot take two thermal spokes; tombstone risk of 0201s: see BOARD.md
+    zone([(kxl, kyl), (kxr, kyr), (47.0, 28.0), (23.0, 28.0)], ["F.Cu"], "GND", "GND_F_local", priority=1)
+    # thermal connection (board.yaml thermal_relief); 0201 GND pads none (NO_POUR_PADS), starved pads solid (POUR_SOLID_PADS)
     ko = list(G.antenna_keepout_polygon())               # [(35, 0), (right, 17), (left, 17)]
     zone(ko, ["In1.Cu", "In2.Cu", "B.Cu"], name="antenna_keepout", rule=dict(footprints=False))
     # F.Cu: the same triangle with a notch for the antenna land and its feed (tree_outline: only A's land and feed inside)
