@@ -219,6 +219,15 @@ def floorplan(P):
     V(32.55, 27.95)                                                 # XL1 to B.Cu (X1 sits on the right side)
     T([(33.20, 27.15), (33.20, 27.60), (33.40, 28.00)])
     V(33.40, 28.00)                                                 # XL2
+    # gate 5: LFXO lines hand-drawn on B.Cu (KRT left XL1 / XL2 open in the first full run: boxed in by the right-row
+    # escapes). The order flips between U1 (XL1 left of XL2) and X1 (XL2 left of XL1), so XL1 takes the inner lane under
+    # the exposed pad (0.43 mm clear of its B.Cu pad) and crosses OVER X1's XL2 via (0.38 mm clear) to reach X1.1; XL2
+    # takes the outer lane. Lanes 0.55 mm apart, 0.5 mm clear of the VDD 10 / TPS_SEL vias below (emi.yaml hfxo rule
+    # gap 0.5); reference plane In2 (GND) under the whole run
+    xl1_u, xl2_u, xl2_x, xl1_x = (32.55, 27.95), (33.40, 28.00), (39.90, 26.10), (41.30, 26.10)
+    assert xl1_u[0] < xl2_u[0] and xl2_x[0] < xl1_x[0]       # the crossing this drawing resolves
+    T([xl1_u, (xl1_u[0], 26.50), (39.25, 26.50), (39.25, 25.35), (xl1_x[0], 25.35), xl1_x], 0.15, "B.Cu")
+    T([xl2_u, (xl2_u[0], 27.05), (xl2_x[0], 27.05), xl2_x], 0.15, "B.Cu")
     # F.Cu GND stitching row along y 17.35 under the keep-out line (decision 4), clear of the RF parts and C5
     for x in (28.40, 29.40, 30.40, 31.40, 39.55, 40.40, 41.40):
         V(x, 17.35, "GND")
@@ -263,6 +272,7 @@ def floorplan(P):
     yb = uy + 1.93 + 0.97 + 0.30                         # 0.27 below the courtyard touch: clear of U2's pin-1 silk mark
     for k, ref in enumerate(("R23", "R20", "R21", "R22")):   # SEL pull-down, CFG1, CFG2, CFG3 under pins 2-5
         P.put(ref, ux - 1.575 + 1.05 * k, yb, 270.0)
+    power_stage(P)
     # ---- 5. variant B (DNP in order 1, D10): J2 and U3 under the holder (D15 rule), passives in the right wing ----------
     P.put("J2", TO.CX, 58.0, 0.0)
     P.put("U3", 44.0, 78.5, 0.0)
@@ -271,6 +281,45 @@ def floorplan(P):
     P.put("R32", 55.0, 74.6, 0.0)
     P.put("R30", 49.5, 72.9, 0.0)
     P.put("R31", 52.0, 72.9, 0.0)
+
+
+def power_stage(P):
+    """TPS63900 stage as locked copper (gate 5, kicad-layout: 'draw the power stage from the datasheet layout example'; TI
+    SLVSET3D 10.1 / Figure 10-1: Cin at VIN and GND, Cout at VOUT and GND, the inductor across LX1 / LX2 with short wide
+    copper, the CFG resistors at their pins). Coordinates from the placed pads (U2 rot 90: pins 6-10 on top, 1-5 below the
+    exposed pad 11). The first full KRT run left CFG1 / CFG2 open here (0.5 mm pin pitch next to the 0.3 mm power taps).
+    Loops: VIN pin 10 -> C20.1 0.3 mm straight left; pin 1 joins it by a column between C20 and the exposed pad; C20 GND
+    has its own via; the exposed pad goes right to C21's GND pad (0.4 mm); C21 GND and the CFG resistor GND row have vias."""
+    T, V = P.track, P.via
+    p = {k: P.pad("U2", str(k)) for k in range(1, 11)}
+    c20v, c20g = P.pad("C20", "1"), P.pad("C20", "2")
+    c21v, c21g = P.pad("C21", "1"), P.pad("C21", "2")
+    l1, l2 = P.pad("L2", "1"), P.pad("L2", "2")
+    r = {ref: (P.pad(ref, "1"), P.pad(ref, "2")) for ref in ("R23", "R20", "R21", "R22")}
+    # orientation the drawing relies on: pins 10..6 on top left to right, 1..5 below; inductor above, LX1 left
+    assert p[10][1] < p[1][1] and p[10][0] < p[6][0] and p[1][0] < p[5][0] and l1[0] < l2[0] and l1[1] < p[9][1]
+    assert c20v[1] < c20g[1] and c21v[1] < c21g[1] and c20v[0] < p[10][0] < p[6][0] < c21v[0]
+    ep_y = (p[6][1] + p[5][1]) / 2                                      # exposed pad centre row (pad 11)
+    T([p[9], (p[9][0], l1[1] + 0.7)], 0.3)                              # LX1 pin 9 straight up into L2.1
+    T([p[7], (p[7][0], l2[1] + 0.7)], 0.3)                              # LX2 pin 7 straight up into L2.2
+    T([p[8], (p[8][0], p[8][1] + 0.75)], 0.25)                          # GND pin 8 into the exposed pad
+    T([p[6], (c21v[0], p[6][1])], 0.3)                                  # VOUT pin 6 -> C21.1 (VDD)
+    T([p[10], (c20v[0] + 0.3, p[10][1]), c20v], 0.3)                    # VIN pin 10 -> C20.1
+    xcol = round(((c20v[0] + 0.475) + (p[1][0] - 0.125)) / 2, 3)       # midway C20's pad edge - pin 1's edge
+    T([p[1], (xcol, p[1][1]), (xcol, p[10][1])], 0.3)                   # VIN pin 1 up the column to pin 10's track
+    T([c20g, (c20g[0], c20g[1] + 0.95)], 0.3)
+    V(c20g[0], c20g[1] + 0.95)                                          # Cin GND via (0.2 mm below the pad)
+    T([(p[5][0] - 0.15, ep_y), (c21g[0], ep_y), c21g], 0.4)             # exposed pad -> C21.2 GND (Cout return)
+    T([c21g, (c21g[0], c21g[1] + 0.95)], 0.3)
+    V(c21g[0], c21g[1] + 0.95)                                          # Cout GND via
+    # CFG / SEL pins (0.5 mm pitch) fan out to the resistor row (1.05 mm pitch) below; 0.2 mm tracks
+    T([p[2], (p[2][0], p[2][1] + 0.6), (r["R23"][0][0], r["R23"][0][1] - 0.25), r["R23"][0]], 0.2)   # TPS_SEL
+    T([p[3], (p[3][0], p[3][1] + 0.6), (r["R20"][0][0], r["R20"][0][1] - 0.25), r["R20"][0]], 0.2)   # CFG1
+    T([p[4], (p[4][0], p[4][1] + 0.6), (r["R21"][0][0], r["R21"][0][1] - 0.25), r["R21"][0]], 0.2)   # CFG2
+    T([p[5], (p[5][0], p[5][1] + 0.6), (r["R22"][0][0], r["R22"][0][1] - 0.25), r["R22"][0]], 0.2)   # CFG3
+    gx = r["R22"][1][0] + 0.32 + 0.18 + 0.3                              # via 0.18 clear of R22.2 (rule 0.15)
+    T([r["R23"][1], (gx, r["R23"][1][1])], 0.3)                         # GND row of the four resistors
+    V(gx, r["R23"][1][1])
 
 
 SILK = [("TREE-01 A", (TO.CX, 79.5)), ("${GIT_SHA}", (TO.CX, 81.3))]
@@ -284,18 +333,58 @@ def load_profile():
     return yaml.safe_load((BOARD_DIR / "board.yaml").read_text())
 
 
+FROZEN = BOARD_DIR / "frozen-routes.json"
+
+
+def _opt(args, name, default=None):
+    return args[args.index(name) + 1] if name in args else default
+
+
+def build_into(out_dir: Path, routes=None, stub=0.0, quiet=False) -> Path:
+    """Build the board into another directory (router input, grading copy): board + project + rules + library table +
+    schematic (for the parity check). The committed board is never touched."""
+    r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--out", str(out_dir), "--stub", str(stub)]
+                       + (["--frozen", str(routes)] if routes else ["--no-routes"]), capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(f"build_into {out_dir}: {r.stdout[-800:]}{r.stderr[-800:]}")
+    if not quiet:
+        print(r.stdout.splitlines()[-1] if r.stdout else "")
+    return out_dir / f"{NAME}.kicad_pcb"
+
+
 def stage1(args):
     prof = load_profile()
     kpy = os.environ.get("KICAD_PYTHON")
     if not kpy or not shutil.which("kicad-cli"):
         sys.exit("source scripts/kicad-env.sh first (needs kicad-cli and $KICAD_PYTHON)")
+    if _opt(args, "--route") == "krt":                     # re-run KiCadRoutingTools, freeze a clean result, then build
+        r = subprocess.run([sys.executable, str(HERE / "tree_a_krt.py"), "run", "--write"])
+        if r.returncode:
+            sys.exit("tree_a_pcb: the KiCadRoutingTools run did not give a clean result; frozen-routes.json is unchanged")
+    out_dir = Path(_opt(args, "--out", BOARD_DIR)).resolve()
+    if "--no-routes" in args:
+        routes = None
+    else:
+        f = Path(_opt(args, "--frozen", FROZEN))
+        routes = json.loads(f.read_text()) if f.exists() else None
+    if "--check" in args:                                   # repeatable build: two builds into temp dirs, same bytes
+        import hashlib
+        hs = []
+        for _ in range(2):
+            with tempfile.TemporaryDirectory() as tdc:
+                b = build_into(Path(tdc), FROZEN if FROZEN.exists() else None, quiet=True)
+                hs.append(hashlib.sha256(b.read_bytes()).hexdigest())
+        same = hs[0] == hs[1]
+        cur = hashlib.sha256((BOARD_DIR / f"{NAME}.kicad_pcb").read_bytes()).hexdigest()
+        print(f"repeatable build: {'OK' if same else 'FAILED'} {hs[0][:12]} (committed board {'equal' if cur == hs[0] else 'DIFFERENT'})")
+        return 0 if same and cur == hs[0] else 1
     with tempfile.TemporaryDirectory() as td:
         net = Path(td) / "a.net"
         subprocess.run(["kicad-cli", "sch", "export", "netlist", "-o", str(net), str(BOARD_DIR / f"{NAME}.kicad_sch")],
                        check=True, capture_output=True)
         variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
-               "layout": prof["layout"], "variant": variant}
+               "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0))}
         jf = Path(td) / "job.json"
         jf.write_text(json.dumps(job))
         r = PS.run_isolated([kpy, str(Path(__file__).resolve()), "--pcbnew", str(jf)], capture_output=True, text=True)
@@ -313,13 +402,26 @@ def stage1(args):
                 shutil.copy(BOARD_DIR / f"{NAME}{suf}", vb / f"{NAME}{suf}")
             print(f"variant B board (paste on the charger parts, none on BT1): {vb / (NAME + '.kicad_pcb')}")
             return 0
-        shutil.copy(Path(td) / f"{NAME}.kicad_pcb", BOARD_DIR / f"{NAME}.kicad_pcb")
-    pcb = BOARD_DIR / f"{NAME}.kicad_pcb"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy(Path(td) / f"{NAME}.kicad_pcb", out_dir / f"{NAME}.kicad_pcb")
+    pcb = out_dir / f"{NAME}.kicad_pcb"
     postprocess(pcb, prof)
     sys.path.insert(0, str(HW / "tools"))
     import write_project as wp
-    wp.write(BOARD_DIR / f"{NAME}.kicad_pro", (BOARD_DIR / prof["fab"]["rules"]).resolve(), prof["net_classes"])
-    shutil.copy((BOARD_DIR / prof["fab"]["custom_drc"]).resolve(), BOARD_DIR / f"{NAME}.kicad_dru")
+    pro = out_dir / f"{NAME}.kicad_pro"
+    if out_dir != BOARD_DIR:                               # a copy: project (schematic sections), library table, schematic
+        shutil.copy(BOARD_DIR / f"{NAME}.kicad_pro", pro)
+        (out_dir / "fp-lib-table").write_text((BOARD_DIR / "fp-lib-table").read_text().replace("${KIPRJMOD}/../lib", str(HW / "lib")))
+        for s in BOARD_DIR.glob("*.kicad_sch"):
+            shutil.copy(s, out_dir / s.name)
+        for f in ("sym-lib-table",):
+            if (BOARD_DIR / f).exists():
+                (out_dir / f).write_text((BOARD_DIR / f).read_text().replace("${KIPRJMOD}/../lib", str(HW / "lib")))
+    wp.write(pro, (BOARD_DIR / prof["fab"]["rules"]).resolve(), prof["net_classes"])
+    shutil.copy((BOARD_DIR / prof["fab"]["custom_drc"]).resolve(), out_dir / f"{NAME}.kicad_dru")
+    nt = len(routes["tracks"]) if routes else 0
+    print(f"frozen routes: {nt} tracks, {len(routes['vias']) if routes else 0} vias replayed as locked copper" if routes else
+          "frozen routes: none (unrouted board: router input or gate 4 state)")
     ok = placement_checks(pcb)
     if "--drc" in args:
         ok = drc() and ok
@@ -491,12 +593,14 @@ def load_waivers():
     return out
 
 
-def drc() -> bool:
+def drc(pcb: Path = None, routed: bool = None, quiet: bool = False, stats: dict = None) -> bool:
     """kicad-cli DRC in the board's own project (rules, library table) with schematic parity, all severities, zones refilled.
-    Unconnected items are expected at gate 4 (not routed). Warnings must be fixed or waived (type + reference); errors never."""
+    Warnings must be fixed or waived (type + reference); errors never. Unconnected items: expected before routing (gate 4),
+    a failure once the board carries frozen routes (gate 5: `routed`, default = frozen-routes.json exists)."""
     OUT_REVIEW.mkdir(parents=True, exist_ok=True)
-    out = OUT_REVIEW / "drc.json"
-    pcb = BOARD_DIR / f"{NAME}.kicad_pcb"
+    pcb = pcb or BOARD_DIR / f"{NAME}.kicad_pcb"
+    out = (OUT_REVIEW if pcb.parent == BOARD_DIR else pcb.parent) / "drc.json"
+    routed = FROZEN.exists() if routed is None else routed
     subprocess.run(["kicad-cli", "pcb", "drc", "--format", "json", "--severity-all", "--schematic-parity", "--refill-zones",
                     "-o", str(out), str(pcb)], capture_output=True, check=True)
     d = json.loads(out.read_text())
@@ -517,10 +621,16 @@ def drc() -> bool:
             warns += 1
         key = (v["severity"], v["type"])
         seen.setdefault(key, []).append(v["description"][:60] + " | " + "; ".join(i["description"][:50] for i in v["items"]))
-    for (sev, typ), items in sorted(seen.items()):
-        print(f"DRC {sev:7} {typ:28} x{len(items)}  e.g. {items[0]}")
-    print(f"DRC: {errs} errors, {warns} unwaived warnings, {waived} waived, {len(d['unconnected_items'])} unconnected (not routed)")
-    return errs == 0 and warns == 0
+    unc, par = len(d["unconnected_items"]), len(d.get("schematic_parity", []))
+    if stats is not None:
+        stats.update(errors=errs, warnings=warns, waived=waived, unconnected=unc, parity=par, seen=seen,
+                     unconnected_items=d["unconnected_items"])
+    if not quiet:
+        for (sev, typ), items in sorted(seen.items()):
+            print(f"DRC {sev:7} {typ:28} x{len(items)}  e.g. {items[0]}")
+        print(f"DRC: {errs} errors, {warns} unwaived warnings, {waived} waived, {unc} unconnected"
+              f"{' (must be 0: routed board)' if routed else ' (not routed)'}, {par} parity items (waived ones counted above)")
+    return errs == 0 and warns == 0 and (unc == 0 or not routed)
 
 
 def render(pcb: Path):
@@ -874,7 +984,7 @@ def stage2(job_file):
         def track(self, pts, w=0.15, layer="F.Cu"):
             """Locked fan-out copper (hw-check: unlocked copper counts as router copper). Net = the pad or locked via at
             either end (first match)."""
-            net = self._net_at(pts[0]) or self._net_at(pts[-1])
+            net = self._net_at(pts[0]) or self._net_at(pts[-1]) or self._end_net(pts[0]) or self._end_net(pts[-1])
             if net is None:
                 raise SystemExit(f"fan-out track {pts}: no pad / via at either end")
             for a, b in zip(pts, pts[1:]):
@@ -904,6 +1014,10 @@ def stage2(job_file):
             board.Add(v)
             self.ends.append(((x, y), net))
 
+        def _end_net(self, q):
+            """net of a locked via or track end already drawn at q (B.Cu runs between generator vias)"""
+            return next((n for (e, n) in self.ends if abs(e[0] - q[0]) < 1e-6 and abs(e[1] - q[1]) < 1e-6), None)
+
         def _net_at(self, q):
             pt = V(*q)
             for fp in fps.values():
@@ -914,6 +1028,46 @@ def stage2(job_file):
     P = Placer()
     P.ends = []
     floorplan(P)
+    # gate 5: frozen router result (hardware/tree-a/frozen-routes.json, gen/tree_a_krt.py = KiCadRoutingTools) replayed as
+    # LOCKED copper, so a rebuild is repeatable and a later router run keeps it; never the router's own board file
+    routes = job.get("routes") or {}
+    for t in routes.get("tracks", []):
+        tr = pcbnew.PCB_TRACK(board)
+        tr.SetStart(V(*t["a"]))
+        tr.SetEnd(V(*t["b"]))
+        tr.SetWidth(mm(t["w"]))
+        tr.SetLayer(board.GetLayerID(t["layer"]))
+        tr.SetNet(nets[t["net"]])
+        tr.SetLocked(True)
+        board.Add(tr)
+    for v in routes.get("vias", []):
+        vi = pcbnew.PCB_VIA(board)
+        vi.SetPosition(V(*v["at"]))
+        vi.SetViaType(pcbnew.VIATYPE_THROUGH)
+        vi.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+        vi.SetWidth(mm(v["size"]))
+        vi.SetDrill(mm(v["drill"]))
+        vi.SetNet(nets[v["net"]])
+        vi.SetLocked(True)
+        board.Add(vi)
+    # router input only (--no-routes --stub L): an UNLOCKED B.Cu escape stub from every LED pad outward (tree-b lesson:
+    # 0.45 mm pads at 0.8 mm pitch, otherwise the router drops vias into the pads); the result is frozen WITH the stubs
+    if job.get("stub", 0) > 0 and not routes:
+        for q in G.led_placements("A"):
+            fp = fps[q["ref"]]
+            c = fp.GetPosition()
+            for pd in fp.Pads():
+                if pd.GetNetCode() <= 0:
+                    continue
+                pp = pd.GetPosition()
+                sx = -1.0 if pp.x < c.x else 1.0
+                tr = pcbnew.PCB_TRACK(board)
+                tr.SetStart(pp)
+                tr.SetEnd(pcbnew.VECTOR2I(c.x + mm(sx * (0.4 + job["stub"])), pp.y))
+                tr.SetWidth(mm(job.get("stub_w", 0.2)))
+                tr.SetLayer(pcbnew.B_Cu)
+                tr.SetNet(pd.GetNet())
+                board.Add(tr)
     for ref, fp in fps.items():                 # silk reference on the fab layer for 0201/0402-dense parts would hide
         fp.Reference().SetTextSize(V(0.6, 0.6))  # designators; 0.6 mm silk is below the 0.8 floor: keep them on Fab
         fp.Reference().SetTextThickness(mm(0.1))
