@@ -384,9 +384,15 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # improving, only the nets still open may use In2 (cost 3.0, In1 stays closed), or a list of net patterns (the engineer's
 # fallback: local power / signal on In2 only if routing needs it, reported per net).
 # ------------------------------------------------------------------------------------------------------------------
-PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=True, fence=True,
-            rules={"clearance": 0.1, "track": 0.1, "via": 0.45, "drill": 0.2, "min_clearance": 0.09, "min_track": 0.09},
-            standard=0.1, floor_clearance=0.09, track=0.1, via=0.45, drill=0.2, grid=0.05, in2_fallback=[], in2_vdd=[], route_args=[],
+# Coordinator decision on the round-3 report (options a + b): classes from board.yaml (Default / Power clearance 0.10,
+# Default track 0.127, necked to the 0.10 minimum only where a net needs it: --escalation board), no floor rung below the
+# class, In2 only for the still-open nets of IN2_ALLOWED, GND return vias within 1.5 mm of every signal via.
+IN2_ALLOWED = ["/leds/LED_L*", "/mcu/SWD*", "/mcu/SWO", "/mcu/nRESET_TC", "/mcu/BTN_SW1", "/charger/VBUS_DET",
+               "/charger/CHG_STAT"]
+PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
+            rules=None, gnd_via_mm=1.5,
+            standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="open",
+            in2_vdd=[], route_args=[],
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
                    ["/mcu/DCC", 0.3], ["/mcu/VSS_PA", 0.3]])
 
@@ -480,7 +486,11 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
     if best and best[1] and cfg["in2_fallback"] and cfg["in2_fallback"] != "first":   # engineer's fallback: only the still-open nets (or the listed ones) may
         prev = best[0]                                  # use In2 (3.0), In1 stays closed
         for k in (1, 2):
+            from fnmatch import fnmatch
             nets = best[2] if cfg["in2_fallback"] == "open" else list(cfg["in2_fallback"])
+            nets = [n for n in nets if any(fnmatch(n, q) for q in IN2_ALLOWED)]      # never RF / crystal / DCC / power
+            if not nets:
+                break
             out = workdir / f"s4_in2_fallback_p{k}.kicad_pcb"
             r = one_pass(prev, out, cfg["standard"], nets, ["1.0", "-1", "3.0", "1.0"], f"In2 fallback pass {k} for {nets}")
             if r is None or r[0] >= best[1]:
@@ -493,12 +503,13 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
         f = workdir / "s8_fence.kicad_pcb"
         rc, t = sh([py, "-u", rt / "route_planes.py", cur, f, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",
                     "--skip-existing-zones", "--clearance", cfg["standard"], "--stitch-edge-fence", "--stitch-fence-pitch",
-                    "4.2"], workdir / "s8_fence.log")
+                    "4.2", *(["--add-gnd-vias", "--gnd-via-distance", cfg["gnd_via_mm"]] if cfg.get("gnd_via_mm") else [])],
+                   workdir / "s8_fence.log")
         times.append(("route_planes.py edge fence round the routed signals", t, rc))
         out = workdir / "s9_final.kicad_pcb"
         rc, t = sh([py, "-u", rt / "route.py", f, out, *base[:0], "--nets", "GND", "--no-bga-zones", "--track-width", cfg["track"],
                     "--via-size", cfg["via"], "--via-drill", cfg["drill"], "--grid-step", cfg["grid"], "--escalation", "board",
-                    "--clearance-ceiling", cfg["standard"], "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu",
+                    "--clearance", cfg["standard"], "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu",
                     "--layer-costs", "1.0", "-1", "-1", "1.0", "--json-out", out.with_suffix(".json")], workdir / "s9_final.log")
         times.append(("route.py GND (plane finalize, the chain ends on route.py)", t, rc))
         if out.exists():

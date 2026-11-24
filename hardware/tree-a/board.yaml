@@ -11,7 +11,7 @@ requirements: ../REQUIREMENTS.md
 fab:
   house: JLCPCB
   assembly: "Standard two-sided assembly (D6); hand-soldered: Li-ion pouch plug-in (variant B), standoffs, screws. Variant A first order (D10)"
-  rules: ../rules/jlc-4layer.json      # fab floors; router_rules must agree. NOTE its _comment says 1.6 mm: floors are not thickness dependent, stackup below is 1.0 mm
+  rules: ../rules/jlc-4layer-tree-a.json   # fab floors: jlc-4layer.json with min clearance / track 0.10 (gate 5 round 3, coordinator options a + b); stackup below is 1.0 mm
   custom_drc: ../rules/tree-a.kicad_dru
   extended_fee_usd: 1.53               # per unique Extended part (JLCPCB Economic/Standard feeder loading fee, quote of 2026-11-23: UNVERIFIED, engineer figure from the job brief)
   setup_fee_usd: 51.12                 # Standard assembly setup, D6 (job brief)
@@ -43,10 +43,10 @@ stackup:                               # part of the order; calc/impedance.py re
     - {name: B.Cu,  role: signal, ref: In2.Cu, dielectric_mm: 0.2104, er: 4.4}
 
 net_classes:                           # full KiCad net names; widths checked by calc/track_width.py
-  Default: {track_mm: 0.15, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3}     # fab floor 0.127/0.127 (rules/jlc-4layer.json); 0.15 keeps 18 % margin and fits the 0.4 mm QFN pitch
+  Default: {track_mm: 0.127, clearance_mm: 0.10, via_mm: 0.6, drill_mm: 0.3}   # gate 5 round 3 (coordinator, options a + b): clearance 0.15 -> 0.10 (JLC 4-layer min 0.09, 10 % margin; GND/GND did not route at 0.15), track 0.15 -> 0.127 (router necks to 0.10 only where needed, listed in BOARD.md); router vias 0.45 / 0.2, hand vias 0.6 / 0.3
   Power:                                # nets are provisional names: the schematic generator sets them (gate 3)
     track_mm: 0.3
-    clearance_mm: 0.15
+    clearance_mm: 0.10                  # gate 5 round 3 (coordinator, option b): was 0.15; tracks stay 0.3 (>= 0.127)
     via_mm: 0.6
     drill_mm: 0.3
     current_a: 0.5                      # TPS63900 peak switch current limit 0.51 A max in the 100 mA setting (card 6.5); average input 0.1 A
@@ -62,6 +62,12 @@ net_classes:                           # full KiCad net names; widths checked by
     via_mm: 0.6
     drill_mm: 0.3
     nets: [/rf/ANT_FEED, /mcu/ANT_PA, /rf/RF_50]   # netlist names (sheet-local); RF_50 = L5/C11 to the pi slot
+  Crystal:                              # gate 5 round 3 (coordinator, option b): the HFXO / LFXO lines keep 0.15 clearance while Default drops to 0.10
+    track_mm: 0.15
+    clearance_mm: 0.15
+    via_mm: 0.6
+    drill_mm: 0.3
+    nets: [/mcu/XC1, /mcu/XC2, /mcu/XL1, /mcu/XL2]
 
 layout:
   stitch_pitch_mm: [2, 3]

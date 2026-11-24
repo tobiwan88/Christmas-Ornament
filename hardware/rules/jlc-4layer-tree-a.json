@@ -1,0 +1,48 @@
+{
+  "_comment": "tree-a only (coordinator decision on the gate-5 round-3 report, options a + b, 2026-11-24): rules/jlc-4layer.json with min clearance and min track 0.10 (JLC 4-layer minimum 0.09 = 3.5 mil, 10 % margin), so the Default and Power class clearance 0.10 of board.yaml and the 0.10 signal necks the router needs are legal. Everything else as jlc-4layer.json: JLCPCB 4-layer, 1 oz outer / 0.5 oz inner, no extra-cost options (jlcpcb.com/capabilities, 2026-10); the floors below are assumed not to depend on the board thickness (UNVERIFIED against the fab page for 1.0 mm; the first draft said 1.6 mm; tree-a/tree-b are 1.0 mm, stackup JLC04101H-7628, board.yaml). Values have margin over the minimums: track/space 0.09, via 0.2/0.45, hole-to-hole 0.45, copper-edge 0.2, silk 0.15/1.0.",
+  "rules": {
+    "min_clearance": 0.1,
+    "min_track_width": 0.1,
+    "min_via_diameter": 0.45,
+    "min_via_annular_width": 0.1,
+    "min_through_hole_diameter": 0.2,
+    "min_hole_to_hole": 0.5,
+    "min_hole_clearance": 0.2,
+    "min_copper_edge_clearance": 0.3,
+    "min_silk_clearance": 0.15,
+    "min_text_height": 0.8,
+    "min_text_thickness": 0.15,
+    "solder_mask_to_copper_clearance": 0.0,
+    "min_microvia_diameter": 0.2,
+    "min_microvia_drill": 0.1
+  },
+  "classes": [
+    {
+      "name": "Default",
+      "clearance": 0.15,
+      "track_width": 0.2,
+      "via_diameter": 0.6,
+      "via_drill": 0.3,
+      "diff_pair_width": 0.2,
+      "diff_pair_gap": 0.15
+    },
+    {
+      "name": "Power",
+      "clearance": 0.15,
+      "track_width": 0.4,
+      "via_diameter": 0.6,
+      "via_drill": 0.3,
+      "diff_pair_width": 0.2,
+      "diff_pair_gap": 0.15
+    },
+    {
+      "name": "USB",
+      "clearance": 0.15,
+      "track_width": 0.27,
+      "via_diameter": 0.6,
+      "via_drill": 0.3,
+      "diff_pair_width": 0.27,
+      "diff_pair_gap": 0.15
+    }
+  ]
+}

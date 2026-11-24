@@ -80,6 +80,8 @@ FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outl
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
 HAND = ("rf", "fanout", "xl", "power")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
+IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
+                 "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
 IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
 RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
@@ -1271,6 +1273,12 @@ def stage2(job_file):
     # thermal connection (board.yaml thermal_relief); 0201 GND pads none (NO_POUR_PADS), starved pads solid (POUR_SOLID_PADS)
     ko = list(G.antenna_keepout_polygon())               # [(35, 0), (right, 17), (left, 17)]
     zone(ko, ["In1.Cu", "In2.Cu", "B.Cu"], name="antenna_keepout", rule=dict(footprints=False))
+    # gate 5 round 3 (coordinator, option a): signals may use In2 only for named still-open nets; never under the RF column,
+    # the crystals or the nRF54L DC/DC node (pin 46 - L1). In2 rule areas forbid tracks there (vias and the GND pour stay).
+    for nm, box in IN2_NO_SIGNAL.items():
+        x0, y0, x1, y1 = box
+        zone([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], ["In2.Cu"], name=f"in2_no_signal_{nm}",
+             rule=dict(tracks=True, vias=False, pour=False, footprints=False))
     # In2 signal exception (coordinator decision option c, gate 5): signal tracks on In2 only inside the LED-bus box
     # around J3 and the R columns (job "in2_zone"); everywhere else an In2 rule area forbids tracks (vias and the GND
     # pour stay allowed), so In2 stays GND outside the box and under the RF line, the crystal lanes and U1.
