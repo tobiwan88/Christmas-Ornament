@@ -15,7 +15,7 @@ Antenna	Chip antenna at the tree tip with a copper keep-out on both boards (no L
 Clocks	32 MHz (2016) for the radio, 32.768 kHz (2012) for timekeeping in sleep.	
 Programming	Tag-Connect TC2030-NL on the outer face of board A (trunk): VDD, SWDIO, SWDCLK, RESET, GND. Later updates over BLE (MCUboot DFU).	
 Sensing	Battery voltage via divider to an ADC input. Li-ion variant: USB VBUS detect and charger STAT to GPIOs. TPS63900 SEL from a GPIO.	
-Mechanical	Two M2 nylon screws + ~14 mm standoffs at the tier 3 ends (x = 8 and 62 mm, y = 72 mm). Cells or pouch sit in the gap. USB-C opens at the bottom edge of board A.	
+Mechanical	Two M2 screws (nylon allowed only with brass standoffs) + M2 brass standoffs, 12.0 mm female-female (D31, D3; first note said ~14 mm nylon) at the tier 3 ends (x = 10.7 and 59.3 mm, y = 71.0 mm, D17). Cells or pouch sit in the gap. USB-C opens at the bottom edge of board A.	
 Assembly	JLCPCB PCBA. Board A two-sided, board B one-sided. Battery holder hand-soldered or consigned. Black soldermask with ENIG.	
 Power budget	Firmware caps the LED average at about 2 mA. Expected ~40 days at 11 h/day on 2 × AAA.	Measure timer + clock current while lit
 Mock-ups	Design canvas, V3 views: https://claude.ai/artifact/RAzMpQZA17YqjUqwqKFavs	

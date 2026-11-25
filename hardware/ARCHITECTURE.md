@@ -10,7 +10,7 @@
 Same outline for A and B (tree, 70 x 105 mm), same hole pattern (hanging hole at the tip, two M2 at tier 3 ends at (10.7, 71.0) and (59.3, 71.0) mm (D17; the notes' x = 8 / 62, y = 72 leave too little material), exact coordinates in `hardware/gen/tree_outline.py`, the single source for both boards). Stacked with the INNER faces facing, both boards viewed from the front: A's inner face is its F.Cu (parts), B's outer face is its F.Cu (LEDs) and B's inner face is its B.Cu (header). Both F.Cu point the same way, so there is NO x mirror between the boards in the stack: a part at (x, y) on one board is at (x, y) on the other (`tree_common.B_MIRRORED_IN_STACK = False`). A's outer-face parts (D9-D16, SW1, Tag-Connect) are on B.Cu and read mirrored when viewed from the back. The header footprints are on opposite layers (B.Cu male on B, F.Cu female on A); the stack check proves the pad positions and nets.
 
 ## Interface: header J3 (A, female) / J4 (B, male), 2 x 4, 2.54 mm
-Eight LED lines, no supply, no ground. Single source: `hardware/gen/tree_common.py` (both generators import it); checked by
+Eight LED lines, no supply, no ground pin (board B's GND reaches board A's GND through the two brass standoffs and the plated mounts MH1-MH4, D31). Single source: `hardware/gen/tree_common.py` (both generators import it); checked by
 `python3 hardware/calc/led_matrix.py hardware/tree-a` (inputs with sources in `hardware/tree-a/led_matrix.yaml`).
 
 View conventions (D14, 2026-11-23). Each board is drawn in its own top (F.Cu) view; header positions are (column, row),
@@ -32,14 +32,18 @@ inner ones), giving the left-to-right bus order L1..L8 with no crossing (J3 pins
 
 | J3 pin | Net | GPIO | QFN pin | Anode of | Series R (A) | J4 pin (same position) |
 |---|---|---|---|---|---|---|
-| 1 | LED_L1 | P1.08 | 9 | D1, D9 | R1 | 2 |
-| 2 | LED_L8 | P1.11 | 39 | D8, D16 | R8 | 1 |
-| 3 | LED_L2 | P1.07 | 8 | D2, D10 | R2 | 4 |
-| 4 | LED_L7 | P1.12 | 40 | D7, D15 | R7 | 3 |
-| 5 | LED_L3 | P1.06 | 7 | D3, D11 | R3 | 6 |
-| 6 | LED_L6 | P1.13 | 41 | D6, D14 | R6 | 5 |
-| 7 | LED_L4 | P1.05 | 6 | D4, D12 | R4 | 8 |
-| 8 | LED_L5 | P1.14 | 42 | D5, D13 | R5 | 7 |
+| 1 | LED_L1 | P1.11 | 39 | D1, D9 | R1 | 2 |
+| 2 | LED_L8 | P1.08 | 9 | D8, D16 | R8 | 1 |
+| 3 | LED_L2 | P1.12 | 40 | D2, D10 | R2 | 4 |
+| 4 | LED_L7 | P1.07 | 8 | D7, D15 | R7 | 3 |
+| 5 | LED_L3 | P1.13 | 41 | D3, D11 | R3 | 6 |
+| 6 | LED_L6 | P1.06 | 7 | D6, D14 | R6 | 5 |
+| 7 | LED_L4 | P1.14 | 42 | D4, D12 | R4 | 8 |
+| 8 | LED_L5 | P1.05 | 6 | D5, D13 | R5 | 7 |
+
+GPIO and QFN pin per line follow D33 (2026-11-24, permuted inside the same 8 P1 pins on the placed board): L1-L4 on pins 39-42
+(P1.11-P1.14, R1-R4 left of J3), L5-L8 on pins 6-9 (P1.05-P1.08, R5-R8 right of J3). Source: `tree-a/netlist.csv`
+(`LED_Ln_MCU` to U1) and `gen/tree_common.py` `PIN_PLAN`, read 2026-11-25. Gate 3 had L1-L4 on pins 9..6 and L5-L8 on 42..39.
 
 Net names: `LED_Ln` = line on the LED side of Rn (header, LED pads on both boards); `LED_Ln_MCU` = GPIO side of Rn (board A).
 Resistors R1-R8 on board A, one per line, between the GPIO and the header; 22 ohm recommended (led_matrix.py, 2026-11-23).
@@ -88,10 +92,11 @@ because the red+red chains (3.6 V minimum, below VDD max + 0.1 V) span exactly t
 ## Pin plan: nRF54L15 / nRF54L10 QFN48 (board A; the BOM part is the nRF54L10, D2, same pin table; pin numbers confirmed against Nordic's QFAA reference schematic v0.8, electrical limits from the PS HTML summary: UNVERIFIED)
 Package sides (standard QFN numbering, check the PS drawing): pins 1-12 left (pin 1 top), 13-24 bottom, 25-36 right,
 37-48 top. The LED lines need 8 P1 pins; P1 has no 8 adjacent free pins (pins 5-9 and 37-42 are its free pins), so they form
-two groups of 4 adjacent pins, numbered along the package edge (pin 9 up to 6, around the top-left corner, 42 down to 39).
+two groups of 4 adjacent pins (pins 6-9 and 39-42, around the top-left corner). Since D33 pins 39-42 carry L1-L4 and pins 6-9 carry
+L5-L8 (the gate 3 order was the other way round).
 VBAT_SENSE (P1.04, a DC net) sits between the LFXO pins and the LED group. P1.09/P1.10 (slow inputs) sit between the HFXO
-pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 are free for firmware if the layout wants them
-(gate 4): change `tree_common.py` and rerun the check.
+pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 were free for the layout; D33 used them (gate 5). A further
+swap: change `tree_common.py`, rerun `led_matrix.py` and fix this table and FIRMWARE-RULES.md in the same step.
 
 | Function | Net | GPIO | QFN pin | Note |
 |---|---|---|---|---|
@@ -100,10 +105,10 @@ pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 are fre
 | nc | NC | P1.02 | 3 | NFC1, unused, leave open |
 | nc | NC | P1.03 | 4 | NFC2, unused, leave open |
 | ain | VBAT_SENSE | P1.04 | 5 | AIN0, battery divider mid-point (2 x 2.2 M + 100 nF after D21, mid-point at half the cell voltage: 4.2 V Li-ion -> 2.1 V) |
-| led | LED_L4_MCU | P1.05 | 6 | via R4 to LED_L4 |
-| led | LED_L3_MCU | P1.06 | 7 | via R3 to LED_L3 |
-| led | LED_L2_MCU | P1.07 | 8 | via R2 to LED_L2 |
-| led | LED_L1_MCU | P1.08 | 9 | via R1 to LED_L1 (P1.08 = EXTREF, not used) |
+| led | LED_L5_MCU | P1.05 | 6 | via R5 to LED_L5 (D33) |
+| led | LED_L6_MCU | P1.06 | 7 | via R6 to LED_L6 |
+| led | LED_L7_MCU | P1.07 | 8 | via R7 to LED_L7 |
+| led | LED_L8_MCU | P1.08 | 9 | via R8 to LED_L8 (P1.08 = EXTREF, not used) |
 | out | TPS_SEL | P2.00 | 11 | TPS63900 SEL: high = VO(2) lit, low = VO(1) 3.0 V; external pull-down (never float, 3.0 V at start) |
 | spare | SPARE_P2_01 | P2.01 | 12 | spare; D13: TPS63900 EN tied to VIN, no GPIO (EN can see 4.2 V > VDD + 0.3 V) |
 | spare | VBAT_DIV_EN | P2.02 | 13 | reserved, not used: D21 keeps the divider unswitched (2 x 2.2 M); pin kept free for a low-side switch |
@@ -117,10 +122,10 @@ pins 34/35 and the LED group. Pin swaps inside P1.05-P1.08 / P1.11-P1.14 are fre
 | swd | nRESET | nRESET | 30 | TC2030 pin 3 via 1 k (Nordic reference R1/C13) |
 | in (wake) | BTN_SW1 | P1.09 | 37 | SW1 to GND, internal pull-up; wake from System OFF (P1 SENSE) |
 | in (wake) | VBUS_DET | P1.10 | 38 | Li-ion variant; wakes on USB plug-in; pin-voltage rule below |
-| led | LED_L8_MCU | P1.11 | 39 | via R8 to LED_L8 (AIN4 unused) |
-| led | LED_L7_MCU | P1.12 | 40 | via R7 to LED_L7 |
-| led | LED_L6_MCU | P1.13 | 41 | via R6 to LED_L6 |
-| led | LED_L5_MCU | P1.14 | 42 | via R5 to LED_L5 |
+| led | LED_L1_MCU | P1.11 | 39 | via R1 to LED_L1 (AIN4 unused) |
+| led | LED_L2_MCU | P1.12 | 40 | via R2 to LED_L2 |
+| led | LED_L3_MCU | P1.13 | 41 | via R3 to LED_L3 |
+| led | LED_L4_MCU | P1.14 | 42 | via R4 to LED_L4 |
 
 Pin-voltage rules (D13; `tree_common.PIN_VOLTAGE_RULES`, checked by `led_matrix.py`). The nRF pin limit is VDD + 0.3 V,
 which is 3.3 V at VDD idle 3.0 V (unverified: PS HTML summary).
@@ -137,7 +142,7 @@ Unused: P2.06, P2.08-P2.10 (TRACE). Power and decoupling pins (10, 22, 36, 47, 4
 Cell (A: 2 x AAA, B: Li-ion) -> reverse-polarity P-MOSFET Q1 (both variants, D7) -> VIN -> TPS63900; VOUT = VDD (3.0 V idle / 3.5 V lit, SEL from a GPIO). Li-ion variant: USB-C VBUS -> MCP73831 -> cell. Battery voltage to ADC via divider; VBUS detect and charger STAT to GPIO (variant B).
 
 ## Mechanical stack (D3, D18; numbers from `gen/tree_outline.py`)
-B (1.0 mm) | gap 12.0 mm: J3/J4 header mated 8.5 + 3.2 = 11.7 mm, holder 11.3 mm (11.65 mm worst case), M2 nylon standoffs 12 mm | A (1.0 mm). Thickness board outer face to outer face 14.0 mm, 14.8 mm with the LEDs (D18); the Li-ion pouch may overhang the outline by up to 1.5 mm per side inside the gap (D16). The antenna keep-out region is copper-free on both boards. USB-C opens at the bottom edge of A. Housing: transparent 3D print, see `hardware/panel/MECHANICAL.md`.
+B (1.0 mm) | gap 12.0 mm: J3/J4 header mated 8.5 + 3.2 = 11.7 mm, holder 11.3 mm (11.65 mm worst case), M2 brass standoffs 12.0 mm female-female (D31: they carry board A's GND to board B; screw length per `hardware/panel/MECHANICAL.md`, nylon screws allowed only with brass standoffs) | A (1.0 mm). Thickness board outer face to outer face 14.0 mm, 14.8 mm with the LEDs (D18); the Li-ion pouch may overhang the outline by up to 1.5 mm per side inside the gap (D16). The antenna keep-out region is copper-free on both boards. USB-C opens at the bottom edge of A. Housing: transparent 3D print, see `hardware/panel/MECHANICAL.md`.
 
 ## Decisions (dated)
 - 2026-11-23: one panel for both boards (engineer). Consequence: board B is also 4-layer at 1.0 mm; assembly is two-sided for the panel. Cost delta against two separate orders is computed in `hardware/panel/BOARD.md`.

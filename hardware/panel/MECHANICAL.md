@@ -123,15 +123,17 @@ Component height zones (`height_zones()`; heights from the board face; the gap i
 | antenna 2450AT42A100E | A inner, tip | land y 5.7 to 14.6 | 1.1 mm | datasheet Rev 2.0 p2 |
 | SW1 | A outer, trunk | (35, 88.8) mock-up | not known | MISSING (switch not chosen) |
 | Tag-Connect TC2030-NL | A outer, trunk | (35, 99.4) mock-up | pads only | block 8 x 5 mm UNVERIFIED |
-| nylon screw heads | A outer and B outer | at the mount holes, keep-out D5 | about 1.3 mm | UNVERIFIED |
+| screw heads (M2 x 5, nylon allowed if the standoff is brass) | A outer and B outer | at the mount holes, keep-out D5 | about 1.3 mm | UNVERIFIED |
 | RGB LEDs | both outer faces | everywhere | 0.4 mm +-0.25 (0.65 mm worst case) | XL-1010RGB-YG datasheet p8 |
 
 ## 5. Stack
 
 - Two boards 1.0 mm, gap 12.0 mm (inner face to inner face): 14.0 mm over both boards, 14.8 mm with 0.4 mm LEDs on both outer
   faces, 15.3 mm worst case with the LED tolerance (0.4 +-0.25, datasheet p8). D3's "about 14.5 mm" was an estimate (D18 settles 14.0 / 14.8).
-- Standoffs M2 nylon F-F 12 mm, screws M2 x 5 nylon, hole D2.2, keep-out D5. Thread engagement about 5 - 1.0 (board) - 1.3 (head)
-  = 2.7 mm (head height UNVERIFIED); an M2 x 6 screw gives 3.7 mm.
+- Standoffs: M2 brass standoff, 12.0 mm female-female (D31: the standoffs carry A's GND to B's GND through the plated mounts MH1-MH4;
+  a nylon standoff leaves B's ground floating). Screws M2 x 5 (nylon allowed only if the standoff is brass; metal screws also work),
+  hole D2.2, keep-out D5. Thread engagement about 5 - 1.0 (board) - 1.3 (head) = 2.7 mm (head height UNVERIFIED); an M2 x 6 screw
+  gives 3.7 mm. Continuity A-GND to B-GND through the standoffs is a bring-up check before the first power-up (ORDER.md section 5).
 - Header: SMD female 8.5 mm on A + SMD male 3.2 mm plastic on B = 11.7 mm mated, 0.3 mm short of the gap, insertion 5.7 mm
   (research digest, heights UNVERIFIED until the parts arrive). The holder (11.3 mm, 11.65 worst case) and the mated header (11.7 mm nominal; 12.05 mm worst case by the card tolerances, 0.05 mm over, UNVERIFIED) fit the 12 mm gap at nominal.
 - Antenna keep-out copper-free on both boards; nothing metal over it in the housing.
@@ -178,7 +180,7 @@ Openings and access:
    face (board surface at z = 13.0 from B's outer face: B 1.0 + gap 12.0 puts A's inner face at 13.0).
 3. Battery door or removable shell over the holder: cells load from the top (towards B), holder y 37.6 to 104.0 (default 39.5 to 101.7).
 4. SW1 button access on A's outer face (35, 88.8); Tag-Connect cable access at (35, 99.4) (removable part or opening).
-5. Screw access D5 at the mount holes (10.7, 71.0) and (59.3, 71.0), nylon heads on both outer faces.
+5. Screw access D5 at the mount holes (10.7, 71.0) and (59.3, 71.0), screw heads (nylon allowed with brass standoffs) on both outer faces.
 6. Clearance for LEDs 0.4 mm (+-0.25) on both outer faces; transparent shell at the tip: no metal.
 7. STEP of the assembled stack: not produced yet (the 3D models of the holder, header and USB-C part are not in the repo).
 

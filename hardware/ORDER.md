@@ -1,6 +1,7 @@
 # Order notes: tree ornament (TREE-01), JLCPCB (skeleton, 2026-11-23)
 
-Status: NOT ORDERED. Gate 6 not started (gates 4 and 5 not reached: no board files yet). This file is the skeleton the order is
+Status (2026-11-25): NOT ORDERED. Gate 6 (fab files) not started; boards A and B are routed (board A frozen with known exceptions),
+the panel is built (6 of 8 tabs, rest pending a router nudge). This file is the skeleton the order is
 filled from; every row marked OPEN is a human step or a fact to confirm. Copies to keep in step (hw-base, Changing a decision):
 `board.yaml` (`fab`), `REQUIREMENTS.md` R2.1/R6, `panel/BOARD.md`, `FIRMWARE-RULES.md`, the PARTS-REVIEW bring-up lists.
 
@@ -11,8 +12,11 @@ filled from; every row marked OPEN is a human step or a fact to confirm. Copies 
   `board.yaml` stackup. RF line 50 ohm: `calc/impedance.py` via hook 60-rf-impedance; the fab calculator cross-check is a human step (OPEN: write
   inputs and result here).
 - Standard assembly, two-sided (D6): board A both faces, board B one face. First order populates variant A (2 x AAA, D10).
-- Hand-fitted after delivery (not soldered at JLC): standoffs M2 nylon F-F 12 mm, nylon screws M2 x 5, cells; variant B: the Li-ion pouch
-  plug-in. JLC-assembled: holder BT1 (C964881, D4), headers J3/J4 (D3).
+- Hand-fitted after delivery (not soldered at JLC): 2 standoffs M2 BRASS, 12.0 mm female-female (D31: they carry A's GND to B's GND, a
+  nylon standoff leaves B floating), screws M2 x 5 (screw length per `panel/MECHANICAL.md`; nylon screws allowed only if the standoff
+  is brass), cells; variant B: the Li-ion pouch plug-in. Purchase: standoffs and screws are not at LCSC, buy separately; about 0.1-0.2 USD
+  per pair, UNVERIFIED (no price script or lookup in the repo; check the shop's brass M2 x 12 F-F price and a 5-ornament quantity: 10
+  standoffs plus spares). JLC-assembled: holder BT1 (C964881, D4), headers J3/J4 (D3).
 - Not placed, per reference: variant A: J1, J2, U3, R30-R32, C30, C31 (charger and USB-C, DNP, no fab number); C50, C51 (antenna tuning
   slots, bench-tune with a VNA); TC1 (Tag-Connect pads, no part). The exact list is in `hardware/tree-a/bom.csv` (rows without a fab number).
 
@@ -85,8 +89,13 @@ write variant A: charger parts are DNP in the schematic, and `bom-variant-b.csv`
 4. Recompute the order (variant B row of `bom_check`), re-run the manual quote if the part count changed.
 
 ## 5. Bring-up list (first boards; what proves each UNVERIFIED item)
-Order of work: bench supply with no cell, then cells, then antenna and firmware items. UNVERIFIED sources are named; the PARTS-REVIEW rows
-carry the evidence.
+Order of work: standoff continuity, bench supply with no cell, then cells, then antenna and firmware items. UNVERIFIED sources are named;
+the PARTS-REVIEW rows carry the evidence.
+0. Standoff continuity (D31), BEFORE the first power-up of the stack (board B mounted on A): with no cell and no supply, meter on the
+   ohm range between a GND point on A (Tag-Connect GND pad or the holder pad 2) and a GND point on B (MH3 / MH4 ring or a B ground via):
+   under 1 ohm (proposed limit, UNVERIFIED; zero the meter leads first) through each standoff alone (test MH1-MH3 and MH2-MH4 with the other screw loosened, then both). Open or above 1 ohm = a
+   nylon standoff, an unseated ring or a loose screw: B floats (its LED lines work, its antenna-side ground reference does not); stop,
+   fix, repeat. Record the value per ornament. Check the standoff material (brass, not nylon) before assembly.
 1. First power on a bench supply at 2.0 V, 2.6 V and 3.2 V (no cells), current limit 100 mA: VIN, VDD at SEL low (3.0 V) and SEL high (3.5 V,
    expect 3.45-3.55 V), P-FET drop at 40 mA and at the power-up peak (tree-a finding 14).
 1a. Battery sense calibration (D26, FIRMWARE-RULES rule 5; bench supply on VIN, no cell, SEL low): force VIN to 2.00 V and to 3.00 V, read VIN with the meter on the VIN node and record the firmware reading of VBAT_SENSE at each point (one sample per second, wait 7 tau = 0.77 s after each step). Do not put the meter on the pin: a 10 Mohm meter on the 1.1 Mohm source takes 10 % off the reading. From the two points fit reading = gain x VIN + offset and keep gain and offset in the firmware. Threshold: offset above 25 mV at the pin (SAADC offset and pin leakage across the 1.1 Mohm source, both UNVERIFIED) -> swap R40/R41 to 2 x 1 M C26083 (the R23 part, Basic; source 500 kohm); that is a BOM change for the engineer (D26): rerun `tree_charge_path.py` and the sleep rows of `tree_power.py` first (sleep current of the divider rises from 0.68 uA to 1.5 uA at 3.0 V).
@@ -106,7 +115,8 @@ carry the evidence.
    tree-a finding 23); size the MCUboot + app + second slot + VPR images against them.
 5. LFXO start at 1.7 V and 40 C, INTCAP for the 9 pF crystal, frequency count on a GPIO (UNVERIFIED, finding 7); HFXO frequency error and
    start-up (UNVERIFIED, finding 8).
-6. DC/DC: efficiency and ripple with the 0805 L1 (UNVERIFIED, finding 13); VDD lit and idle.
+6. DC/DC: efficiency and ripple with the 0805 L1 (UNVERIFIED, finding 13); VDD lit and idle. Firmware keeps the nRF54L DC/DC OFF (LDO
+   mode) until item 14 passes (FIRMWARE-RULES rule 13).
 7. Antenna: first reel sample, brown mark against pin 1 under the microscope (about 90 % sure, UNVERIFIED, finding 1); VNA sweep of S11 at
    2.4-2.5 GHz (return loss at least 9.5 dB per Johanson on its own board), bench tune with the R50/C50/C51 pi slots; keep-out check (finding 2).
    C9 ground (KNOWN deviation, gate 4): C9.2 goes to GND through its own via into In1 at the pad, not Nordic's bottom-layer-only
@@ -130,7 +140,48 @@ carry the evidence.
 11a. Variant B, BEFORE the first pouch plug-in (D26, R2-B2): (i) with no pouch, continuity J2 pin 1 to Q1 pin 3 (drain, net BAT) and J2 pin 2 to GND: J2 pin 1 = cell + must be proven on the board, the footprint pin 1 is UNVERIFIED; (ii) with the meter on the pouch plug (not the wire colours), mark the lead that is + and confirm it lands on J2 pin 1 when the plug is seated, so the plug is keyed or marked the right way; (iii) never plug a pouch of unknown polarity while USB is present. Reason: a reversed pouch with USB present is not blocked: Q1 turns on and U3 drives the cell in reverse at up to 12.5 mA (about 68 mW in Q1, `tree_charge_path.py` row "reversed pouch, USB present") until the pack protection cuts off; after that cut-off U3 pulls VIN to VREG and the pack protection sees VIN plus the cell voltage in reverse (pack limits UNVERIFIED). Hardware protection belongs to the variant B hardening with DS-B1.
 11. Variant B only: STAT and VBUS_DET pin levels (diode / divider; CHG_STAT low means charging only while VBUS_DET is high, rule 7), STAT sawtooth behaviour (rule 9), back-power with VBUS present and VDD = 0 (rule 7), charge current 100 mA at VBAT 3.0 V, USB-C sheet 2 / edge position (UNVERIFIED, finding 25); MCP73831 VREG and IREG are guaranteed only for VDD of 5.2 V or more (typical values below), so measure VREG and IREG on a 5.0 V USB host as well.
 12. Housing: stack thickness 14.0 mm (14.8 mm with LEDs), standoffs and screws fit, pouch overhang (D16).
-Parts that arrive hand-fitted: standoffs, screws, cells (variant A); pouch (variant B). Order: standoffs and screws first, cells last.
+Layout exceptions accepted in review round 3 (proposed D35, `out/doc-proposals.md`) each get a measurement. Figures below are the
+review's estimates, not re-measured here: layout facts live in `tree-a/BOARD.md` (Routing).
+13. RF tuning kit and VNA first. Order spare parts before the first antenna measurement: 0201 C0G for C11 (0.0 pF = 0 ohm jumper, 0.2, 0.3
+    pF; fitted 0.3), 0201 C0G for C9 (1.5, 2.0, 2.4 pF; fitted 2.0), and a series 2.3-2.9 pF C0G 0402 for the R50 slot (fitted 0 ohm):
+    ANT_FEED runs 2.4 mm without a ground reference under it, so a series C may be needed to move S11. Order of work: (i) VNA check of the
+    matching network alone (U1 side, R50 lifted, port at L5 / C11 with a coax pigtail; item 7), (ii) S11 of the full chain at 2.4-2.5 GHz,
+    (iii) swap the kit parts one at a time, one change per sweep, write S11 at 2.44 GHz and the best return loss in this file. Only then
+    conducted power and radio tests (items 14, 15). UNVERIFIED: the kit values are a search grid, not a computed optimum.
+14. DC/DC ripple and RX sensitivity BEFORE enabling DC/DC (FIRMWARE-RULES rule 13). C1 / C12 sit 5.2 / 6.2 mm from their pins and the
+    DECA / DECRF copper runs 14 mm between pins 33 and 43 (review 3). With DC/DC off: measure DECD and DECA ripple (scope, 20 MHz
+    bandwidth, short ground spring on the cap pads, lit and idle) and the BLE receive sensitivity (conducted or in a quiet room against a
+    reference board or the Nordic DK, packet error rate at the lowest level the setup holds). Repeat with DC/DC on. Accept DC/DC
+    only if sensitivity drops by under 1 dB (proposed, the engineer sets it) and DECA ripple stays inside the datasheet limit (limit to be
+    read from the PS: UNVERIFIED, not in the repo). Otherwise stay in LDO mode; the cost is current (power budget: rerun `tree_power.py` with the LDO figure).
+15. LFCLK drift test (FIRMWARE-RULES rule 15): the 32.768 kHz crystal lanes run 0.16 mm beside LED_L1 (estimated 7 mV per edge of
+    coupling, review 3). Compare an RTC-based interval (RTC on the 32.768 kHz crystal, against a 1 s GPIO pulse counted on the bench
+    with a frequency counter or a logic analyser clocked from a reference) with the LED matrix scanning versus idle, over at least 10
+    minutes each, three boards. Pass: difference inside the sleep clock accuracy the BLE stack is configured for (limit
+    to be set from the stack's SCA setting: UNVERIFIED, not in the repo). Fail: add a firmware guard (rule 15) or move the lanes (next
+    revision).
+16. Variant B release requirement (before a variant B order, not for variant A): VBUS track widened to at least 0.127 mm and at least
+    0.15 mm from VIN / VDD, charger GND vias added. The generators carry variant A today: a variant B order is not released until
+    `tree-a/BOARD.md` shows these two changes built and DRC clean (section 4 lists the other steps).
+Parts that arrive hand-fitted: brass standoffs, screws, cells (variant A); pouch (variant B). Order: standoffs and screws first (the
+continuity test of item 0 needs them), cells last.
+
+## 5b. Fab checks for the order (OPEN; added 2026-11-25 from review round 3)
+Ask JLC support or check in the order page's DFM check; write each answer here with the date (no order or account numbers in the repo).
+1. Tracks 0.100 mm with 0.100 mm clearance on the outer layers AND on inner layer 2 (In2): the DFM check must accept them at 4 layers,
+   1.0 mm, ENIG. Nets at 0.100 mm: see tree-a/BOARD.md Routing (placeholder: the list is added when the routing agent publishes it).
+   If JLC refuses, the fallback is widening those nets: a layout step, not an order step.
+2. Copper to board edge 0.3 mm on the routed edges (0.6 mm behind each mouse-bite hole row, `panel/BOARD.md`): accepted?
+3. Thermal vias in pads are tented: U1 16 vias, U2 6 vias. Ask whether JLC plugs (resin-fills) or only tents them, and the cost; a via
+   in the pad under the QFN with open mask can wick solder.
+4. 0201 parts (C9, C11, L4, L5): solder-mask dam between 0201 pads in BLACK mask: black mask resolution is coarser than green; does JLC
+   keep the dam, and what is the minimum dam in black?
+5. Impedance: the stackup JLC04101H-7628 at 1.0 mm is not published with values on JLC's impedance page (only 1.6 mm stackups are).
+   Ask support for the layer thicknesses and Dk of JLC04101H-7628 at 1.0 mm, or order impedance control for the F.Cu-In1 pair (the
+   50 ohm RF line, `calc/impedance.py`) and write down which stackup JLC sees for the quote. Until answered, the RF line impedance
+   (49.4 ohm in `calc/impedance.py`) rests on assumed stackup values (UNVERIFIED).
+6. Silk text: silk text minimum height 1.0 mm (check the silk of both boards in the gerber view; the floor is the
+   engineer's instruction, confirm it against the JLC capability page). The generators' silk is checked against this at gate 6.
 
 ## 6. Before payment (hw-fab-order checklist)
 - [ ] Routed board, gate OK at all DRC severities; `hw-check.sh --strict --stock --qty 5` OK (needs the manual quote above); clean tree.
@@ -138,6 +189,8 @@ Parts that arrive hand-fitted: standoffs, screws, cells (variant A); pouch (vari
 - [ ] Stock rechecked right before paying (nRF54L10 C44800139, antenna, J3, J4).
 - [ ] Placement preview checked by a human (every IC, connector, LED polarity, antenna, USB-C shell, board B rotated 180 degrees), with
       the per-part checks of section 7.
+- [ ] Section 5b answered or its fallback accepted (0.100 mm tracks, thermal via plugging, black-mask dam, JLC04101H-7628 at 1.0 mm
+      impedance).
 - [ ] Support answers of section 3 written here; this file updated; `GATES.md` gate 6 status.
 
 ## 7. CPL conventions (fab-footprint fit, 2026-11-23)

@@ -2,7 +2,7 @@
 
 Rules the hardware depends on. Each names the requirement it serves (REQUIREMENTS.md), the source (datasheet section, calc row,
 review item) and how it is checked. Register and pin names are checked against the datasheet when the driver is written.
-Pins and nets: ARCHITECTURE.md (single source `hardware/gen/tree_common.py`). Decisions: DECISIONS.md. A rule marked BENCH has no
+Pins and nets: ARCHITECTURE.md (single source `hardware/gen/tree_common.py`; LED line map in the section below). Decisions: DECISIONS.md. A rule marked BENCH has no
 number from a datasheet yet: the first board confirms it (bring-up list in ORDER.md).
 
 | # | Rule | Serves | Source / check |
@@ -19,6 +19,23 @@ number from a datasheet yet: the first board confirms it (bring-up list in ORDER
 | 10 | LED average current. Cap the LED average at 2.0 mA at the 3.5 V rail (hard limit); default 1.0 mA. The cap is the basis of the autonomy numbers: 2.0 mA gives 22.2 days, 1.0 mA about 36 days. | R3.2 (D19) | `calc/tree_power.py` rows "autonomy break-even" (FAIL below 20 days), "autonomy at firmware default LED" (FAIL below 30 days) |
 | 11 | All LED lines Hi-Z in sleep (and before System OFF), CHG_STAT / VBUS_DET as in rule 7 or 8, TPS_SEL low. No GPIO drives a load in the sleep window. | R3.3 (< 5 uA), R4.3 | `calc/power_budget.py` and `calc/tree_power.py` sleep rows (3.72 uA typ, 4.67 uA with maxima) |
 | 12 | Hand-off at boot: SEL low, all LED lines Hi-Z, clock started (rule 6), cut-off checked (rule 4), only then the lit window. | R3.1, R3.5 | rules 3, 4, 6 |
+| 13 | DC/DC conditional (review round 3). Keep the nRF54L DC/DC disabled (LDO mode, no DCDCEN) until the bring-up measurement of DECD / DECA ripple and radio receive sensitivity passes. Reason: C1 / C12 sit 5.2 / 6.2 mm from their pins and the DECA / DECRF copper runs 14 mm between pins 33 and 43 (figures from the review, UNVERIFIED here). Enable DC/DC only through a build flag that stays off until the measurement result is written in ORDER.md. The cost is current: rerun `calc/tree_power.py` with the LDO figure. | R1.4 (BLE link), R3.2 (autonomy) | ORDER.md section 5 item 14 (measurement); the DC/DC build flag defaults to off (review); `calc/tree_power.py` sleep and autonomy rows |
+| 14 | Sample VBAT_SENSE with the LED scan paused. VBAT_SENSE runs 0.123 mm beside LED_L7 / LED_L8 (tracks in the layout, review 3), and a scanning line couples edges into a 1.1 Mohm source. Stop the slot scan (all LED lines Hi-Z, rule 11 state) before the SAADC sample, sample once (rule 5), then resume. The pause is shorter than one slot frame (rule 2: 200 Hz, 5 ms), so nothing visible changes. | R3.2, R3.3 | ORDER.md item 1a (calibration is done with the scan stopped, same as in use); `gen/tree_charge_path.py` row "VBAT_SENSE filter" (source impedance); review 3 layout figure from `tree-a/BOARD.md` Routing |
+| 15 | LFCLK drift check with the matrix scanning vs idle. The RTC / GRTC runs on the 32.768 kHz crystal (rule 6) whose lanes run 0.16 mm beside LED_L1 (estimated 7 mV per edge, review 3). The bring-up test compares the RTC interval against a bench reference with the LED matrix scanning and idle; firmware keeps a build-time switch to calibrate the LFCLK (or fall back to the internal RC with periodic calibration) if the drift difference exceeds the limit of ORDER.md item 15. No time-critical schedule (phone time sync) is released before that test. | R3.1 (schedule from phone time) | ORDER.md section 5 item 15; PARTS-REVIEW finding 7 (LFXO) |
+
+## LED line to MCU pin map (D33, netlist `tree-a/netlist.csv`, read 2026-11-25; `gen/tree_common.py` `PIN_PLAN`)
+| Line | GPIO | QFN pin | Resistor | Side of J3 |
+|---|---|---|---|---|
+| LED_L1 | P1.11 | 39 | R1 | left |
+| LED_L2 | P1.12 | 40 | R2 | left |
+| LED_L3 | P1.13 | 41 | R3 | left |
+| LED_L4 | P1.14 | 42 | R4 | left |
+| LED_L5 | P1.05 | 6 | R5 | right |
+| LED_L6 | P1.06 | 7 | R6 | right |
+| LED_L7 | P1.07 | 8 | R7 | right |
+| LED_L8 | P1.08 | 9 | R8 | right |
+Gate 3 had L1-L4 on P1.08-P1.05 and L5-L8 on P1.11-P1.14; firmware written against that order drives the wrong lines. Slot rule (rule 1)
+is by line number, so the driver only needs this table. P1.08 = EXTREF, P1.11 = AIN4: neither function is used.
 
 ## Not decided here (firmware owner)
 - Re-arm threshold after the cut-off (rule 4).

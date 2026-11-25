@@ -25,6 +25,6 @@ SW1	1	Small tactile switch		All	Choose part	Basic likely	Wake, change effect, pa
 TC1	1	Tag-Connect TC2030-NL footprint		All	Footprint only		SWD programming	Pads only	Tag-Connect		VDD, SWDIO, SWDCLK, RESET, GND. Use the official footprint.
 R40–R41	2	1 MΩ divider (or switched)		All	Choose part	Basic	Battery voltage to ADC	402			Keep leakage low; consider switching it.
 R42–R44	3	Divider + pull-up		Li-ion	Choose part	Basic	USB VBUS detect and charger STAT to GPIO	402			
-H1–H2	2	M2 nylon screw + ~14 mm standoff		All	Source separately		Holds the two boards together	Mechanical			At tier 3 ends: x = 8 mm and 62 mm, y = 72 mm.
+H1–H2	2	M2 screw (nylon only with brass standoffs) + M2 brass standoff 12.0 mm F-F (D31)		All	Source separately		Holds the two boards together	Mechanical			At tier 3 ends: x = 10.7 mm and 59.3 mm, y = 71.0 mm (D17). Price about 0.1-0.2 USD per pair, UNVERIFIED.
 PCB A	1	70 × 105 mm, 1.0 mm FR4, 4 layers, black mask, ENIG		All	Design		Main board				Two-sided assembly: parts inner face, 8 RGB + SW1 + Tag-Connect outer face.
 PCB B	1	70 × 105 mm, 1.0 mm FR4, 2 layers, black mask, ENIG		All	Design		LED board				One-sided assembly: 8 RGB LEDs on the outer face only.
