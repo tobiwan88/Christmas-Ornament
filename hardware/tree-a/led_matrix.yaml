@@ -1,0 +1,86 @@
+# Inputs of hardware/calc/led_matrix.py (charlieplex LED matrix, nRF54L15 pin plan, inter-board header).
+# Every input: {value, source}. value null = MISSING; no source = WARN. "unverified: PS HTML summary" = nRF54L15 number taken
+# from hardware/RESEARCH-2026-11-23.md (HTML datasheet via a summarising tool; the Product Specification PDF was not read).
+# The matrix table, pin plan and header map live in `matrix_module` (single source for both generators); this file holds
+# the datasheet facts and the design settings the script checks them against.
+
+matrix_module: ../gen/tree_common.py
+
+supply:
+  vdd_lit_v: {value: 3.5, source: "REQUIREMENTS R3.5 (TPS63900 VO(2) while LEDs are lit, SEL high); engineer decision"}
+  vdd_idle_v: {value: 3.0, source: "REQUIREMENTS R3.5 (TPS63900 VO(1), SEL low, RCFG3 13.3k Table 7-3); sets the pin-voltage limit when idle"}
+  vdd_tol_pct: {value: 1.5, source: "TPS63900 SLVSET3D 6.5 p.5, output voltage DC accuracy +-1.5 % (CFG resistors only select a code, Table 7-2 note)"}
+  vdd_candidates_v:
+    value: [3.3, 3.4, 3.5]
+    source: "TPS63900 SLVSET3D Table 7-2 p.14: 3.3 V = RCFG1 36.5k + RCFG2 0/511 (unlimited/100 mA); 3.4 V = RCFG1 0R + RCFG2 8.25k/10.5k; 3.5 V = RCFG1 511R + RCFG2 8.25k/10.5k"
+  nrf_vdd_max_rec_v: {value: 3.6, source: "nRF54L15 datasheet v1.0 VDD operating 1.7-3.6 V (unverified: PS HTML summary)"}
+  nrf_vdd_abs_max_v: {value: 3.9, source: "nRF54L15 datasheet v1.0 absolute maximum VDD (unverified: PS HTML summary)"}
+
+led:                      # XINGLIGHT XL-1010RGB-YG, LCSC copy without revision, local hardware/tree-a/datasheets/XL-1010RGB-YG
+  vf20_min_v: {value: {R: 1.8, G: 2.6, B: 2.6}, source: "XL-1010RGB-YG p.4 optical-electrical table, VF min at IF=20 mA, 25 C"}
+  vf20_max_v: {value: {R: 2.4, G: 3.4, B: 3.4}, source: "XL-1010RGB-YG p.4, VF max at IF=20 mA (no typ stated)"}
+  vf20_typ_v:
+    value: {R: 1.95, G: 2.85, B: 2.90}
+    source: "estimate: read from the typical V-I curve p.6 at 20 mA (+-0.05 V reading error); NOT a datasheet typ. docs/parts.csv 2.1/2.9/2.8 is unverified and not used"
+  iv20_min_mcd: {value: {R: 100, G: 550, B: 80}, source: "XL-1010RGB-YG p.4, IV min at 20 mA"}
+  iv20_max_mcd: {value: {R: 200, G: 1000, B: 200}, source: "XL-1010RGB-YG p.4, IV max at 20 mA"}
+  if_max_ma: {value: {R: 20, G: 20, B: 20}, source: "XL-1010RGB-YG p.3 absolute maximum, continuous forward current"}
+  ifp_max_ma: {value: {R: 60, G: 80, B: 80}, source: "XL-1010RGB-YG p.3 absolute maximum, peak forward current, pulse <= 0.1 ms, duty <= 1/10"}
+  ifp_pulse_ms: {value: 0.1, source: "XL-1010RGB-YG p.3 note"}
+  ifp_duty: {value: 0.1, source: "XL-1010RGB-YG p.3 note"}
+  pd_max_mw: {value: {R: 50, G: 70, B: 70}, source: "XL-1010RGB-YG p.3 absolute maximum, power dissipation"}
+  vr_max_v: {value: 5, source: "XL-1010RGB-YG p.3, max reverse voltage"}
+  ir_max_ua: {value: 1, source: "XL-1010RGB-YG p.4, IR max at VR=5 V"}
+  # low-current model: Vf(I) = Vf20 + n*Vt*ln(I/20 mA) + Rs*(I - 20 mA). Bench to confirm (WARN row).
+  ideality_n: {value: 2.0, source: "assumption: diode ideality n=2 below 20 mA; fits the p.6 typical curve within its reading error; bench to confirm"}
+  rs_ohm: {value: 4.6, source: "estimate: slope of the p.6 typical V-I curve 20->80 mA (R 1.95->2.30 V, G/B 2.85->3.20 V) minus the n=2 diode term"}
+  temp_c: {value: 25, source: "XL-1010RGB-YG p.4 test condition 25 C; ornament indoors 0-40 C (R1.2): Vf temperature coefficient not stated"}
+  # pad cycle of the land pattern, clockwise in the top (pad-side) view, starting top-left
+  pad_cycle: {value: ["A", "B", "G", "R"], source: "digest XL-1010RGB-YG: 3 anode top-left, 4 B top-right, 2 G bottom-right, 1 R bottom-left (orientation inferred, UNVERIFIED in the digest)"}
+  pad_number: {value: {R: "1", G: "2", A: "3", B: "4"}, source: "XL-1010RGB-YG pin table (digest): 1 R cathode, 2 G cathode, 3 common anode, 4 B cathode"}
+
+gpio:
+  r_src_worst_ohm: {value: 100.0, source: "nRF54L15 high drive source min 4 mA at VDD-0.4 V -> 0.4/0.004 (unverified: PS HTML summary)"}
+  r_sink_worst_ohm: {value: 133.3, source: "nRF54L15 high drive sink min 3 mA at VSS+0.4 V -> 0.4/0.003 (unverified: PS HTML summary)"}
+  r_src_typ_ohm: {value: 50.0, source: "assumption: no typical drive in the PS HTML summary; half the min-spec resistance; bench to confirm"}
+  r_sink_typ_ohm: {value: 66.7, source: "assumption: as r_src_typ_ohm"}
+  r_src_extra_ohm: {value: 28.6, source: "nRF54L15 extra drive (P2 only) source 14 mA at 0.4 V (unverified: PS HTML summary); option R4.5"}
+  r_sink_extra_ohm: {value: 25.0, source: "nRF54L15 extra drive (P2 only) sink 16 mA at 0.4 V (unverified: PS HTML summary); option R4.5"}
+  i_total_max_ma: {value: 15, source: "nRF54L15 recommended maximum for all GPIOs together (unverified: PS HTML summary); REQUIREMENTS R4.4"}
+  pin_v_max_over_vdd_v: {value: 0.3, source: "nRF54L15 pin voltage <= VDD + 0.3 V (unverified: PS HTML summary)"}
+
+design:
+  r_line_ohm: {value: 22, source: "REQUIREMENTS R4.4 start value 22-47 ohm; C25092 Basic 0402 (digest stock table); recommendation of this script"}
+  r_candidates_ohm: {value: [22, 33, 47], source: "REQUIREMENTS R4.4 (22/33 Basic, 47 Extended per the digest)"}
+  drive: {value: high, source: "REQUIREMENTS R4.5: LED lines on P1 (high drive, GPIOTE); 'extra' = P2 option"}
+  r_tol_pct: {value: 1, source: "assumption: 1 % 0402 resistors (Basic parts are 1 %)"}
+  i_target_fail_ma: {value: 1.0, source: "REQUIREMENTS R4.4 (2026-11-23): FAIL below 1 mA at worst-case Vf, VDD min, TYPICAL drive"}
+  i_target_warn_ma: {value: 2.0, source: "job 2026-11-23: second target 2 mA (WARN only)"}
+  ghost_margin_v: {value: 0.1, source: "REQUIREMENTS R4.3: two lowest Vf at minimum > VDD + 0.1 V"}
+  ghost_ratio_warn: {value: 1.0e-4, source: "assumption: a sneak current above 1/10000 of the lit current may glow in a dark room; review"}
+
+scan:                     # REQUIREMENTS R4.2 (notes): one die lit at a time
+  slots: {value: 48, source: "REQUIREMENTS R4.1/R4.2: 48 dies, one slot each"}
+  slot_us: {value: 100, source: "REQUIREMENTS R4.2: slots about 100 us"}
+  frame_hz: {value: 200, source: "REQUIREMENTS R4.2: 200 Hz frame"}
+  i_avg_cap_ma: {value: 2.0, source: "REQUIREMENTS section 3 table and R3.2: firmware caps the LED average at about 2 mA"}
+  white_weights: {value: {R: 0.2126, G: 0.7152, B: 0.0722}, source: "ITU-R BT.709 relative luminance coefficients (D65 white), used as the mcd ratio of a white pixel"}
+
+nrf_qfn48:                # package pin -> function, QFN48 6 x 6, 12 pins per side, counter-clockwise from pin 1 (top-left)
+  source: "digest section nRF54L15 'Pins' (unverified: PS HTML summary); side convention = standard QFN numbering, check the PS package drawing"
+  pins: {1: P1.00, 2: P1.01, 3: P1.02, 4: P1.03, 5: P1.04, 6: P1.05, 7: P1.06, 8: P1.07, 9: P1.08, 10: VDD,
+         11: P2.00, 12: P2.01, 13: P2.02, 14: P2.03, 15: P2.04, 16: P2.05, 17: P2.06, 18: P2.07, 19: P2.08, 20: P2.09, 21: P2.10,
+         22: VDD, 23: P0.00, 24: P0.01, 25: SWDIO, 26: SWDCLK, 27: P0.02, 28: P0.03, 29: P0.04, 30: nRESET, 31: ANT, 32: VSS_PA,
+         33: DECRF, 34: XC1, 35: XC2, 36: VDD, 37: P1.09, 38: P1.10, 39: P1.11, 40: P1.12, 41: P1.13, 42: P1.14, 43: DECA,
+         44: VSS, 45: DECD, 46: DCC, 47: VDD, 48: VDD}
+  ain: {P1.04: AIN0, P1.05: AIN1, P1.06: AIN2, P1.07: AIN3, P1.11: AIN4, P1.12: AIN5, P1.13: AIN6, P1.14: AIN7}
+  reserved: {P1.00: "XL1 LFXO", P1.01: "XL2 LFXO", P1.02: "NFC1 (not used as GPIO)", P1.03: "NFC2 (not used as GPIO)",
+             P2.06: "TRACE", P2.07: "TRACE / SWO", P2.08: "TRACE", P2.09: "TRACE", P2.10: "TRACE"}
+  wake_ports: [P0, P1]           # SENSE/DETECT wake from System OFF/ON; P2 has no wake and no GPIOTE
+  led_ports: [P1]                # REQUIREMENTS R4.5
+  rf_near_pins: [27, 28, 29, 30] # P0.02-P0.04, nRESET next to ANT (31): static or slow signals only (assumption, Nordic nRF52 guidance)
+
+# Known deviations (row id -> text): the FAIL row becomes a WARN carrying the text. Engineer-accepted only.
+known:
+  min_drive_G: "D13 (2026-11-23): at the datasheet minimum P1 drive green reaches about 0.77 mA at worst-case Vf; accepted, gate at typical drive (R4.4). Bench: measure P1 high-drive source/sink resistance at 1-5 mA and green current at 3.5 V on the first boards; fix if low: Vf-binned LEDs or P2 extra drive"
+  min_drive_B: "D13 (2026-11-23): as min_drive_G for blue (same Vf range). Bench: blue current at 3.5 V on the first boards"

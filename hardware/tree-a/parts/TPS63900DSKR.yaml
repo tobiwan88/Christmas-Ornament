@@ -1,0 +1,74 @@
+# Datasheet card: TPS63900DSKR (TI ultra-low-Iq buck-boost). Read from the local PDF (pdftotext -layout and page images, 2026-11-23).
+mpn: TPS63900DSKR
+role: Cell -> VDD buck-boost; SEL low = 3.0 V (idle), SEL high = 3.5 V (LEDs lit); input current limit 100 mA
+lcsc: C1518762
+source:
+  url: https://www.ti.com/lit/ds/symlink/tps63900.pdf
+  revision: "SLVSET3D, March 2020, revised October 2020 (land-pattern page DSK0010A dated 09/2025)"
+  file: datasheets/tps63900/tps63900.pdf
+values:
+  # --- ratings and operating range
+  vin_abs_max_v: {value: 5.9, section: "6.1 Absolute Maximum Ratings (VIN, LX1, LX2, VOUT, EN, CFG1-3, SEL)"}
+  vin_range_v: {value: [1.8, 5.5], section: "6.3 Recommended Operating Conditions, VI"}
+  vout_range_v: {value: [1.8, 5.0], section: "6.3 Recommended Operating Conditions, VO"}
+  iout_max_a: {value: 0.4, section: "6.3 Recommended Operating Conditions (VI >= 2.0 V, VO = 3.6 V)"}
+  ci_min_effective_uf: {value: 5, section: "6.3 Recommended Operating Conditions, CI (effective after DC bias)"}
+  cout_effective_uf: {value: [10, 1000000], section: "6.3 CO min 10 uF effective; 8.2.2.3 'There is no upper limit for the output capacitance value'"}
+  cout_nominal_uf: {value: 22, section: "8.2.2.3 recommended nominal output capacitor: a single 22 uF; Table 8-1 other values 10/22/47/100/>=300"}
+  cin_nominal_uf: {value: 10, section: "8.2.2.4 a 10 uF input capacitor is recommended, X5R or X7R, no upper limit"}
+  cap_tolerance_note: {value: "effective capacitance can vary +20 % / -50 % (tolerance and DC bias)", section: "Table 8-1 footnote (2)"}
+  inductance_uh: {value: 2.2, section: "6.3 Recommended Operating Conditions, L (2.2 uH only); effective L varies +20 % / -30 % (Table 8-1 footnote 1)"}
+  isat_required_a: {value: {setting_le_100ma: 1.0, unlimited: 2.0}, section: "6.3 ISAT inductor saturation current rating; 8.2.2.2 recommends 20 % above the Equation 5 peak"}
+  c_cfg_max_pf: {value: 10, section: "6.3 C(CFG) capacitance on CFG1-3 (keep the CFG nets short, no capacitor)"}
+  ta_range_c: {value: [-40, 85], section: "6.3 Recommended Operating Conditions"}
+  # --- electrical characteristics (6.5)
+  iq_vin_typ_ua: {value: 0.075, section: "6.5 Quiescent current into VIN, V(EN) = 3 V, no load, not switching, unlimited setting (typ)"}
+  iq_vin_max_ua: {value: 1, section: "6.5 Quiescent current into VIN (max)"}
+  shutdown_current_na: {value: 60, section: "6.5 Shutdown current into VIN, V(EN) = 0 V (typ)"}
+  uvlo_rising_v: {value: {min: 1.73, typ: 1.75, max: 1.77}, section: "6.5 VIT+(UVLO)"}
+  uvlo_hysteresis_mv: {value: {min: 90, typ: 100, max: 110}, section: "6.5 Vhys(UVLO)"}
+  uvlo_falling_v: {value: 1.65, section: "derived: VIT+ typ 1.75 V - Vhys typ 100 mV (not printed as a value)"}
+  por_rising_v: {value: {min: 1.37, max: 1.74}, section: "6.5 VIT+(POR)"}
+  en_sel_thresholds_v: {value: {vih: 1.2, vil: 0.4}, section: "6.5 VIH 1.2 V (printed in the MAX column), VIL 0.4 V (printed in the MIN column): read as 'high needs >= 1.2 V, low needs <= 0.4 V'; the columns look swapped in the print, the meaning is the usual one"}
+  en_sel_input_current_na: {value: {typ: 1, max_25c: 10}, section: "6.5 input current EN, SEL (+-)"}
+  rds_on_mohm: {value: {q1_vi3_vo5: 155, q2_vi3_vo3: 110, q3_vi3_vo3: 110, q4_vi5_vo3: 155}, section: "6.5 power switch on-state resistance, test current 1 A"}
+  peak_current_limit_startup_a: {value: {min: 0.35, max: 0.83}, section: "6.5 peak current limit during startup (Q1), VI 3.6 V, unlimited setting"}
+  peak_current_limit_100ma_setting_a: {value: {min: 0.15, typ: 0.29, max: 0.51}, section: "6.5 peak current limit (Q1), VI 3.6 V, VO 3.3 V, 100 mA setting"}
+  peak_current_limit_unlimited_a: {value: {min: 1.33, typ: 1.45, max: 1.6}, section: "6.5 peak current limit (Q1), VI 1.8 V, VO 3.6 V, unlimited setting"}
+  input_current_limit_settings_ma: {value: [1, 2.5, 5, 10, 25, 50, 100, "unlimited"], section: "6.5 average input current limit; 7.3.4"}
+  short_circuit_input_current_ma: {value: {setting_100ma: 26, setting_50ma: 26, setting_25ma: 26}, section: "7.3.8.2 Table 7-4"}
+  vout_dc_accuracy_pct: {value: 1.5, section: "6.5 output voltage DC accuracy, IO = 1 mA, CO(eff) = 10 uF, L(eff) = 2.2 uH (+-)"}
+  td_en_ms: {value: 1.5, section: "6.5 td(EN) supply stable before EN to the start of the output ramp (max)"}
+  td_por_ms: {value: 3.8, section: "6.5 td(POR) after the POR threshold (typ)"}
+  tw_ss_us: {value: {min: 100, typ: 125, max: 150}, section: "6.5 soft-start step duration, VO > 1.8 V"}
+  td_sel_us: {value: {typ: 30, max: 40}, section: "6.5 delay between SEL change and the first output step"}
+  tw_dvs_us: {value: {min: 100, typ: 125, max: 150}, section: "6.5 dynamic voltage scaling step duration (100 mV steps, 7.3.5)"}
+  td_restart_ms: {value: {typ: 10, max: 11}, section: "6.5 restart delay after protection"}
+  thermal_shutdown_c: {value: {typ: 150, hysteresis_typ: 20}, section: "6.5 protection features"}
+  rth_ja_c_per_w: {value: 64.6, section: "6.4 thermal information, DSK package"}
+  # --- configuration (7.3.6): resistors 1 % or better, 200 ppm or better, total RMS error < 3 % including drift and ageing
+  cfg_resistor_rule: {value: "+-1 % or better, tempco +-200 ppm or better; total RMS error incl. tolerance, drift, ageing < +-3 %; read ONCE at start-up, runtime changes ignored; CFG1-3, EN, SEL must never float", section: "7.3.6 and Table 5-1"}
+  cfg_vo2_3p5v_100ma: {value: {rcfg1_ohm: 511, rcfg2_ohm: 10500}, section: "Table 7-2, row 3.5 V, column 100 mA"}
+  cfg_vo2_3p5v_unlimited: {value: {rcfg1_ohm: 511, rcfg2_ohm: 8250}, section: "Table 7-2, row 3.5 V, column UNLIMITED"}
+  cfg_vo1_3p0v: {value: {rcfg3_ohm: 13300}, section: "Table 7-3, row 3.0 V"}
+  cfg_vo1_range: {value: "1.8 V (0 ohm), 2.0 V (511) ... 3.0 V (13.3 k), 3.3 V (16.2 k), 3.6 V (20.5 k), 4.0 V (24.9 k), 4.5 V (30.1 k), 5.0 V (36.5 k)", section: "Table 7-3"}
+  cfg_vo2_rcfg1_for_other_voltage: {value: "3.4 V 0 ohm, 3.5 V 511, 3.6 V 1.15 k, 3.7 V 1.87 k ...; RCFG2 selects the input current limit (8.25 k unlimited ... 36.5 k 1 mA)", section: "Table 7-2"}
+  sel_function: {value: "SEL = high selects VO(2) (CFG1 + CFG2), SEL = low selects VO(1) (CFG3); 100 mV steps of 125 us after a 30-40 us delay", section: "7.3.5, 7.3.7"}
+  no_active_discharge: {value: "does not actively discharge the output capacitor when the output steps down; tsettle = CO x (VO(HIGH) - VO(LOW)) / IO", section: "7.3.5 Equation 3"}
+  sel_startup_default: {value: null, section: "not stated (which preset is active during the start-up ramp; behaviour of SEL during start-up): pull SEL down so the start is at 3.0 V"}
+  pg_pin: {value: null, section: "not stated: the device has no power-good pin (Table 5-1)"}
+  current_limit_tolerance_100ma: {value: null, section: "not stated beyond the 100 mA typical average limit of 6.5 (no min/max given)"}
+  efficiency_vo3p3: {value: "about 85-92 % for VI 1.8-3.6 V and IO 100 uA-100 mA; about 70-85 % at 1-10 uA (graph read, not tabulated)", section: "Figure 8-7 (page 23), read from the image (EST)"}
+  efficiency_vo3p5: {value: null, section: "not stated (curves exist for 1.8, 3.3 and 5.0 V output only)"}
+  efficiency_light_load_claim: {value: ">90 % efficiency at 10 uA load current", section: "1 Features (page 1)"}
+  land_pattern_mm: {value: {pitch: 0.5, pad: [0.25, 0.6], thermal_pad: [1.2, 2.0], outline: [2.5, 2.5], thermal_vias_dia: 0.2}, section: "Example board layout DSK0010A page 38 (read from the image)"}
+  pins: {value: "1 EN, 2 SEL, 3 CFG1, 4 CFG2, 5 CFG3, 6 VOUT, 7 LX2, 8 GND, 9 LX1, 10 VIN, thermal pad = GND", section: "5 Pin configuration, Table 5-1"}
+alternates_discussed:
+  - "none for the converter itself"
+checklist:
+  - "decoupling: Cin 10 uF at VIN/GND (6.3 CI >= 5 uF effective; Table 8-4 lists 10 uF 10 V 0603 X5R: C19702 CL10A106KP8NNNC is that class), Cout 22 uF (6.3 CO >= 10 uF effective; 8.2.2.3; C45783 22 uF 25 V 0805 X5R keeps more capacitance at 3.5 V than the 6.3 V 0603 in Table 8-3), both on the top layer next to the pins (10.1)"
+  - "enable/reset: EN, SEL, CFG1-3 never float (Table 5-1); EN to VIN or a GPIO with a pull; SEL pulled down (state during start-up not stated; SEL low = the Table 7-3 preset, 3.0 V); CFG resistors 1 %, 200 ppm, 511 ohm / 10.5 k / 13.3 k (Tables 7-2, 7-3)"
+  - "inductor 2.2 uH, Isat >= 1 A for a <= 100 mA setting (6.3); C23894 SWPA252012S2R2MT Isat 1.85 A min / 2.07 A typ (see its card)"
+  - "layout notes -> critical.yaml: short wide top-layer loops VIN-Cin-GND and VOUT-Cout-GND, inductor may sit after the caps and be routed on an inner layer (10.1); thermal pad to GND with vias (Table 5-1 'connect to ground for correct operation'; package note 4 of the land page says solder to the thermal pad); the digest's 'thermal pad soldered (10.1)' is not in 10.1 text, the statement is Table 5-1 + page 38 note 4"
+  - "no active discharge: firmware sets SEL low in good time before sleep (7.3.5); numbers from calc/tree_power.py"
+  - "UVLO: rising 1.73-1.77 V, falling about 1.65 V; cell sag under the LED load pulses can cause on/off cycling at end of life; firmware cut-off above 1.8 V (7.4, 6.5)"

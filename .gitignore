@@ -1,0 +1,19 @@
+hardware/out/
+.privacy-patterns
+*.kicad_prl
+*-backups/
+__pycache__/
+CLAUDE.local.md
+.DS_Store
+
+# vendor datasheets and conversions: local only (copyright); the datasheet cards in parts/ carry the facts and URLs
+hardware/*/datasheets/*
+!hardware/*/datasheets/README.md
+.venv/
+
+# KiCad per-user files: the lock file holds the host and user name, .history is a nested git repo of local snapshots
+*.lck
+.history/
+
+# local render output (Blender scene, frames, video, about 800 MB): generated, not part of the hardware record
+/render/

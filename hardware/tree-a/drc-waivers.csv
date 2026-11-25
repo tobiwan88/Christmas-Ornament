@@ -1,0 +1,14 @@
+type,ref,reason
+lib_footprint_mismatch,C30,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,C31,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,C50,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,C51,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,J1,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,J2,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,R30,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,R31,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,R32,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,R42,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,R44,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,U3,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
+lib_footprint_mismatch,BT1,fix round (render review): the generator turns BT1's '-' silk stroke horizontal; copper and courtyard = library

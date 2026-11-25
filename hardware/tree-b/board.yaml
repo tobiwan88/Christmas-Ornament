@@ -1,0 +1,53 @@
+# Board profile: the facts the board-neutral hardware skills and hardware/calc/ scripts read (skill hw-base, folder contract).
+# value null = MISSING (script fails at order time); a value without source = WARN.
+name: tree-b
+pcb: tree-b.kicad_pcb
+sch: tree-b.kicad_sch
+bom: bom.csv
+generators: {schematic: ../gen/tree_b.py, layout: ../gen/tree_b_pcb.py}
+notes: BOARD.md
+requirements: ../REQUIREMENTS.md
+
+fab:
+  house: JLCPCB
+  assembly: "Standard assembly, one side (D6): panel is two-sided because board A has parts on both faces; no hand-soldered parts on this board"
+  rules: ../rules/jlc-4layer.json      # fab floors; router_rules must agree. NOTE its _comment says 1.6 mm: floors are not thickness dependent, stackup below is 1.0 mm
+  custom_drc: ../rules/tree-b.kicad_dru
+  extended_fee_usd: 1.53               # per unique Extended part (JLCPCB Economic/Standard feeder loading fee, quote of 2026-11-23: UNVERIFIED, engineer figure from the job brief)
+  setup_fee_usd: 51.12                 # Standard assembly setup, D6 (job brief)
+  stencil_fee_usd: 16.42               # D6 (job brief). Setup, stencil and the Extended fees are per ORDER (one panel), not per board: counted once through fab.order_includes (tree-a) / fab.fees_paid_by (tree-b); the order total is in PARTS-REVIEW.md
+  order_qty: 5                         # panels = ornaments (R2.1)
+  order_limit_usd: 250                 # D20: cap per ORDER, judged on tree-a's order row (it sums both boards, all-in with the manual PCB quote); here for the record only
+  footprint_libs: [../lib/tree.pretty] # project footprints (joint count; the owner's order row counts them)
+  fees_paid_by: ../tree-a              # panel-level accounting (optional key of calc/bom_check.py): setup, stencil and Extended parts that tree-a's BOM already carries are counted once, on tree-a's order row, not again here
+
+stackup:                               # part of the order; calc/impedance.py reads it
+  name: JLC04101H-7628                 # JLCPCB 4-layer 1.0 mm default (D5); thin option -3313 not used
+  copper_mm: 0.035                     # outer; inner 0.0152 (1/2 oz finished)
+  inner_copper_mm: 0.0152
+  total_mm: 1.0
+  soldermask: {thickness_mm: 0.015, er: 3.8}
+  layers:
+    - {name: F.Cu,  role: signal, ref: In1.Cu, dielectric_mm: 0.2104, er: 4.4}                    # 7628 prepreg
+    - {name: In1.Cu, role: plane, net: GND, core_below_mm: 0.5, core_er: 4.48}                   # core 0.5 mm between In1 and In2
+    - {name: In2.Cu, role: plane, net: GND}     # D31 (reverses D28): solid GND planes on both inner layers, same stackup roles as tree-a; GND reaches board A through the two plated M2 mount holes (MH1, MH2) and metal standoffs. No supply on this board.
+    - {name: B.Cu,  role: signal, ref: In2.Cu, dielectric_mm: 0.2104, er: 4.4}
+
+net_classes:                           # full KiCad net names; widths checked by calc/track_width.py
+  Default: {track_mm: 0.25, clearance_mm: 0.15, via_mm: 0.6, drill_mm: 0.3}     # fab floor 0.127/0.127 (rules/jlc-4layer.json); 0.15 keeps 18 % margin and fits the 0.4 mm QFN pitch
+
+layout:
+  stitch_pitch_mm: [2, 3]
+  thermal_relief: {spoke_mm: 0.3, gap_mm: 0.25, spokes: 4}
+  max_board_mm: [70, 105]               # R1.1 outline
+  temp_rise_c: 10
+
+alternates:                             # primary LCSC: {lcsc: alternate, note: "what else must change"}
+  C965834:                              # D1-D8: XL-1010RGB-YG (same part as board A: one unique Extended part per order)
+    lcsc: C17701865                     # Everlight 18-239A/R6GHBHC-M01/2T(DF)
+    note: "GHOST MARGIN: Everlight red Vf can be 1.7 V (listing, datasheet not obtained); not usable until its datasheet is read and calc/led_matrix.py is re-run; both boards must carry the same LED"
+  C192300:                              # J4 male header (board B inner face)
+    lcsc: C32713284                     # HX PZ2.54-2x4P TP
+    note: "different land: 8.60 mm outer-to-outer, 3.20 mm pads instead of 9.00 mm / 2.00 mm; plastic top 3.20 mm read the same on both drawings (UNVERIFIED interpretation)"
+power: []                               # no power circuit on this board (LED board: 8 LEDs and the header); calc/buck.py and calc/tree_power.py do not apply
+design: {}                              # no cell, regulator or sleep load on this board: calc/power_budget.py has nothing to check; the power budget lives in tree-a/board.yaml

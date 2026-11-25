@@ -1,0 +1,90 @@
+# Datasheet card: nRF54L15-QFAA (BLE SoC). The Product Specification PDF could NOT be obtained (Cloudflare 403 on docs.nordicsemi.com).
+# Every value tagged `unverified:` comes from the HTML datasheet through a summarising fetch tool (research digest 2026-11-23, section
+# "nRF54L15") or from Nordic's reference-design package; a human must re-check the numbers that drive a decision against the PDF.
+# Values without `unverified:` were read directly from the local reference-design package (schematic PDF, BOM) and carry that section.
+mpn: nRF54L15-QFAA
+role: BLE SoC, QFN48 6 x 6 mm, DC/DC from the 3.0/3.5 V rail, 128 MHz Cortex-M33 + RISC-V VPR; LED matrix scan on port P1
+lcsc: C42458750            # JLC stock 0 on 2026-11-23; assembled part for the first order is nRF54L10-QFAA-R7 C44800139 (decision D2)
+source:
+  url: https://docs.nordicsemi.com/bundle/ps_nrf54l15/
+  revision: "nRF54L15 | nRF54L10 | nRF54L05 Datasheet v1.0, Sept 2025 (HTML only, PDF not obtained); reference layout v0.8 (schematic dated 04.02.2025)"
+  file: datasheets/nrf54l15-hwdesign/qfaa-reference-layout-0_8/ (schematic, BOM, layout PDFs); datasheets/nrf54l15-spec/ is EMPTY
+variant_note_nRF54L10:
+  mpn: nRF54L10-QFAA-R7
+  lcsc: C44800139
+  statement: "The one datasheet covers nRF54L15, nRF54L10 and nRF54L05 with the same QFN48 pin table."
+  unverified: "PS HTML summary; flash/RAM sizes of the L10 are smaller than the L15 (numbers not in this card): check the firmware image (MCUboot + BLE + effects) against the L10 limits before the order"
+  bring_up_check: "read FICR/INFO part code and RAM/RRAM size over SWD before the first flash"
+values:
+  # --- absolute maximum and operating ranges
+  vdd_abs_max_v: {value: 3.9, section: "Absolute maximum ratings (VDD)", unverified: "PS HTML summary"}
+  vdd_operating_v: {value: [1.7, 3.6], section: "Recommended operating conditions (extended temperature: 3.4 V max)", unverified: "PS HTML summary"}
+  vdd_operating_max_extended_temp_v: {value: 3.4, section: "Recommended operating conditions", unverified: "PS HTML summary"}
+  pin_voltage_max_v: {value: "VDD + 0.3", section: "Absolute maximum ratings (I/O pins)", unverified: "PS HTML summary"}
+  por_min_v: {value: 1.75, section: "Power-on reset", unverified: "PS HTML summary"}
+  bor_range_v: {value: [1.56, 1.64], section: "Brown-out reset", unverified: "PS HTML summary"}
+  # --- GPIO
+  gpio_vih: {value: "0.7 x VDD", section: "GPIO electrical", unverified: "PS HTML summary"}
+  gpio_vil: {value: "0.3 x VDD", section: "GPIO electrical", unverified: "PS HTML summary"}
+  gpio_standard_drive_ma: {value: {ioh_ma: 1, iol_ma: 3, test_v_from_rail: 0.4}, section: "GPIO electrical, standard drive", unverified: "PS HTML summary (digest reads 1 / 3 / 4 mA; the third figure is not identified)"}
+  gpio_high_drive_ma: {value: {source_min_ma: 4, sink_min_ma: 3, test_v: 0.4}, section: "GPIO electrical, high drive", unverified: "PS HTML summary; no VOL or output resistance stated for high drive"}
+  gpio_extra_drive_p2_ma: {value: {source_ma: 14, sink_ma: 16}, section: "GPIO electrical, extra drive (P2)", unverified: "PS HTML summary"}
+  gpio_total_recommended_max_ma: {value: 15, section: "GPIO electrical (all GPIOs together)", unverified: "PS HTML summary"}
+  gpio_ports: {value: "P0 (5 pins) and P1: wake from System OFF/ON, GPIOTE (P1: 8 channels, P0: 4). P2: extra drive but NO GPIOTE and NO wake", section: "GPIO / GPIOTE chapters", unverified: "PS HTML summary"}
+  free_gpio_with_lfxo_fitted: {value: "P0.00-P0.04, P1.04-P1.14, P2.00-P2.10 = 27", section: "pin table", unverified: "PS HTML summary"}
+  adc_inputs: {value: "AIN0-3 on P1.04-P1.07, AIN4-7 on P1.11-P1.14; P1.08 = EXTREF", section: "SAADC", unverified: "PS HTML summary"}
+  # --- current (3 V, DC/DC, 25 C)
+  i_system_on_idle_grtc_lfxo_ua: {value: {ram_64kb: 1.5, ram_128kb: 1.9, ram_256kb: 2.9}, section: "Current consumption, System ON idle, GRTC + LFXO", unverified: "PS HTML summary"}
+  i_system_off_grtc_lfxo_ua: {value: 0.9, section: "Current consumption, System OFF with GRTC + LFXO", unverified: "PS HTML summary"}
+  i_cpu_run_ma: {value: 2.6, section: "Current consumption, CPU running", unverified: "PS HTML summary"}
+  i_radio_rx_ma: {value: 3.4, section: "Current consumption, RADIO RX", unverified: "PS HTML summary"}
+  i_radio_tx_0dbm_ma: {value: 4.8, section: "Current consumption, RADIO TX 0 dBm", unverified: "PS HTML summary"}
+  i_constant_latency_ma: {value: 0.55, section: "Current consumption, Constant Latency mode (keep OFF)", unverified: "PS HTML summary"}
+  i_advertising_average: {value: null, section: "not stated"}
+  rtc_note: {value: "The chip has a GRTC (global RTC), not an RTC peripheral; time is lost when VDD is lost (no battery-backed RTC beyond the LFXO)", section: "GRTC chapter", unverified: "PS HTML summary"}
+  # --- crystals
+  lfxo_cl_pf: {value: [6, 9], section: "LFXO electrical specification, CL_LFXO", unverified: "official HTML PS table read through a fetch tool 2026-11-23; not the PDF"}
+  lfxo_c0_pf: {value: {typ: 1.0, max: 2.0}, section: "LFXO electrical specification, C0_LFXO", unverified: "official HTML PS table through a fetch tool"}
+  lfxo_esr_kohm: {value: {typ: 60, max: 100}, section: "LFXO electrical specification, RS_LFXO", unverified: "official HTML PS table through a fetch tool"}
+  lfxo_drive_level_uw_max: {value: 0.5, section: "LFXO electrical specification, PD_LFXO", unverified: "official HTML PS table through a fetch tool"}
+  lfxo_freq_tolerance_ppm_ble: {value: 500, section: "LFXO electrical specification, fTOL_LFXO_BLE", unverified: "official HTML PS table through a fetch tool"}
+  lfxo_pin_capacitance_intcap_off_pf: {value: 3, section: "LFXO electrical specification, Cpin (INTCAP = 0)", unverified: "official HTML PS table through a fetch tool"}
+  lfxo_internal_cap_pf: {value: {range: [3, 18], step: 0.65}, section: "LFXO chapter, internal capacitors (INTCAP set by firmware before start, factory trim)", unverified: "PS HTML summary + web search 2026-11-23"}
+  lfxo_load_capacitance_rule: {value: "firmware passes the crystal CL (not the INTCAP value) to the load-capacitance routine; Nordic staff thread: a 9 pF crystal failed to start at low VDD until INTCAP was recomputed", section: "Nordic DevZone, not the datasheet", unverified: "forum thread (web search summary)"}
+  hfxo_cl_pf: {value: [6, 9], section: "HFXO electrical specification, CL_HFXO", unverified: "sibling parts nRF54LM20A / nRF54LS05 tables (web search); nRF54L15 table NOT read"}
+  hfxo_esr_ohm_max: {value: null, section: "not stated in the sources read; Nordic ties ESR to C0 and CL by a maximum-allowed curve on the 'Crystal selection' page (figure not read)"}
+  hfxo_drive_level_uw: {value: 100, section: "HFXO electrical specification", unverified: "sibling parts tables (web search)"}
+  hfxo_internal_cap_pf: {value: {range: [4.0, 17.0], step: 0.25}, section: "HFXO chapter, internal capacitor CINT", unverified: "web search summary of the nRF54L15 page"}
+  reference_x2_32mhz: {value: "32 MHz, 2016, CL 8 pF, total +-40 ppm, NO external load caps", section: "reference BOM v0.8 X2 and schematic", file: nRF54L15_qfaa_4L_config1_bom.txt}
+  reference_x1_32k: {value: "32.768 kHz, 2012, 9 pF, +-20 ppm, NO external load caps, marked 'Optional' in the schematic", section: "reference BOM v0.8 X1 and schematic", file: nRF54L15_qfaa_4L_config1_bom.txt}
+  # --- debug and reset
+  swd_pins: {value: {SWDIO: "pin 25 (14 k pull-up)", SWDCLK: "pin 26 (14 k pull-down)", nRESET: "pin 30 (pull-up inside), reference series R1 1 k + C13 3.9 pF to GND at the pin"}, section: "pin table; reference schematic v0.8", unverified: "PS HTML summary for the internal pull values; R1/C13 read from the reference schematic"}
+  # --- pin table (QFN48, 6 x 6 mm, pitch 0.40, pad 0.20 x 0.65, exposed pad 4.7 x 4.7 pin 49 = VSS)
+  pins:
+    value: "1 P1.00/XL1, 2 P1.01/XL2, 3 P1.02/NFC1, 4 P1.03/NFC2, 5-9 P1.04-P1.08, 10 VDD, 11-21 P2.00-P2.10 (P2.06-P2.10 TRACE, P2.07 also SWO), 22 VDD, 23 P0.00, 24 P0.01, 25 SWDIO, 26 SWDCLK, 27 P0.02, 28 P0.03, 29 P0.04, 30 nRESET, 31 ANT, 32 VSS_PA, 33 DECRF (connect to DECA), 34 XC1, 35 XC2, 36 VDD, 37-42 P1.09-P1.14, 43 DECA, 44 VSS, 45 DECD, 46 DCC, 47 VDD, 48 VDD, 49 exposed pad VSS"
+    section: "pin assignment table; cross-checked against the reference schematic v0.8 (pins 10, 22, 25, 26, 30-36, 43-49 and the P0/P1/P2 lists match)"
+    unverified: "PS HTML summary for the GPIO function names; supply/RF/debug pin numbers confirmed on the reference schematic"
+  reference_decoupling:
+    value:
+      VDD_47_48: "C3 10 uF X6S 6.3 V 0402 + C10 100 nF X7R 0201"
+      VDD_10_22_36: "C7 100 nF (pin 10), C8 100 nF (pin 22), C4 100 nF (pin 36), one each, 0201, X7R"
+      DCC_46: "L1 4.7 uH between DCC (46) and the DECD node"
+      DECD_45: "C1 2.2 uF 2.5 V X6T 0201 to GND at the DECD node; FB1 ferrite 120 ohm @100 MHz 0.2 A 0.5 ohm max from the DECD node to the DECA/DECRF node"
+      DECA_43_DECRF_33: "joined into one node with C2 2.2 uF, C12 10 nF, C5 2.2 nF (all 0201 to GND); pin 33 connects to pin 43"
+      VSS_44_49: "GND (44 and the exposed pad 49)"
+    section: "Nordic nRF54L15-QFAA reference schematic v0.8 (04.02.2025) and BOM, config 1 (DC/DC from battery, no NFC)"
+  reference_rf_network:
+    value: "ANT 31 -> L2 2.7 nH (LQP03HQ2N7B02) -> node A (C6 1.5 pF to GND ONLY via pin 32 VSS_PA, pin 32 only to pin 49, top layer) -> L3 3.5 nH (LQP03HQ3N5B02) -> node B (C9 2.0 pF, its ground connected ONLY to the bottom ground layer) -> L4 3.5 nH -> node C (C11 0.3 pF C0G) -> 50 ohm port. No antenna in the reference."
+    section: "reference schematic v0.8 notes on C6 and C9; BOM"
+  reference_layout_distances_mm: {value: "decoupling caps 0.74-1.2 from their pin, C1 0.9 from DECD, L1 2.2-2.5 from DCC, C6 0.86 from pin 32, L2 0.86 from ANT, C13 0.88 from nRESET, X2 2.1-3.5 from XC pins, X1 1.8-2.1 from XL pins; mid layers have a cutout under the matching network", section: "reference layout PDFs v0.8 (measured from the drawing)"}
+  reference_l1: {value: "4.7 uH, +-20 %, 120 mA, 0.65 ohm, 0603", section: "reference BOM v0.8 L1"}
+checklist:
+  - "decoupling per supply pin: VDD 47/48 10 uF + 100 nF, VDD 10/22/36 100 nF each, DECD 2.2 uF, DECA/DECRF 2.2 uF + 10 nF + 2.2 nF (reference schematic v0.8 and BOM; 0201 in the reference, 0402 is our choice because C12530 / C1525 are the Basic parts: part-size change is the engineer's call, see PARTS-REVIEW)"
+  - "DECRF (33) must connect to DECA (43); VSS_PA (32) only to the exposed pad 49; C6 ground only via pin 32, C9 ground only on the bottom layer (reference schematic notes)"
+  - "enable/reset: nRESET pin 30 internal pull-up, series 1 k + 3.9 pF at the pin (reference); SWDIO/SWDCLK pulls internal (PS HTML summary, UNVERIFIED)"
+  - "VDD must stay <= 3.6 V operating (3.9 V abs max): TPS63900 3.5 V preset + 1.5 % accuracy + 1 % resistors = 3.553 V worst case (calc/tree_power.py)"
+  - "layout notes -> critical.yaml entries: decoupling distances 0.74-1.2 mm, L1 within 2.2-2.5 mm of DCC, matching network next to ANT, crystals 1.8-3.5 mm from their pins (reference layout v0.8; critical.yaml is not in this job)"
+bring_up_checks:
+  - "LFXO: INTCAP value vs the 9 pF crystal; start-up at VDD 1.7-3.6 V and at 40 C; measure with a frequency counter on a GPIO"
+  - "HFXO: 32 MHz frequency error and start-up time with the 8 pF crystal and the chosen INTCAP"
+  - "nRF54L10 swap: read the part code and memory sizes over SWD"

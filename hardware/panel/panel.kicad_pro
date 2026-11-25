@@ -1,0 +1,536 @@
+{
+  "board": {
+    "design_settings": {
+      "defaults": {},
+      "rule_severities": {
+        "hole_to_hole": "warning",
+        "lib_footprint_issues": "warning",
+        "lib_footprint_mismatch": "warning",
+        "missing_courtyard": "ignore",
+        "track_dangling": "warning",
+        "via_dangling": "warning"
+      },
+      "rules": {
+        "min_clearance": 0.1,
+        "min_copper_edge_clearance": 0.3,
+        "min_hole_clearance": 0.2,
+        "min_hole_to_hole": 0.5,
+        "min_microvia_diameter": 0.2,
+        "min_microvia_drill": 0.1,
+        "min_silk_clearance": 0.15,
+        "min_text_height": 0.8,
+        "min_text_thickness": 0.15,
+        "min_through_hole_diameter": 0.2,
+        "min_track_width": 0.1,
+        "min_via_annular_width": 0.1,
+        "min_via_diameter": 0.45,
+        "solder_mask_to_copper_clearance": 0.0
+      }
+    }
+  },
+  "boards": [],
+  "meta": {
+    "filename": "panel.kicad_pro",
+    "version": 3
+  },
+  "net_settings": {
+    "classes": [
+      {
+        "bus_width": 12,
+        "clearance": 0.1,
+        "diff_pair_gap": 0.15,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.127,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Default",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2147483647,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.127,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.1,
+        "diff_pair_gap": 0.15,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.127,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "A_Default",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1000,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.127,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.1,
+        "diff_pair_gap": 0.15,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.127,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "A_Power",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.3,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.15,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.127,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "A_RF",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.35,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.15,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.127,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "A_Crystal",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 3,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.15,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.15,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.25,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "B_Default",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1001,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.25,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      }
+    ],
+    "meta": {
+      "version": 4
+    },
+    "netclass_patterns": [
+      {
+        "netclass": "A_Power",
+        "pattern": "BAT"
+      },
+      {
+        "netclass": "A_Power",
+        "pattern": "VIN"
+      },
+      {
+        "netclass": "A_Power",
+        "pattern": "VDD"
+      },
+      {
+        "netclass": "A_Power",
+        "pattern": "/power/LX1"
+      },
+      {
+        "netclass": "A_Power",
+        "pattern": "/power/LX2"
+      },
+      {
+        "netclass": "A_Power",
+        "pattern": "VBUS"
+      },
+      {
+        "netclass": "A_Power",
+        "pattern": "/mcu/DCC"
+      },
+      {
+        "netclass": "A_RF",
+        "pattern": "/rf/ANT_FEED"
+      },
+      {
+        "netclass": "A_RF",
+        "pattern": "/mcu/ANT_PA"
+      },
+      {
+        "netclass": "A_RF",
+        "pattern": "/rf/RF_50"
+      },
+      {
+        "netclass": "A_Crystal",
+        "pattern": "/mcu/XC1"
+      },
+      {
+        "netclass": "A_Crystal",
+        "pattern": "/mcu/XC2"
+      },
+      {
+        "netclass": "A_Crystal",
+        "pattern": "/mcu/XL1"
+      },
+      {
+        "netclass": "A_Crystal",
+        "pattern": "/mcu/XL2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/charger/CC1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/charger/CC2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/charger/CHG_STAT"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/charger/PROG"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/charger/STAT"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/charger/VBUS_DET"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L1_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L2_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L3"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L3_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L4"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L4_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L5"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L5_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L6"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L6_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L7"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L7_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L8"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/leds/LED_L8_MCU"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/ANT_PA"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/BTN_SW1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/BTN_SW1_PAD"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/DCC"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/DECA"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/DECD"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/SWDCLK"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/SWDIO"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/SWO"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/TPS_SEL"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/VBAT_SENSE"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/VSS_PA"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/XC1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/XC2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/XL1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/XL2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/nRESET"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/mcu/nRESET_TC"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/power/BT_LINK"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/power/CFG1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/power/CFG2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/power/CFG3"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/power/LX1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/power/LX2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/rf/ANT_FEED"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/rf/RF_50"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/rf/RF_N1"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "/rf/RF_N2"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "BAT"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "GND"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "VBUS"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "VDD"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "VIN"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(ANT1-PCB_Trace-Pad2)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(J2-MountPin-PadMP)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P0.01-Pad24)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P0.02-Pad27)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P0.03-Pad28)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P0.04-Pad29)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P1.02{slash}NFC1-Pad3)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P1.03{slash}NFC2-Pad4)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.01-Pad12)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.02-Pad13)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.03-Pad14)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.04-Pad15)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.05-Pad16)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.06-Pad17)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.08-Pad19)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.09-Pad20)"
+      },
+      {
+        "netclass": "A_Default",
+        "pattern": "unconnected-(U1-P2.10-Pad21)"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L1"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L2"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L3"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L4"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L5"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L6"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L7"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "/LED_L8"
+      },
+      {
+        "netclass": "B_Default",
+        "pattern": "B_GND"
+      }
+    ]
+  },
+  "text_variables": {
+    "GIT_SHA": "0000000-dirty"
+  }
+}

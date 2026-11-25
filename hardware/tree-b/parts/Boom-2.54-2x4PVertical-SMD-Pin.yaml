@@ -1,0 +1,24 @@
+# Datasheet card: Boom Precision Elec 2.54-2*4P vertical SMD pin header (C192300). J4 on board B (decision D3).
+mpn: 2.54-2*4PVertical SMD Pin
+role: "header J4, male, board B inner face (preferred male part: its heights are on the drawing; alternate HX PZ2.54-2x4P TP)"
+lcsc: C192300
+source:
+  url: null     # Boom Precision Elec (LCSC listing); title block 'PZ2.54-2xNAT'; no maker site printed
+  revision: "maker drawing 'PZ2.54-2xNAT', 1 sheet, scale 1:1 (LCSC copy)"
+  file: datasheets/Boom-2.54-2x4P-SMD/Boom_lcsc.pdf
+values:
+  pin_above_plastic_mm: {value: 6.00, tol_mm: 0.2, section: "drawing side view"}
+  plastic_height_mm: {value: 2.5, section: "drawing end view '2.5' (plastic body); LCSC listing 2.5 mm"}
+  plastic_top_above_pcb_mm: {value: 3.20, tol_mm: 0.2, section: "drawing side view '3.20 +-0.2' (foot tip to the plastic top face: plastic 2.5 + stand-off about 0.7), interpretation of the rotated view", unverified: "interpretation of the drawing; ask the maker or measure one part"}
+  pin_mm: {value: 0.64, section: "drawing '0.64' square pin"}
+  pitch_mm: {value: 2.54, section: "drawing"}
+  pcb_layout_mm: {value: {pad_length: 2.00, outer_to_outer_rows: 9.00}, tol_mm: 0.2, section: "drawing P.C.B Layout: 9.00 +-0.2 overall, 2.00 pad length, 1.0 end offset"}
+  current_a: {value: 3, section: "drawing electrical"}
+  contact_resistance_mohm_max: {value: 20, section: "drawing"}
+  temperature_c: {value: [-55, 105], section: "drawing"}
+  soldering: {value: "260 C, 10 s max", section: "drawing"}
+  mated_height: {value: "with the female 8.5 mm part: 8.5 + 3.2 = 11.7 mm; pin insertion 6.0 - 0.3 = 5.7 mm at a 12 mm standoff", section: "calculation"}
+alternate: {mpn: HX PZ2.54-2x4P TP, lcsc: C32713284, card: HX-PZ2.54-2x4P-TP.yaml, note: "pad layout differs (8.60 outer, 3.20 pad length): different footprint"}
+checklist:
+  - "footprint: 9.00 mm overall land, 2.00 mm pads (this drawing), NOT the 8.60 / 3.20 of the Hanxia part"
+  - "pin-1 marking: not shown: no x mirror between the boards (decision D14: A's inner face is F.Cu and B's outer face is F.Cu, both F.Cu point forward, a part at (x, y) on one board is at (x, y) on the other): J4 sits at the same (x, y) as J3 on A, identity transform; the stack check owns it"

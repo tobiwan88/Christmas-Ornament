@@ -1,0 +1,27 @@
+# Datasheet card: HCTL HC-TYPE-C-6P-01A (power-only USB-C receptacle, 6 pin, SMD right angle). Variant B only (DNP in the first order, D10).
+mpn: HC-TYPE-C-6P-01A
+role: USB-C power input (VBUS, GND, CC1, CC2 with 5.1 k pull-downs); no data lines
+lcsc: C2894893
+source:
+  url: null     # maker Shenzhen Huacan Tianlu Electronics Co., Ltd (drawing title block, "HCTL" in the LCSC listing); no maker page found, document is the LCSC-hosted drawing
+  revision: "maker drawing 'Type c 6P board-mount, leg length 1.1' REV A, sheet 1/2 only, no date (LCSC copy)"
+  file: datasheets/HC-TYPE-C-6P-01A/HC-TYPE-C-6P-01A_lcsc.pdf
+values:
+  pins: {value: "A5 CC1, A9 VBUS, A12 GND, B12 GND, B9 VBUS, B5 CC2", section: "sheet 1 USB TYPE-C PIN ASSIGNMENTS"}
+  body_mm: {value: {w: 8.95, h: 6.85, d: 3.16}, tol_mm: 0.15, section: "sheet 1 views (8.95 +-0.15, 6.85 +-0.15, 3.16 +-0.15)"}
+  pcb_pads_mm: {value: {pad_length: 1.2, widths: {gnd: 0.9, vbus: 0.8, cc: 0.7}, pitches: [1.23, 1.02, 1.00, 1.02, 1.23], row_note: "pitches are asymmetric: from the drawing 1.23 / 1.02 / 1.00 / 1.02 / 1.23 and widths 0.90 0.80 0.70 0.80 0.80 0.90 read along the row"}, section: "sheet 1 RECOMMENDED P.C.B. LAYOUT (tolerance +-0.05)"}
+  shell_slots_mm: {value: {count: 4, size: [0.5, 1.4], across: 8.64, front_to_back: 3.70}, section: "sheet 1 RECOMMENDED P.C.B. LAYOUT; the 6 x 1.2 / 4 x 1.40 labels and 8.64 / 4 x 0.50 / 3.70 dimensions"}
+  pcb_edge: {value: "the drawing shows a PC Edge line; edge flush with the mating face within about +-0.3 mm", section: "sheet 1 PC Edge line", unverified: "estimated from the drawing, to be confirmed on the 3D model"}
+  vbus_current_a: {value: 3.5, section: "sheet 1 notes, electrical (1.25 A for the GND pin, 0.25 A for others)"}
+  voltage_max_v: {value: 20, section: "sheet 1 notes, electrical; withstanding 100 V AC rms"}
+  contact_resistance_mohm_max: {value: 40, section: "sheet 1 notes, electrical"}
+  insertion_force_n: {value: [5, 20], section: "sheet 1 notes, mechanical"}
+  durability_cycles: {value: 5000, section: "sheet 1 notes, mechanical"}
+  temperature_c: {value: [-25, 85], section: "sheet 1 notes, environmental"}
+  tolerances_mm: {value: {"X.X": 0.30, "X.XX": 0.20, "X.XXX": 0.10}, section: "sheet 1 title block"}
+  sheet_2: {value: null, section: "not available: only sheet 1/2 was obtained"}
+checklist:
+  - "CC pull-downs: CC1 (A5) and CC2 (B5) each 5.1 k to GND for a sink on a 5 V default source (USB Type-C spec, not in this drawing: standard sink Rd); R30-R31 are DNP in the first order"
+  - "ESD array: none, power-only connector, no data pairs to check"
+  - "footprint: asymmetric pad row and pad widths per the drawing; compare with the fab footprint (fit check); shell slot positions 8.64 x 3.70 mm"
+  - "mechanical: the PCB edge sits at the mating face; the opening at the bottom edge of board A; board B does not carry it"

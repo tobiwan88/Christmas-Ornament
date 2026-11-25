@@ -1,0 +1,30 @@
+Ref	Qty	Part / value	JLCPCB #	Variant	Status	JLC class	Function	Package	Manufacturer	Stock seen (22 Nov 2026)	Notes
+U1	1	nRF54L15-QFAA-R	C42458750	All	Check	Not checked	BLE SoC, 1.5 MB flash, 128 MHz M33 + RISC-V VPR	QFN-48 6×6	Nordic	3,976 at LCSC	Confirm JLCPCB assembly stock. nRF54L10 / nRF54L05 are pin-compatible if flash allows.
+U2	1	TPS63900DSKR	C1518762	All	Found at JLC	Extended	Buck-boost, 1.8–5.5 V in, 75 nA Iq	WSON-10 2.5×2.5	TI	~11,200 at LCSC	Two VOUT presets via SEL: 3.0 V idle, 3.5 V while LEDs are lit. Set by CFG resistors (datasheet tables 7-2 / 7-3).
+L2	1	2.2 µH power inductor, Isat ≥ 1 A		All	Choose part		TPS63900 inductor	1008 / 1210			Isat ≥ 1 A is enough with input current limit ≤ 100 mA; ≥ 2 A if set to unlimited.
+C20–C21	2	10 µF (in), 22 µF (out), X5R/X7R		All	Choose part	Basic likely	TPS63900 caps	0603 / 0805			Values are effective capacitance after DC-bias derating.
+R20–R22	3	1 % resistors per TPS63900 CFG tables		All	Choose part	Basic likely	Set VOUT presets and input current limit	402			Total error incl. tolerance and drift must stay under ±3 %.
+D1–D16	16	XL-1010RGB-YG	C965834	All	Check	Not checked	RGB LED 1×1 mm, common anode	0404 (1010 metric)	XINGLIGHT	27,697 at LCSC (older snapshot)	Vf typ 2.1 V R / 2.9 V G / 2.8 V B. D1–D8 on board B, D9–D16 on board A outer face.
+D1–D16 alt	16	18-239A/R6GHBHC-M01/2T(DF)	C17701865	Alternative	Alternative	Extended	RGB LED 1×1 mm	1×1 mm 4-pin	Everlight		Lower G/B Vf, but red can be 1.7 V: ghosting risk at a 3.5 V rail.
+R1–R8	8	Line resistors, value after bench test (start 22–47 Ω)		All	Choose part	Basic	Charlieplex current setting, one per line	402			Bench-test with real LEDs before freezing values.
+X1	1	XL7EL89CKI-111YLC-32M (32 MHz, 8 pF, ±10 ppm)	C2965582	All	Found at JLC	Extended	HFXO crystal	SMD2016-4P	YXC		Check load capacitance and ESR against the nRF54L15 HFXO spec.
+X2	1	ABS06-32.768KHZ-9-1-T (9 pF, ±10 ppm)	C510776	All	Found at JLC	Extended	LFXO for RTC timekeeping	SMD2012-2P	Abracon		Check against the nRF54L15 LFXO spec.
+ANT1	1	2450AT18A100E	C89334	All	Found at JLC	Extended	2.4 GHz chip antenna	1206	Johanson		Follow Johanson layout and keep-out; add pi-match pads for tuning. Alternative: Nordic reference PCB antenna.
+L1	1	4.7 µH (nRF DC/DC), e.g. LLBHB1608KKT4R7MG	C7216321	All	Check	Extended	nRF54L15 DC/DC inductor	603	Taiyo Yuden		Compare with the inductor in Nordic's QFN48 reference design.
+L3–L5, C6, FB1	5	RF matching per Nordic reference (2.7 nH, 3.5 nH, 1.5 pF, ferrite bead)		All	Choose part		RF matching network	201	Murata (reference)		Copy Nordic nRF54L15-QFAA reference circuit config 1 and layout v0.8 exactly.
+C1–C12	7	Decoupling per Nordic config 1 (2 × 2.2 µF, 4 × 100 nF, 10 nF)		All	Choose part	Basic likely	nRF54L15 decoupling	0201 / 0402			
+J1	1	HC-TYPE-C-6P-01A	C2894893	Li-ion	Found at JLC	Extended	USB-C power-only receptacle	SMD right angle	HCTL		Alternative: SHOU HAN TYPE-C 6P (C456012). Opening at the bottom edge of board A.
+R30–R31	2	5.1 kΩ		Li-ion	Choose part	Basic	USB-C CC1 / CC2 pull-downs	402			
+U3	1	MCP73831T-2ACI/OT	C424093	Li-ion	Found at JLC	Extended	Li-ion charger, 4.2 V, 15–500 mA	SOT-23-5	Microchip	~26,100 at LCSC	Charge about 100 mA (0.2C for 500 mAh); set RPROG per datasheet.
+C30–C31	2	4.7 µF		Li-ion	Choose part	Basic likely	Charger in / out	603			
+J2	1	S2B-PH-SM4-TB(LF)(SN)	C295747	Li-ion	Found at JLC	Extended	JST PH 2-pin, battery pouch	SMD right angle	JST	55,665 at LCSC	Check pouch lead polarity: it varies between suppliers.
+BT1	1	Keystone 1022 (2 × AAA holder, SMD)		AAA	Source separately		Battery holder	SMD, 11.2 mm tall	Keystone		Not found at JLC. Hand-solder or consign. Fits the ~14 mm gap.
+BT2	1	Li-ion pouch ~500 mAh, protected (PCM), JST PH lead		Li-ion	Source separately		Battery	~35 × 30 × 5 mm			Plugged in after assembly.
+J3 / J4	1	2 × 4 header, 2.54 mm: male on B, female on A		All	Choose part		Carries the 8 LED lines between boards	THT or SMD			Mated height must match the ~14 mm board gap.
+SW1	1	Small tactile switch		All	Choose part	Basic likely	Wake, change effect, pairing	SMD			On board A outer face, in the trunk.
+TC1	1	Tag-Connect TC2030-NL footprint		All	Footprint only		SWD programming	Pads only	Tag-Connect		VDD, SWDIO, SWDCLK, RESET, GND. Use the official footprint.
+R40–R41	2	1 MΩ divider (or switched)		All	Choose part	Basic	Battery voltage to ADC	402			Keep leakage low; consider switching it.
+R42–R44	3	Divider + pull-up		Li-ion	Choose part	Basic	USB VBUS detect and charger STAT to GPIO	402			
+H1–H2	2	M2 screw (nylon only with brass standoffs) + M2 brass standoff 12.0 mm F-F (D31)		All	Source separately		Holds the two boards together	Mechanical			At tier 3 ends: x = 10.7 mm and 59.3 mm, y = 71.0 mm (D17). Price about 0.1-0.2 USD per pair, UNVERIFIED.
+PCB A	1	70 × 105 mm, 1.0 mm FR4, 4 layers, black mask, ENIG		All	Design		Main board				Two-sided assembly: parts inner face, 8 RGB + SW1 + Tag-Connect outer face.
+PCB B	1	70 × 105 mm, 1.0 mm FR4, 2 layers, black mask, ENIG		All	Design		LED board				One-sided assembly: 8 RGB LEDs on the outer face only.

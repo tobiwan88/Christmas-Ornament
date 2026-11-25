@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "tree")(type "KiCad")(uri "${KIPRJMOD}/../lib/tree.pretty")(options "")(descr "TREE-01 project footprints (gen/build_footprints.py)"))
+)

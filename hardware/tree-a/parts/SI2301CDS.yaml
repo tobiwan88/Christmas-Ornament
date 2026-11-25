@@ -1,0 +1,35 @@
+# Datasheet card: Vishay Siliconix Si2301CDS (P-channel 20 V MOSFET, SOT-23). Reverse-polarity protection, decision D7.
+mpn: SI2301CDS-T1-GE3
+role: "high-side reverse-polarity protection: drain to cell +, source to VIN (TPS63900 + the rest), gate to GND"
+lcsc: C10487
+source:
+  url: https://www.vishay.com/docs/68741/si2301cd.pdf
+  revision: "Document Number 68741, S10-2430-Rev. C, 25-Oct-10 (9 pages; the LCSC-hosted copy was read)"
+  file: datasheets/SI2301CDS/SI2301CDS_lcsc.pdf
+values:
+  vds_max_v: {value: -20, section: "page 1 Absolute Maximum Ratings"}
+  vgs_max_v: {value: 8, section: "page 1 Absolute Maximum Ratings, VGS +-8 V"}
+  id_a: {value: {tc25: -3.1, ta25_5s_1in2_fr4: -2.3}, section: "page 1 continuous drain current"}
+  pulsed_drain_current_a: {value: -10, section: "page 1 IDM"}
+  vgs_th_v: {value: {min: -0.4, max: -1.0}, section: "page 2 MOSFET Specifications, VDS = VGS, ID = -250 uA"}
+  vgs_th_tempco_mv_per_c: {value: 2.2, section: "page 2 VGS(th)/TJ"}
+  rds_on_ohm_vgs_m4p5: {value: {typ: 0.090, max: 0.112, test_id_a: -2.8}, section: "page 2 drain-source on-state resistance"}
+  rds_on_ohm_vgs_m2p5: {value: {typ: 0.110, max: 0.142, test_id_a: -2.0}, section: "page 2 drain-source on-state resistance (JLC '142 mohm@2.5 V' is the max)"}
+  rds_on_ohm_vgs_m1p8: {value: null, section: "not stated in the table. Curves on page 3: 'Output Characteristics' for VGS = -1.5 V and -2 V (ID about 3-4 A at VDS 0.5 V), and 'On-Resistance vs Junction Temperature' has a normalised VGS = 1.8 V trace (about 0.93 at 0 C, 1.0 at 25 C). Estimate from the output characteristics at VGS -1.8 V: about 0.12-0.13 ohm typ (EST, graph read)"}
+  rds_on_ohm_vgs_m1p8_estimate: {value: {typ: 0.13, max_assumed: 0.20}, section: "page 3 output characteristics, graph read (EST); max = typ x the 1.29 ratio of the -2.5 V row, rounded up: assumption used by calc/tree_power.py"}
+  rds_on_tempco: {value: "normalised about 0.93 at 0 C, 1.0 at 25 C, about 1.2 at 100 C, about 1.4 at 150 C (graph)", section: "page 3 On-Resistance vs Junction Temperature (EST read)"}
+  body_diode_vsd_v: {value: {typ: -0.8, max: -1.2, test_is_a: -0.7}, section: "page 2 drain-source body diode characteristics"}
+  body_diode_current_a: {value: {is_tc25: -1.3, ism: -10, is_ta25: -0.72}, section: "page 1 and page 2"}
+  idss_ua: {value: {max_25c: -1, max_55c: -10}, test: "VDS = -20 V, VGS = 0", section: "page 2 zero gate voltage drain current"}
+  igss_na_max: {value: 100, section: "page 2 gate-source leakage, VDS = 0, VGS = +-8 V"}
+  ciss_pf: {value: 405, section: "page 2 dynamic"}
+  qg_nc: {value: {typ_vgs_4p5: 5.5, typ_vgs_2p5: 3.3}, section: "page 2 total gate charge"}
+  rthja_c_per_w: {value: {typ: 120, max_5s: 145, max_steady: 175}, section: "page 1 thermal resistance ratings (1 in x 1 in FR4)"}
+  pins: {value: "SOT-23 (TO-236): 1 gate, 2 source, 3 drain; marking N1", section: "page 1 top view"}
+  circuit_orientation: {value: "drain to cell +, source to VIN, gate to GND. Normal polarity: body diode conducts (drain = anode) from cell + to VIN first, then the channel turns on with VGS = -(VIN) and the drop falls to ID x RDS(on). Reversed cell: VGS = 0 and the body diode is reverse-biased: blocked up to VDS -20 V", section: "analysis of page 1 pin-out and body diode data; decision D7"}
+  gate_overstress: {value: "gate at GND: VGS = -VIN = -1.8 V (end of life) to -3.3 V (fresh cells, 1.65 V each open circuit): inside the +-8 V rating; reversed cells: VGS = 0", section: "calculation (calc/tree_power.py)"}
+checklist:
+  - "gate drive: VGS = -VIN, minimum -1.8 V at the UVLO end (1.65-1.8 V): threshold max -1.0 V, margin 0.8 V; RDS(on) at -1.8 V not tabulated (EST 0.13 ohm typ): calc/tree_power.py uses 0.20 ohm"
+  - "drop at 40 mA and 500 mA start-up peak from calc/tree_power.py (printed with the check run)"
+  - "decoupling: none needed on the FET; the TPS63900 input capacitor sits behind it"
+  - "layout: nothing thermal (millwatt dissipation): SOT-23 land per the fab footprint"

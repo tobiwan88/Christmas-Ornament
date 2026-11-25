@@ -1,0 +1,43 @@
+# Critical blocks, declared by intent; checked by calc/critical.py (--placement before routing). Pins are REF.PAD from the
+# generated netlist; distances in mm, PAD CENTRE to PAD CENTRE (calc/pcb.py Board.dist). Limits are design targets unless a
+# source is named. `known:` on an entry turns a FAIL into a WARN with the reason. EMI settings live in emi.yaml.
+# No USB pair on this board (USB-C of variant B is power only), no feedback divider (TPS63900 set by CFG resistors), no sensor.
+# Sources:
+#   NRF = parts/nRF54L15-QFAA.yaml reference_layout_distances_mm (Nordic QFAA reference layout v0.8, measured from the
+#         drawing): decoupling 0.74-1.2 from the pin, C1 0.9 from DECD, L1 2.2-2.5 from DCC, C6 0.86 from pin 32, the series
+#         L at ANT 0.86, C13 0.88 from nRESET, X2 2.1-3.5 from XC pins, X1 1.8-2.1 from XL pins
+#   TI  = TPS63900 SLVSET3D section 10 layout guidelines / Figure 10-1 (Cin and Cout next to VIN / VOUT and GND, inductor
+#         across LX1 / LX2); limits here are own targets in the spirit of that figure, not printed numbers
+# Crystal, RF-chain and net-tie rows are written as `decoupling` / `series_termination` entries because critical.py has no
+# crystal / RF key yet (proposed extension in the gate 4 report); the row label then reads "decoupling X2" etc.
+switcher_loop:
+  # TI: input loop Cin - VIN - GND; GND = exposed pad 11 (pad centre; its edge is about 1 mm closer than the centre)
+  - {name: tps63900_in, cin: "C20", vin: "U2.10", gnd: "U2.11", max_mm: 3.5, sw: "U2.9", inductor: "L2.1", sw_max_mm: 2.5}   # loop as built (emi_check, fix round): 1.5 + 1.6 + 1.8 = 4.9 mm (target 12)
+  # TI: output loop Cout - VOUT - GND, LX2 side of the inductor
+  - {name: tps63900_out, cin: "C21", vin: "U2.6", gnd: "U2.11", max_mm: 3.5, sw: "U2.7", inductor: "L2.2", sw_max_mm: 2.5}
+feedback: []
+decoupling:
+  - {pin: "U1.48", cap: "C10.1", max_mm: 1.2, known: "1.36 mm (gate 4 U1 fan-out, engineer decision 1): C10 sits below L1 (DCC 0805, courtyard to y 26.30) and above the J3 courtyard (y 27.62), x bounded by the U1 courtyard; VDD 47/48 tied at x 31.50 and fed by a 0.25 mm track to C10.1 / C3.1. 0.16 over the reference span"}
+  - {pin: "U1.22", cap: "C8.1", max_mm: 1.2}      # NRF
+  - {pin: "U1.33", cap: "C5.1", max_mm: 1.2, known: "2.56 mm (gate 4 U1 fan-out, engineer decision 1): C5 stands above X2's XC1 track at the top-left corner; DECA from pin 33 goes through a dog-bone via (33.30, 19.50) into C5.1. The DECA node also has C12 / C2 on the left (FB1)"}
+  - {pin: "U1.36", cap: "C4.1", max_mm: 1.2, known: "2.72 mm (gate 4 U1 fan-out, engineer decision 1): VDD 36 leaves through a via at (32.05, 21.00); C4 sits left of X2 at the top-left corner, fed by a 0.15 mm F.Cu track"}
+  - {pin: "U1.10", cap: "C7.1", max_mm: 1.2, known: "2.72 mm (gate 4 U1 fan-out, engineer decision 1): pin 10 faces J3 (no room below); VDD 10 leaves through a via at (36.55, 28.00); C7 sits at the bottom-right corner below X1; C3 10 uF / C10 / C8 share the VDD node"}
+  - {pin: "U1.45", cap: "C1.1", max_mm: 0.9, known: "5.19 mm (gate 4 U1 fan-out, engineer decision 1): L1 takes the slot at pins 45/46 (DCC first, NRF L1 2.2-2.5; NRF C1 0.9). Gate 4 round 2: <= 3 mm is blocked on F.Cu (the DCC exit of pin 46, 0.4 mm below DECD, must reach L1 through the only free strip next to pins 44-46; C10 holds the slot below at 47/48; see BOARD.md). DECD runs pin 45 -> L1.2 -> FB1 -> C1 on F.Cu; C1 has its own GND via at (25.00, 27.30) shared with C12 / C2 (B7). Risk: DECD loop inductance; check DECD ripple at bring-up"}
+  - {pin: "U1.43", cap: "C12.1", max_mm: 1.2, known: "6.17 mm (gate 4 U1 fan-out, engineer decision 1): DECA 43 goes along y 24.15 to FB1.2; C12 / C2 sit left of FB1 / C1 in the left power cluster. DECA also has C5 at pin 33"}
+  - {pin: "U1.46", cap: "L1.1", max_mm: 2.5}      # NRF L1 2.2-2.5 from DCC
+  - {pin: "U1.30", cap: "C13.1", max_mm: 0.88, known: "4.92 mm (gate 4 U1 fan-out, engineer decision 1): the top band above pins 30-33 holds the RF column; C13 (nRESET filter, slow node) sits at the top-right corner next to R9"}
+  - {pin: "U1.5", cap: "C14.1", max_mm: 3.0, known: "26.90 mm (engineer, gate 4 round 2, decision 1c): the divider R40 / R41 and C14 moved out of the left strip into the left wing below Q1 (fewer nets through the neck left of J3); C14 sits right below R41 at the divider, VBAT_SENSE runs about 27 mm from pin 5 down J3's middle and under the holder on B.Cu. Accepted by the engineer: C14 at the divider, slow node (tau 110 ms), noise not a concern"}
+  # crystals (as decoupling rows, see header): HFXO X2 at XC1/XC2, LFXO X1 at XL1/XL2
+  - {pin: "U1.34", cap: "X2.1", max_mm: 3.5}      # NRF X2 2.1-3.5
+  - {pin: "U1.35", cap: "X2.3", max_mm: 3.5}      # NRF
+  - {pin: "U1.1", cap: "X1.1", max_mm: 2.1, known: "8.71 mm (gate 4 U1 fan-out, engineer decision 1): X1 moved to the right side (40.60, 25.00) rot 180 (B8), XL1 / XL2 leave the bottom row by dog-bone vias and reach X1 on B.Cu (4 vias). 32.768 kHz is the slow clock: trace capacitance adds to the load (re-check the internal load-cap setting at bring-up)"}
+  - {pin: "U1.2", cap: "X1.2", max_mm: 2.1, known: "6.96 mm: as X1.1"}
+  # RF chain at the ANT pin (as series rows, see header)
+series_termination:
+  - {source: "U1.31", part: "L3.1", max_mm: 0.86, known: "1.09 mm (gate 4 U1 fan-out, engineer decision 1): L3 at the top of the RF column right above the ANT pin (U1 courtyard to L3 courtyard 0 mm); 0.23 over the reference"}
+  - {source: "U1.32", part: "C6.2", max_mm: 0.86, known: "1.82 mm (gate 4 U1 fan-out, engineer decision 1): C6 left of L3 in the RF column, its GND pad on VSS_PA (x 34.33 track to pin 32; NT1 bridges to the exposed pad, 0.31 mm); reference has C6 beside the pin"}
+  - {source: "U1.32", part: "NT1.1", max_mm: 0.5}   # D25 bridge in the pad-32 to exposed-pad gap
+  - {source: "C9.2", part: "U1.32", max_mm: 0.0, known: "KNOWN deviation (engineer, gate 4): Nordic returns C9 ground on the bottom layer only; here C9.2 is GND with its own via into In1 at the pad (NT2 / GND_C9 dropped). Distance = C9 ground pad to the VSS_PA pin (the reference return point). Bring-up: VNA check of the match, pi slot C50/R50/C51 kept for retuning (ORDER.md)"}
+  - {source: "R50.2", part: "ANT1.1", max_mm: 1.0, known: "KNOWN deviation (gate 5, coordinator decision): ANT_FEED leaves the 50 ohm GCPW (0.35 / 0.30 over In1, calc/impedance.py --cpw: 49.4 ohm with mask, 52.1 bare) at the keep-out line y 17.0 and runs 2.40 mm (y 17.0 -> ANT1 pad 1 edge y 14.6, 0.35 mm wide) inside the antenna keep-out with NO reference plane (In1 / In2 / B.Cu barred there, no F.Cu pour): impedance not defined there (calc/impedance.py models GCPW only). The antenna card (parts/2450AT42A100E.yaml p3) wants the 50 ohm feed up to the pad, 1.0 mm clear of the ground on the feed side; here the pad sits 2.4 mm into the no-ground tip (tree_outline ANT1 position, engineer). Checked by tree_a_pcb.py --proof row 'ANT_FEED in the antenna keep-out'. Bring-up: VNA match with the pi slot R50 / C50 / C51. Estimate (RF review, fix round): the 2.4 mm without ground acts as about 1.5-1.8 nH series, return loss 11-13 dB at 2.44 GHz; fix: series C 2.3-2.9 pF 0402 in the R50 slot, or move the plane edge to the pad"}
+diff_pair: []
+thermal_distance: []

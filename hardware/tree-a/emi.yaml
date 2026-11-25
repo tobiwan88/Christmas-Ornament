@@ -1,0 +1,31 @@
+# Settings of calc/emi_check.py (edge fence, antenna, planes, loops, parallel runs) for the routed board (gate 5 runs it;
+# at gate 4 there is no copper, so most rows have nothing to measure). Each limit names its source; numbers without a
+# board source are emi_check.py's own defaults, written out so a reader sees them. No USB pair (no pair_* keys).
+# Coordinates: board mm = tree_outline mm (origin top-left of the 70 x 105 box, the outline's bounding box).
+antenna_area: antenna_keepout_top   # F.Cu rule area of gen/tree_a_pcb.py: the 17 mm tip triangle (tree_outline
+                                    # ANT_KEEPOUT_H_MM) minus the notch x 35 +- 1.4 for the antenna land and its feed;
+                                    # rule area antenna_keepout (same triangle, no notch) bars In1, In2, B.Cu
+edge_pitch_mm: 5.0          # GND via fence along the board edge: largest gap between neighbouring vias (emi_check default)
+edge_band_mm: 1.6
+edge_exempt:                # rectangles {box: [x0, y0, x1, y1], reason}
+  - {box: [40.0, 80.5, 48.5, 91.5], reason: "J1 USB-C (variant B, DNP) shell overhangs the right trunk edge at x 48; its plated slots are the GND there"}
+  - {box: [22.0, 95.0, 48.0, 105.0], reason: "trunk bottom: BT1 pads 3/4 (BT_LINK, 7.45 x 6.10) reach y 102.7, no room for an edge via row under them"}
+void_max_mm: 1.0            # longest signal run over a plane void (emi_check default)
+plane_ref: {F.Cu: In1.Cu, B.Cu: In2.Cu}   # board.yaml stackup: In1 and In2 both solid GND (D34, engineer 2026-11-24)
+loop_max_mm: 12.0           # emi_check default; TPS63900 loops are placed at 1.4-3.3 mm pad to pad (critical.yaml)
+sw_nets: [/power/LX1, /power/LX2]   # TPS63900 switch nodes (netlist names)
+sw_area_max_mm2: 3.0        # emi_check default: L2 pads sit 2.06 mm from LX1 / LX2 (critical.yaml), short stubs only
+parallel:                   # {name, victims, aggressors, gap_mm, max_mm}; own targets (no datasheet number)
+  - {name: rf_feed_vs_all, victims: ["/rf/*", "/mcu/ANT_PA"], aggressors: ["/leds/*", "/mcu/SW*", "/mcu/XC*", "/mcu/XL*", "/power/*", "VDD", "VIN", "BAT"], gap_mm: 0.5, max_mm: 0.5}
+  - {name: hfxo_vs_switching, victims: ["/mcu/XC*", "/mcu/XL*"], aggressors: ["/leds/*", "/power/*", "/mcu/DCC"], gap_mm: 0.5, max_mm: 1.0}
+  - {name: led_lines_vs_adc, victims: ["/mcu/VBAT_SENSE"], aggressors: ["/leds/*", "/power/*"], gap_mm: 0.4, max_mm: 3.0}
+known:                      # accepted deviations of the routed board (gate 5 fix round; calc/emi_check.py does not read this list
+                            # yet: the rows still print FAIL, the reason is here and in BOARD.md 'Routing review')
+  - {row: parallel hfxo_vs_switching, what: "XL1 / XL2 (32.768 kHz, B.Cu lanes) beside LED_L1, LED_L1_MCU, VDD and SWO, gap down to 0.16 mm",
+     reason: "RF/MCU review: about 7 mV coupled per LED edge, 4 ppm rms timing noise against a 500 ppm budget; bring-up: LFCLK drift with the LED matrix scanning"}
+  - {row: parallel led_lines_vs_adc, what: "VBAT_SENSE beside LED_L7 / LED_L8 in the J3 middle, gap 0.123 mm",
+     reason: "about 5 uV per LED edge on a 110 ms node; firmware rule: sample VBAT with the LED scan paused"}
+  - {row: edge GND fence (tree_a_pcb.py --proof), what: "gaps over 5.0 mm on the real outline: 7.6 mm at (41.9, 29.3), 13.2 mm at (47.6, 38.0), 6.1 at (44.8, 27.0), 5.2 / 6.2 at the right shoulder (56.1 / 50.8, 75.2), 5.0 / 5.6 / 8.0 on the left slope (18.2, 55.4) (18.1, 46.4) (21.4, 41.8)",
+     reason: "LED / SWD / VDD copper fills the 1.6 mm edge band there; a clearance search on the frozen board found no free site; closing them needs the fence in the router input (re-route)"}
+  - {row: track over plane void (--proof), what: "CC1 (variant B, R30 DNP in A, static) 4.2 mm at x 47.6 beside the trunk edge over In1's edge pull-back (y 76.9-81.0)",
+     reason: "CC2 and a VIN via block a shift inward; DC level line, no edge rate"}

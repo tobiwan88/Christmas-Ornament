@@ -1,0 +1,21 @@
+Topic	Requirement	Open point
+Concept	Christmas tree ornament, two-board sandwich, 70 × 105 mm, about 17 mm thick, about 40 g with AAA cells. Hangs from a Ø1.4 mm hole at the tip.	
+Operating schedule	LED effects 16:00–24:00 and 06:00–09:00. Sleep 00:00–06:00 and 09:00–16:00 with only the 32.768 kHz RTC running.	Make windows configurable from the phone?
+Board A (main)	Inner face: nRF54L15, crystals, chip antenna, TPS63900, charger, USB-C, battery. Outer face: 8 RGB LEDs, SW1, Tag-Connect. 4 layers.	
+Board B (LEDs)	8 RGB LEDs on the outer face only, 2 layers. Connects to A through a 2 × 4 header carrying the 8 charlieplex lines. No power or ground needed on B.	Header mated height vs ~14 mm gap
+Power path	Battery → TPS63900 buck-boost → VDD. Preset 1 (SEL low) 3.0 V when idle; preset 2 (SEL high) 3.5 V while LEDs are lit. nRF54L15 VDD max is 3.6 V.	Confirm 3.5 V is enough for green/blue at the chosen current
+Battery variant A	2 × AAA alkaline in series (1.8–3.2 V), ~1250 mAh each. Same PCB; charger, USB-C and JST left unpopulated.	Reverse-polarity protection (P-MOSFET)
+Battery variant B	One Li-ion pouch (~500 mAh, protected) on JST PH. MCP73831 charges at ~100 mA from USB-C (power-only, 5.1 kΩ CC pull-downs). AAA holder left off.	Find a pouch that fits the gap
+LED matrix	16 RGB LEDs, common anode = 48 dies on 8 GPIO lines. Each line is the anode of 2 RGB LEDs; their 6 cathodes sit on 6 of the other 7 lines. One resistor per line.	
+LED drive	One die lit at a time, ~100 µs slots, 200 Hz frame, 8-bit PWM per slot, gamma and white balance in firmware. Constant current per die and a built-in power cap.	
+GPIO choice	8 lines on port P1 (GPIOTE + timer scanning, high drive ~4 mA). Option: P2 extra drive (~14 mA) scanned by the RISC-V VPR. Stay under 15 mA total GPIO current.	Final pin assignment
+Ghosting	Two LEDs in series must need more than VDD. With XL-1010RGB-YG red at 2.1 V: 4.2 V > 3.5 V. Avoid LEDs whose red Vf can drop below 1.8 V.	
+MCU circuit	Copy the Nordic nRF54L15-QFAA reference circuit (config 1, DC/DC) and reference layout v0.8, including the RF matching network.	
+Antenna	Chip antenna at the tree tip with a copper keep-out on both boards (no LEDs or copper under the top ~17 mm). Add pi-match pads; tune with a VNA if possible.	Chip antenna vs Nordic PCB antenna
+Clocks	32 MHz (2016) for the radio, 32.768 kHz (2012) for timekeeping in sleep.	
+Programming	Tag-Connect TC2030-NL on the outer face of board A (trunk): VDD, SWDIO, SWDCLK, RESET, GND. Later updates over BLE (MCUboot DFU).	
+Sensing	Battery voltage via divider to an ADC input. Li-ion variant: USB VBUS detect and charger STAT to GPIOs. TPS63900 SEL from a GPIO.	
+Mechanical	Two M2 screws (nylon allowed only with brass standoffs) + M2 brass standoffs, 12.0 mm female-female (D31, D3; first note said ~14 mm nylon) at the tier 3 ends (x = 10.7 and 59.3 mm, y = 71.0 mm, D17). Cells or pouch sit in the gap. USB-C opens at the bottom edge of board A.	
+Assembly	JLCPCB PCBA. Board A two-sided, board B one-sided. Battery holder hand-soldered or consigned. Black soldermask with ENIG.	
+Power budget	Firmware caps the LED average at about 2 mA. Expected ~40 days at 11 h/day on 2 × AAA.	Measure timer + clock current while lit
+Mock-ups	Design canvas, V3 views: https://claude.ai/artifact/RAzMpQZA17YqjUqwqKFavs	

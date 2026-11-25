@@ -1,0 +1,16 @@
+# Datasheet card: Hanxia HX PM2.54-2x4P TP (SMD female header 2 x 4, alternate for J3, C41397153).
+mpn: HX PM2.54-2x4P TP
+role: alternate female header (same drawing geometry as the HC part)
+lcsc: C41397153
+source:
+  url: null     # Shenzhen Hanxia Electronic Co., Ltd (drawing title block); no maker site printed
+  revision: "approval drawing 'HX PM2.54-2x4P TP', drawn 2020.6.24 (1 sheet, LCSC copy)"
+  file: datasheets/HX-PM2.54-2x4P-TP/HX-PM2.54-2x4P-TP_lcsc.pdf
+values:
+  height_mm: {value: 8.5, tol_mm: 0.15, section: "drawing side view 8.50 +-0.15"}
+  body_mm: {value: {depth: 5.0, end_view_width: 7.20, end_view_height: 8.90}, tol_mm: {depth: 0.15, w: 0.25, h: 0.2}, section: "drawing"}
+  pcb_layout_mm: {value: {pad_length: 2.50, pad_width: 1.02, pitch: 2.54, outer_to_outer_rows: 8.0}, section: "drawing RECOMMEND P.C.B LAYOUT (tolerance +-0.05)"}
+  current_a: {value: 3, section: "drawing specifications"}
+  temperature_c: {value: [-40, 105], section: "drawing specifications"}
+checklist:
+  - "same land as C22373945 within the drawing rounding (end-view width 7.20 vs 7.10): footprint compatible; stock 519 on 2026-11-23 vs 276"

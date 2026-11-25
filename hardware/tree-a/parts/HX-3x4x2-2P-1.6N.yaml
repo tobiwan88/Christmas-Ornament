@@ -1,0 +1,21 @@
+# Datasheet card: Hanxia HX 3x4x2-2P-1.6N tactile switch (C49234124), SW1 on the outer face of board A.
+mpn: HX 3x4x2-2P-1.6N TACTILE SWITCH
+role: SW1 wake / effect change / pairing
+lcsc: C49234124
+source:
+  url: null     # Shenzhen Hanxia Electronic Co., Ltd; no maker site printed
+  revision: "approval specification for the variant 'HX 3x4x2-2P-1.6N-04' (10 pages, atta.szlcsc.com copy): the exact -04 suffix vs the listed part is UNVERIFIED"
+  file: datasheets/HX-3x4x2-2P-1.6N/HX-3x4x2-2P-1.6N_lcsc.pdf
+values:
+  body_mm: {value: {l: 4.0, w: 3.0, h: 2.0, l_with_terminals: 4.9, terminal_height: 1.5}, tol_mm: 0.1, section: "page 10 drawing (4 +-0.1, 3 +-0.1, 2.0 +-0.1, 4.9 +-0.1, 1.5 +-0.1)"}
+  land_mm: {value: {pad_outer_to_outer: 5.5, pad_gap: 3.4, pad_height: 2.0}, section: "page 10 installation reference dimensions (read from the figure)"}
+  actuator_dia_mm: {value: 1.8, section: "page 10 top view (dia 1.8)"}
+  ratings: {value: "DC 12 V, 50 mA", section: "page 10 technical requirement 2"}
+  operating_force_gf: {value: 160, tol_gf: 50, section: "specification table, operating force 160 +-50 gf"}
+  travel_mm: {value: 0.2, tol_mm: 0.1, section: "specification table 4.2 full travel"}
+  return_force_gf_min: {value: 50, section: "specification table"}
+  contact: {value: "1 pole 1 throw", section: "specification"}
+  life_cycles: {value: 100000, section: "LCSC listing", unverified: "listing"}
+checklist:
+  - "contact rating 12 V / 50 mA vs 3.0 V GPIO sense: fine; debounce in firmware; pull-up or internal pull: netlist"
+  - "keep-out on the outer face of board A in the trunk; actuator height 2.0 mm above the board"

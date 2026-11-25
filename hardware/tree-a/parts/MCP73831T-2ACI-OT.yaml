@@ -1,0 +1,47 @@
+# Datasheet card: MCP73831T-2ACI/OT (Microchip Li-ion linear charger, SOT-23-5). Variant B only (DNP in the first order, decision D10).
+mpn: MCP73831T-2ACI/OT
+role: Li-ion pouch charger from USB VBUS, 4.20 V, about 100 mA (RPROG 10 k)
+lcsc: C424093
+source:
+  url: https://www.microchip.com/en-us/product/MCP73831
+  revision: "DS20001984H (2005-2020 Microchip Technology)"
+  file: datasheets/MCP73831/MCP73831.pdf
+values:
+  vdd_abs_max_v: {value: 7.0, section: "1.0 Absolute Maximum Ratings (VDD)"}
+  io_abs_max_v: {value: "-0.3 to VDD + 0.3", section: "1.0 Absolute Maximum Ratings (all inputs and outputs w.r.t. VSS)"}
+  vdd_operating_v: {value: [3.75, 6.0], section: "1.0 DC Characteristics, supply voltage VDD"}
+  vdd_recommended_v: {value: "VREG(typ) + 0.3 V = 4.5 V to 6 V", section: "3.1 Battery Management Input Supply (VDD)"}
+  uvlo_v: {value: {start_min: 3.3, start_typ: 3.45, start_max: 3.6, stop_min: 3.2, stop_typ: 3.38, stop_max: 3.5}, section: "1.0 DC Characteristics, VSTART / VSTOP"}
+  supply_current_charging_ua: {value: {typ: 510, max: 1500}, section: "1.0 DC Characteristics, ISS charging"}
+  supply_current_complete_no_battery_ua: {value: {typ: 53, max: 200}, section: "1.0 DC Characteristics, ISS charge complete / no battery"}
+  supply_current_prog_floating_ua: {value: {typ: 25, max: 50}, section: "1.0 DC Characteristics, ISS PROG floating (charger disabled)"}
+  limits_valid_for_vdd_v: {value: [5.2, 6.0], section: "1.0 DC Characteristics header: all limits apply for VDD = [VREG(typical) + 1.0 V] to 6 V (4.20 V + 1.0 V = 5.2 V); VREG, IREG, IPREG, ITERM and VPTH are therefore guaranteed only for VDD of 5.2 V or more. USB VBUS is 4.75-5.25 V: below 5.2 V the figures are typical only (D26 bring-up: measure VREG and IREG on a 5.0 V host)"}
+  vreg_v: {value: {min: 4.168, typ: 4.20, max: 4.232}, section: "1.0 DC Characteristics, VREG MCP7383X-2 (the '2' in -2ACI), IOUT = 10 mA, TA = -5 to +55 C; guaranteed only for VDD >= 5.2 V (limits_valid_for_vdd_v), typical below"}
+  ireg_formula: {value: "IREG [mA] = 1000 V / RPROG [kohm]", section: "5.1.2 Current Regulation Set (PROG)"}
+  ireg_at_10k_ma: {value: {min: 90, typ: 100, max: 110}, section: "1.0 DC Characteristics, IREG with PROG = 10 k; guaranteed only for VDD >= 5.2 V (limits_valid_for_vdd_v), typical below"}
+  rprog_range_kohm: {value: [2, 67], section: "1.0 DC Characteristics, charge impedance range"}
+  rprog_shutdown_kohm: {value: [70, 200], section: "1.0 DC Characteristics, minimum shutdown impedance; PROG floating or driven high disables the charger (6.1.1.6)"}
+  option_AC: {value: {ipreg_pct_of_ireg: 10, vpth_pct_of_vreg: 66.5, iterm_pct_of_ireg: 7.5, vrth_pct_of_vreg: 96.5}, section: "Product Identification System (options AC) and 1.0 DC Characteristics"}
+  precondition_current_ma_at_100ma: {value: {typ: 10, min: 7.5, max: 12.5}, section: "1.0: IPREG/IREG 7.5-12.5 % (10 % typ) at PROG 2-10 k"}
+  termination_current_ma_at_100ma: {value: {typ: 7.5, min: 5.6, max: 9.4}, section: "1.0: ITERM/IREG 5.6-9.4 % (7.5 % typ) for option AC"}
+  precondition_threshold_v: {value: 2.79, section: "1.0 VPTH/VREG 66.5 % x 4.20 V (computed from the table; min 64 % = 2.69 V, max 69 % = 2.90 V)"}
+  recharge_threshold_v: {value: 4.05, section: "1.0 VRTH/VREG 96.5 % x 4.20 V (computed; min 91.5 % / max 96.5 % column for option AC)"}
+  pass_transistor_rdson_mohm: {value: 350, section: "1.0 ON-resistance, VDD = 3.75 V, TJ = 105 C (typ)"}
+  battery_detection: {value: {no_battery_threshold: "VREG + 100 mV", z_no_bat_min_mohm: 7, i_bat_det_ua: [0.6, 6]}, section: "1.0 Battery Detection; 4.3"}
+  output_reverse_leakage_ua: {value: {prog_floating_typ: 0.15, vdd_floating_typ: 0.25, max: 2}, section: "1.0 IDISCHARGE"}
+  stat_output: {value: "STAT is a tri-state push-pull output on the MCP73831: High-Z in shutdown and with no battery, LOW during preconditioning / fast charge / constant voltage, HIGH when charge complete (standby)", section: "3.3 and Table 5-1"}
+  stat_levels: {value: {vol_v_max_at_4ma: 1.0, voh_v_typ_at_4ma: "VDD - 0.4", sink_ma_max: 25, source_ma_max: 35, leakage_ua_max: 1}, section: "1.0 Status Indicator - STAT"}
+  cin_min_uf: {value: 4.7, section: "3.1 bypass VDD with a minimum of 4.7 uF"}
+  cout_min_uf: {value: 4.7, section: "3.2 bypass VBAT with a minimum of 4.7 uF for loop stability, also when the battery is disconnected"}
+  thermal_resistance_c_per_w: {value: {sot23_5_typ_4layer_min_copper: 230, sot23_5_large_copper: 130}, section: "1.0 Thermal Characteristics, notes 1 and 2"}
+  thermal_regulation: {value: "charge is suspended above 150 C die temperature, resumes about 10 C lower", section: "4.10"}
+  power_dissipation_formula: {value: "P = (VDDMAX - VPTHMIN) x IREGMAX", section: "6.1.1.3"}
+  temperature_qualification: {value: null, section: "not stated: the charger has no NTC input; the +-5..55 C figures apply to the VREG/IREG specification only. Charging outside 0-45 C is a firmware/bring-up point (REQUIREMENTS R3.4)"}
+  protected_pouch_statement: {value: null, section: "not stated (no statement about charging protected packs with PCM or about absent-battery detection with a protection IC in series)"}
+  pins: {value: "SOT-23-5: 1 STAT, 2 VSS, 3 VBAT, 4 VDD, 5 PROG", section: "3.0 Table 3-1"}
+checklist:
+  - "decoupling: 4.7 uF on VDD, 4.7 uF on VBAT (3.1, 3.2; the 4.7 uF value is the minimum, so the DC-bias derating at 5 V and 4.2 V must be checked on the chosen capacitor: card of the capacitor not written, schematic builder to pick a >= 10 V part and check)"
+  - "enable: PROG resistor to VSS enables; floating or high disables (5.2.2); RPROG 10 k 1 % gives 100 mA (5.1.2); the 0402 10 k is the Basic C25744"
+  - "STAT is tri-state push-pull, not open drain: to a GPIO it needs no pull-up, but the High-Z phase (shutdown, no battery) needs a firmware-side pull or a read with the internal pull enabled (Table 5-1); level up to VDD - 0.4 V at 4 mA (1.0 STAT table); VDD is the USB VBUS (up to 5.25 V), the nRF pin limit is VDD + 0.3 V = 3.8 V at 3.5 V: a direct connection is not allowed, divider or level shifter needed: see PARTS-REVIEW"
+  - "thermal: dissipation (VDD - VBAT) x I computed by calc/tree_power.py; SOT-23-5 130-230 C/W"
+  - "layout notes -> critical.yaml: battery pack close to VBAT/VSS (6.2 PCB Layout Issues); no exposed pad on SOT-23-5"
