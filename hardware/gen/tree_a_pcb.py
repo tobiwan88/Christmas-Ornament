@@ -123,7 +123,13 @@ FINISH_TRACKS = [
     # TPS63900 input loop: the router's VIN track crosses C20.1 mid-segment (no end in the pad); a stub from the pad
     # centre to that track's end gives emi_check's copper graph the C20.1 -> U2.10 path (same copper, 0.75 mm)
     ("VIN", "F.Cu", 0.3, [(17.13, 60.23), (17.75, 59.80)]),
+    # charger GND pads into the planes (power review F1, variant B parts; site search on the frozen board): pad centre ->
+    # GND via (FINISH_CHG), F.Cu 0.3
+    *[("GND", "F.Cu", 0.3, [c, v]) for c, v in (((42.863, 78.5), (41.81, 78.5)), ((53.175, 74.6), (53.97, 75.25)),
+                                                 ((55.51, 74.6), (56.21, 74.35)), ((52.51, 72.9), (53.21, 72.9)),
+                                                 ((39.78, 35.97), (39.43, 36.67)))],
 ]
+FINISH_CHG = [(41.81, 78.5), (53.97, 75.25), (56.21, 74.35), (53.21, 72.9), (39.43, 36.67)]   # U3.2 C31.2 R32.2 R31.2 R45.2
 # GND edge fence (emi.yaml 5.0 mm pitch on the real outline): the router's --stitch-edge-fence left gaps (no 2-layer
 # fill / no clear site); sites from a clearance search on the frozen board (0.45 / 0.2, 0.8-1.4 mm inset)
 FINISH_FENCE = [(18.22, 55.38), (14.78, 51.14), (18.05, 46.41), (21.37, 41.78), (24.88, 26.14), (28.22, 18.35),
@@ -131,7 +137,7 @@ FINISH_FENCE = [(18.22, 55.38), (14.78, 51.14), (18.05, 46.41), (21.37, 41.78), 
                 (50.8, 75.2), (1.57, 75.36), (4.34, 72.2)]
 # decoupling return vias (review B3, reviewer-tested): C7.2 and C8.2 straight into the planes
 FINISH_GND = [(38.78, 25.3), (39.81, 23.9)]
-FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE + FINISH_GND]
+FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE + FINISH_GND + FINISH_CHG]
 # frozen router vias moved on replay (with their own track ends): (net, (x, y) frozen, (x, y) new)
 FROZEN_MOVES = [
     # 0.13 mm (pad bounding box) to its own C30.1 pad; 'via to SMD pad' 0.15 also for the own net (--proof row)
