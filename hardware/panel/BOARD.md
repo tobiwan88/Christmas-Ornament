@@ -8,7 +8,7 @@ waivers, carried into `drc-waivers.csv` with their reasons). Earlier: rebuilt af
 (`panel.kicad_pcb`, `.kicad_pro`, `.kicad_dru`, `drc-waivers.csv`, `fp-lib-table`, `panel_preview.png`); gate hook
 `scripts/hw-check.d/70-panel.sh`. The panel carries A's own DRC items (12 warnings, 0 unconnected on 2026-11-25, all inherited, panel-own items 0). Rerun `python3 hardware/gen/panel_pcb.py` after every change of a board file and
 commit the result; the hook WARNs when the committed panel differs from a rebuild (FAIL with `--strict`). Not ordered. No `board.yaml`
-of its own: the order is priced on tree-a (`fab.order_includes: [../tree-b]`).
+of its own: the order is priced on tree-a (`fab.order_includes: [../tree-b]`). Gate 6 package built 2026-11-25 (section "Fab package").
 
 ## Purpose
 The ONE customer panel that goes to JLCPCB: board A (tree-a) and board B (tree-b) in one file, 5 panels = 5 ornaments (D1, R2.1, R6.1).
@@ -137,8 +137,21 @@ Nets named by a custom rule are left out of the cells (the rule, not the class, 
 ## Assembly of the two-design panel (summary; details and questions in ../ORDER.md section 8)
 BOM and CPL come from the panel file (one BOM, one CPL for the whole panel: the boards' designators are already unique). B's parts carry
 their rotation +180 because B is turned in the panel; `fab_package.py --fit-only` on the panel computes that from the pads
-(`placement fit panel: OK`: J4 KiCad 0 -> CPL 270, ANT1 0 correction). The J4 mating proof stays a property of the board file (the
+(`placement fit panel: OK`: J4 KiCad 0 on the bottom -> CPL 90, ANT1 0 correction). The J4 mating proof stays a property of the board file (the
 panel copy is rigid, row). Global fiducials: FID1-3 (top face) and FID4-6 (bottom face).
+
+## Fab package (gate 6, 2026-11-25; the cart, the checks and the evidence are in ../ORDER.md sections 7 and 9)
+`python3 -I hardware/tools/fab_package.py --require-clean --stock hardware/panel/panel.kicad_pcb` writes `hardware/out/fab/panel/` (git-ignored):
+gerber zip (11 gerbers, PTH and NPTH drill), `panel-bom.csv` (36 lines, 67 designators, variant A), `panel-cpl.csv` (67 rows: 57 Top, 10 Bottom),
+`checks.txt`, `README-order.txt`, `previews/`. Numbers of the 2026-11-25 run: panel DRC 0 errors / 0 open warnings / 0 unconnected (13 waived
+warnings of `drc-waivers.csv`); fit OK (ANT1 and J4 LAND); designators unique; closest CPL pair D12 / R10 0.750 mm; 23 unique Extended parts = 35.19 USD
+= the figure of `calc/bom_check.py`; gerber re-read OK (outline 114.800 x 120.000 mm centre line, 82 pieces, 6 closed contours; 406 PTH + 70 NPTH
+hits equal the board's holes); privacy scan clean.
+- Bottom parts in the CPL: A's D9-D16 (CPL 90) and SW1 (CPL 180), B's J4 (CPL 90 in the panel, 270 in board B alone). Rule: CPL = (180 - KiCad angle) +
+  correction, plain board coordinates (../ORDER.md section 7: three open-source tools agree, JLC's pages are silent: the placement preview decides).
+- Rotated B: D1-D8 CPL 270 (KiCad 180 in the panel, correction 90), J4 as above; nobody adds 180 by hand, the fit reads it off the panel pads.
+- Coordinates: gerbers and CPL are absolute (box x 20.0..134.8, y -140.0..-20.0 mm, y up, CPL Mid X / Mid Y = gerber coordinates).
+- The mounting hole pattern, tabs and rails are untouched by the package: the panel file is read only.
 
 ## Cost: panel against two separate orders
 Command (needs network; model and fee sources in `calc/bom_check.py` and `board.yaml` `fab.extra_fees`):
@@ -164,8 +177,9 @@ python3 -I hardware/tools/fab_package.py --fit-only --offline hardware/panel/pan
 python3 hardware/gen/tree_outline.py --panel    # table of the arrangements
 python3 hardware/calc/bom_check.py hardware/tree-a --stock --qty 5 --separate   # panel against separate orders
 ```
-The production run `python3 -I hardware/tools/fab_package.py --require-clean hardware/panel/panel.kicad_pcb` stops today at the first
-assembled bottom part (A's D9-D16, B's J4): bottom-side CPL rows are not handled by the tool yet (ORDER.md section 7, open for the tool owner).
+The production run `python3 -I hardware/tools/fab_package.py --require-clean --stock hardware/panel/panel.kicad_pcb` builds the package (section "Fab package"):
+bottom-side CPL rows are handled (rule in ../ORDER.md section 7). Selftests: `python3 -I hardware/tools/fab_package.py --selftest` and
+`python3 -I hardware/tools/gerber_check.py --selftest`.
 
 ## Decisions (dated; why)
 - 2026-11-23 D1 (engineer): one customer panel with A and B. Why: one order, one setup, one stencil, one handling fee.

@@ -1,8 +1,10 @@
 # Order notes: tree ornament (TREE-01), JLCPCB (skeleton, 2026-11-23)
 
-Status (2026-11-25): NOT ORDERED. Gate 6 (fab files) not started; boards A and B are routed (board A frozen with known exceptions),
-the panel is built (6 of 8 tabs, rest pending a router nudge). This file is the skeleton the order is
-filled from; every row marked OPEN is a human step or a fact to confirm. Copies to keep in step (hw-base, Changing a decision):
+Status (2026-11-25): NOT ORDERED. Gate 6 fab files BUILT for the panel (`python3 -I hardware/tools/fab_package.py --require-clean --stock
+hardware/panel/panel.kicad_pcb` -> `hardware/out/fab/panel/`: gerber zip, BOM, CPL, previews, order note; section 9 has the cart, the checks and
+the numbers); boards A and B are routed (board A frozen with known exceptions), the panel has all 8 tabs. What is left is human: the engineer's KiCad
+review, the cart quote (section 2), the JLC questions (3), the DFM checks (5b) and the placement preview with the bottom-side parts (6, 7). Every row
+marked OPEN is a human step or a fact to confirm. Copies to keep in step (hw-base, Changing a decision):
 `board.yaml` (`fab`), `REQUIREMENTS.md` R2.1/R6, `panel/BOARD.md`, `FIRMWARE-RULES.md`, the PARTS-REVIEW bring-up lists.
 
 ## 1. What is ordered
@@ -27,8 +29,9 @@ Fee table: `RESEARCH-2026-11-23.md` section JLCPCB; the values are in `board.yam
 2026-11-23: variant A 230.66 USD, variant B 231.92 USD before PCB and shipping, limit 250 USD (D20).
 
 **Manual step (OPEN, human): cart quote for the bare PCB and shipping.** The fab's quote API needs the account session and is not scripted.
-1. Upload the panel gerbers (gate 6 output of `fab_package.py`) in the JLC order page: 4 layers, 114.8 x 120.0 mm, 5 pcs, 1.0 mm, ENIG,
-   black mask, JLC04101H-7628, no impedance control, panel as ONE design / as "different designs": try both and note the price of each.
+1. Upload the panel gerbers (gate 6 output of `fab_package.py`, the zip in `hardware/out/fab/panel/`) in the JLC order page with the cart of
+   section 9 (4 layers, 114.8 x 120.0 mm, 5 pcs, 1.0 mm, ENIG, black mask, JLC04101H-7628, no impedance control, Panel by Customer):
+   "Different design" = 2 and = 1: try both and note the price of each. Read the line "min via hole size": the board has 0.20 mm vias (section 5b).
 2. Write the bare PCB price and the shipping price (country, method, date of the quote) here and put the sum into `board.yaml`
    `fab.pcb_quote_usd`. Do not copy order or account numbers into the repo (public repository).
 3. Rerun `python3 hardware/calc/bom_check.py hardware/tree-a --strict --stock --qty 5`: the row "PCB + shipping" turns OK and the row
@@ -41,6 +44,8 @@ Quote (OPEN): PCB ____ USD, shipping ____ USD, date ____.
 1. Two different designs in one customer panel: how is the panel fee computed and what does it cost (digest: "usually charged more", counted
    by design, amount not published)? Is the fee (designs - 1) x setup?
 2. BOM and CPL conventions for a two-design panel: one BOM for the panel or one per design; CPL of board B rotated 180 degrees in the panel.
+   (Our reading, 2026-11-25: one BOM and one CPL for the whole panel, absolute panel coordinates; JLC's BOM/CPL advice page asks for "each
+   reference designator only once in the entire BOM", one CPL file for both sides, spacing above 0.2 mm [P]; nothing there on two designs [P: silent].)
 3. Surcharges for black solder mask and for 1.0 mm board thickness on 4 layers; is ENIG included in the panel price?
 4. Fiducials and tooling holes: the JLC pages disagree (2 mm or 1.152 mm tool holes, 3-4 fiducials 1 mm pad / 2 mm mask); are rails of 5 mm
    enough or does JLC add its own (digest: "JLC adds; removal costs extra")?
@@ -66,8 +71,10 @@ Added 2026-11-24 with the KiCad panel (`panel/BOARD.md`; evidence level in brack
     designs, placement quantity = panel count) and select "files already contain complete panelized data" [P: BOM/CPL matching page offers
     that option; S: no page covers two designs]. Is that the right option for a "panel by customer" with two designs?
 15. Rotation: design B is turned 180 degrees in the panel; its CPL rows come from the fit with +180 already in them. Please confirm in the
-    placement preview that the B LEDs (D1-D8) and J4 sit right. Both designs carry bottom-side parts (A: D9-D16; B: J4): which rotation
-    convention does the CPL use for bottom parts (already open in section 7)?
+    placement preview that the B LEDs (D1-D8) and J4 sit right. Both designs carry bottom-side parts (A: D9-D16 and SW1; B: J4): the CPL now
+    uses (180 - KiCad angle) + correction for them (section 7, source-code evidence only: JLC's pages are silent). Ask JLC to confirm that
+    their bottom rotation is "the angle of the top-view footprint before the board is turned over about its vertical axis", or confirm the
+    preview of D9 (anode pad 3, bring-up item 2a) and J4.
 16. Mouse bites as built: hole centres on the board outline, 5 holes D0.6 at 0.35 mm web, 5.0 mm bridges up to 4.0 mm long, trapezoid
     bridges between non-parallel slanted edges, sharp inside corners at the tab roots in the file [P for the holes; E for bridge width and
     length, no JLC figure]. Accepted, or do you change them (the guide says non-standard spacing is adjusted without notice)?
@@ -77,6 +84,22 @@ Added 2026-11-24 with the KiCad panel (`panel/BOARD.md`; evidence level in brack
     separation of a 1.0 mm board without exposed copper? [E]
 19. Hole-to-hole 0.35 mm web between the 0.6 mm bite holes is below the 0.5 mm hole-to-hole floor of the capability page: accepted for
     mouse bites (the guide's own figure) [P]?
+Added 2026-11-25 with the fab package (gate 6; evidence levels as above):
+20. Order form, "Panel by Customer" with 2 designs: how is "PCB Qty" counted (panels, or panels x designs) and what must "Different Design" say?
+    [P: "If Panel by Customer has been chosen, the number of designs in the panelized Gerber file should be no more than 10" (instructions for
+    ordering); P: boards separable by milling or drill holes count as different designs (different-design page); the form fields themselves are
+    behind the login and not documented in the help pages.] We enter 2 designs and 5 panels; ask if the quote then shows 10 boards.
+21. Min via hole size option: the board has 267 vias and 22 thermal-via pad holes of 0.20 mm drill (0.45 mm pad) and 109 vias of 0.30 mm. The
+    capability page [P]: multilayer via "0.15 mm hole size / 0.25 mm via diameter", smaller vias "will cost more", no amount; the form's option
+    for a 0.20 mm hole must be selected: what does it cost on this panel, and is it a per-panel or per-via fee?
+22. Remove order number: option name and fee on a panel with customer rails [E: from memory of the form]. Silk text of our own sits on the rails;
+    "specify a location" would need a marker the file does not have.
+23. Coordinates: gerbers and CPL are absolute (panel box x 20.0..134.8 mm, y -140.0..-20.0 mm, y up; CPL Mid X / Mid Y are the gerber coordinates, so
+    the negative y is by design). Fabrication Toolkit, the plugin JLC recommends, does the same unless an auxiliary origin is set [source code].
+    Does the upload need the origin at the panel corner, or does the preview place the parts anyway?
+24. Detected size: the Edge.Cuts centre line is 114.800 x 120.000 mm, with the 0.05 mm line 114.850 x 120.050 mm. Which size does the form show?
+25. Four plated slots (0.5 x 1.4 mm, the shell pins of J1, USB-C, not fitted in variant A) are drilled although J1 is not assembled; plated slot
+    minimum 0.35 mm [P: capability page]. Any slot fee? (Option: drop them in a variant A board revision: the engineer's call.)
 
 ## 4. Variant switch before a variant B order (DS-C4)
 The production BOM and CPL come from the PCB file's DNP flags (`tools/fab_package.py` lines that skip `dnp`), not from a csv. The generators
@@ -108,7 +131,9 @@ the PARTS-REVIEW rows carry the evidence.
    pad 1 R = LED_L3, pad 2 G = LED_L4, pad 4 B = LED_L8; D9 (A, bottom): anode pad 3 = LED_L1, pad 1 R = LED_L7, pad 2 G = LED_L6, pad 4
    B = LED_L2. Good: red glows on pad 1, green and blue glow faintly (meter test voltage permitting); no glow on any pair with the leads
    reversed. A part turned 90 degrees moves the anode to another pad: then no pair glows with the red lead on pad 3 (stop, check the CPL
-   rotation of section 7 for that side before the next panel).
+   rotation of section 7 for that side before the next panel). D9 (bottom side) is also the proof of the bottom-side CPL rule of section 7:
+   a rule that is 180 degrees off puts the anode on pad 2 / the pad diagonal to pad 3, and the tests above fail for D9 and D10-D16 only
+   (D1-D8 on the top of board B are fine): then the bottom rule, not the part, is wrong.
 3. LED Vf at 1 uA / 1 mA / 5 mA per colour; ghost glow in the dark with a green die lit (FIRMWARE-RULES rule 1, tree-a finding 10); current
    at minimum-drive pins (D13, 0.77 mA worst case for green/blue).
 4. Read the part code and the memory sizes of U1 over SWD before the first flash: expect nRF54L10, 1012 kB RRAM, 192 kB RAM (UNVERIFIED,
@@ -187,6 +212,14 @@ Ask JLC support or check in the order page's DFM check; write each answer here w
    Checked 2026-11-25 on jlcpcb.com/capabilities: minimum text height "40 mil (1.0mm)", line width ">= 0.15mm"; tree-a rules
    file min_text_height 1.0, board A / B designators 1.0 / 0.15.
 
+7. Via size: 267 vias and 22 thermal-via pad holes have 0.20 mm drill (0.45 mm pad), 109 vias 0.30 mm (`hardware/out/fab/panel/gerbers/panel-PTH.drl`,
+   tools T1 to T3). The capability page lists multilayer vias down to 0.15 mm hole / 0.25 mm diameter [P], the form has a "min via hole size" option
+   and smaller options "cost more" [P, no amount]: select the option that allows 0.20 mm and read the fee in the quote. Fallback if the fee is too high:
+   a router pass at 0.30 mm vias (layout step, board A is frozen: the engineer decides).
+8. Plated slots: 4 x 0.5 x 1.4 mm (J1 shell pins; J1 is not fitted in variant A but its holes are drilled), minimum plated slot width 0.35 mm [P].
+9. Panel mouse-bite holes (60 x 0.6 mm NPTH, 0.35 mm web) and 3 x 0.991 mm Tag-Connect pegs: NPTH minimum 0.5 mm [P]; the bite spacing is below
+   the 0.45 mm pad hole-to-hole figure on purpose (question 19).
+
 ## 6. Before payment (hw-fab-order checklist)
 - [ ] Routed board, gate OK at all DRC severities; `hw-check.sh --strict --stock --qty 5` OK (needs the manual quote above); clean tree.
 - [ ] Engineer's KiCad review done; `fab_package.py --require-clean` run; fab capability page read against the smallest track/via used.
@@ -196,32 +229,54 @@ Ask JLC support or check in the order page's DFM check; write each answer here w
 - [ ] Section 5b answered or its fallback accepted (0.100 mm tracks, thermal via plugging, black-mask dam, JLC04101H-7628 at 1.0 mm
       impedance).
 - [ ] Support answers of section 3 written here; this file updated; `GATES.md` gate 6 status.
+- [ ] Fab package rebuilt on the final commit: `python3 -I hardware/tools/fab_package.py --require-clean --stock hardware/panel/panel.kicad_pcb`
+      ends without FAIL rows (section 9 lists them); the zip name carries the commit; the panel is fresh (`python3 hardware/gen/panel_pcb.py --check`).
+- [ ] Previews read by a human (`hardware/out/fab/panel/previews/`, the two `overview-*-cpl.png` first: every CPL marker on its part, green arrow =
+      CPL rotation), then JLC's own placement preview: D1-D8 (B, top), D9-D16 (A, bottom), J4 (B, bottom), SW1 (A, bottom), U1, ANT1, BT1, J3.
 
-## 7. CPL conventions (fab-footprint fit, 2026-11-23)
+## 7. CPL conventions (fab-footprint fit, 2026-11-23; bottom side settled 2026-11-25)
 JLC places each part as its own EasyEDA footprint drawn at the CPL angle and centre (the placement preview shows exactly that). So the CPL
-rotation is "KiCad angle + correction", where the correction turns the EasyEDA drawing onto our land BY PAD FUNCTION. The centre is the
-board point of the EasyEDA origin. `tools/fab_package.py` computes both from the fit (`--fit-only --offline` prints `corr` and `offset`).
+rotation is "KiCad angle + correction" on the top and "(180 - KiCad angle) + correction" on the bottom (below), where the correction turns the
+EasyEDA drawing onto our land BY PAD FUNCTION. The centre is the board point of the EasyEDA origin. `tools/fab_package.py` computes both from the fit (`--fit-only --offline` prints `corr` and `offset`).
 Never edit the CPL by hand: fix the footprint or the reviewed tables in the tool. Evidence: maker drawings (local PDFs, D11) and the cached
 EasyEDA footprints and symbols in `hardware/out/fab/easyeda/<LCSC>/component.json`.
 
 | Part (LCSC) | Refs, side | Our land vs EasyEDA | Correction (CPL minus KiCad angle) | Origin offset | Check in JLC's placement preview |
 |---|---|---|---|---|---|
-| XL-1010RGB-YG (C965834) | D1-D8 board B top (KiCad 0 -> CPL 90); D9-D16 board A bottom (KiCad 180) | Ours: maker p8 recommended land, 0.45 mm pads at +-0.40 (0.80 pitch), numbers from the p8 top view 1 R- TL, 2 G- TR, 3 anode BL, 4 B- BR. EasyEDA: 0.40 pads at +-0.315 (0.63 pitch, close to the 0.67 terminal centres: terminals 0.32 with 0.35 gaps, p8 pad-side view), numbered counter-clockwise 1 COM+ TL, 2 B- BL, 3 G- BR, 4 R- TR (its symbol pin names), polarity dot and silk "+" at pad 1 = the anode. By function this is the same part turned 90 degrees, not a mirror. The pitch difference does not move the part: both lands share one centre | +90 on top. Bottom: +90 in the tool's mirrored fit (EasyEDA mirrored in x, then fit: board angle 270 for KiCad 180). How JLC's bottom-side rotation maps onto that is UNVERIFIED, and the tool writes no bottom CPL rows yet (open, see below) | 0.00 mm (both origins = body centre) | The EasyEDA anode marker (dot / "+") sits on OUR pad 3 (net LED_L1 on D1 and D9). Board B top, rotation 0: pad 3 is the lower-left pad. Board A bottom, seen from the bottom side: pad 3 is the lower-left pad of the mirrored footprint (top-view board coordinates: +x, +y of the centre) |
-| BH-AAA-B5AA001 (C964881) | BT1 board A top (KiCad -90 -> CPL 270) | Same geometry within 0.001 mm: 7.45 x 6.10 pads, centres +-27.875 / +-5.5, 1.80 NPTH peg hole at (-23.45, -10.45) in both (maker "PCB Layout Diagram", a bottom view = the top view flipped top to bottom). Numbers differ: EasyEDA numbers per cell (1 upper +, 2 upper -, 3 lower +, 4 lower -; its silk "+" at (20.2, -5.0) and (-20.5, 6.0) match the maker top view: upper cell - left / + right, lower cell + left / - right, peg upper left). Ours: 1 = lower-left = pack + (BAT), 2 = upper-left = pack - (GND), 3/4 = right end, series link (BT_LINK). Both describe the same tabs; the netlist uses ours | 0. Never 180: a holder turned 180 degrees reverses the pack, and its peg misses the hole. The tool's geometry fit cannot see the hole and ties 0/180, so the fix is a pad map (open, below) | 0.00 mm | The EasyEDA peg hole lies on our 1.8 mm NPTH at board (45.45, 47.65), beside BT1 pad 2 (GND). The EasyEDA "+" silk next to our pad 1 (BAT, board (29.5, 43.2)) and the other "+" at the far end on the pad 4 side |
-| 2450AT42A100E (C2917719) | ANT1 board A top (KiCad 90 -> CPL 90) | Ours: Johanson land (Doc 36S0021A Rev 2.0 p3): feed pad 1.0 x 1.8, gap 3.9, stub pad 4.0 x 1.8, 8.9 overall; the 5.00 x 2.00 body (p2, terminals a = 0.50 +-0.30) spans the gap, so its centre is the gap centre = our footprint origin. EasyEDA: two 0.8 x 2.3 pads at +-2.5 about the body centre, pad 1 = "ANT" (feed) with its polarity dot; pad 2 lies inside our stub pad. Pad 1 = feed = brown-mark end in both | 0 | 0.00 mm: the CPL centre must be our footprint origin (35.00, 11.65 board, y down). The tool's least-squares centre is 0.75 mm toward the stub: WRONG; the feed terminal would sit half off its 1.0 mm pad. Open, below | The body lies centred on the 3.9 mm gap, both terminals on copper. The EasyEDA dot and brown-mark end is at the feed pad (board y 14.1, toward the RF line) |
-| Boom 2.54-2x4P vertical SMD pin (C192300) | J4 board B bottom (KiCad 180) | Ours: maker drawing PZ2.54-2xNAT P.C.B layout, 2.00 x 1.0 pads, 9.00 +-0.2 outer to outer, so row centres 7.0 mm, 2.54 pitch. EasyEDA: 1.27 x 2.8 pads, rows 5.6 mm apart (title LS7.4 = the 7.40 leg span), drawn turned 90 degrees. Both cover the feet (leg tips 7.40 apart, plastic 5.0 wide, so each foot runs from 2.5 to 3.7 mm off the centre). The part has 8 identical pins and no pin-1 feature on the drawing, so pin 1 is a netlist matter only | 270 (90 gives the same physical result) | 0.00 mm | The 8 legs on the 8 pads; the plastic centred between the two rows |
+| XL-1010RGB-YG (C965834) | D1-D8 board B top (KiCad 0 in board B, 180 in the panel -> CPL 270); D9-D16 board A bottom (KiCad 180 -> CPL 90) | Ours: maker p8 recommended land, 0.45 mm pads at +-0.40 (0.80 pitch), numbers from the p8 top view 1 R- TL, 2 G- TR, 3 anode BL, 4 B- BR. EasyEDA: 0.40 pads at +-0.315 (0.63 pitch, close to the 0.67 terminal centres: terminals 0.32 with 0.35 gaps, p8 pad-side view), numbered counter-clockwise 1 COM+ TL, 2 B- BL, 3 G- BR, 4 R- TR (its symbol pin names), polarity dot and silk "+" at pad 1 = the anode. By function this is the same part turned 90 degrees, not a mirror. The pitch difference does not move the part: both lands share one centre | +90, the same on both sides. Top: KiCad 180 (B in the panel) -> CPL 270. Bottom (D9-D16): KiCad 180 -> CPL (180 - 180) + 90 = 90 (the tool's fit of the mirrored footprint gives 90 as well; bottom convention below, UNVERIFIED at JLC) | 0.00 mm (both origins = body centre) | The EasyEDA anode marker (dot / "+") sits on OUR pad 3 (net LED_L1 on D1 and D9). Board B top, rotation 0: pad 3 is the lower-left pad. Board A bottom, seen from the bottom side: pad 3 is the lower-left pad of the mirrored footprint (top-view board coordinates: +x, +y of the centre) |
+| BH-AAA-B5AA001 (C964881) | BT1 board A top (KiCad -90 -> CPL 270) | Same geometry within 0.001 mm: 7.45 x 6.10 pads, centres +-27.875 / +-5.5, 1.80 NPTH peg hole at (-23.45, -10.45) in both (maker "PCB Layout Diagram", a bottom view = the top view flipped top to bottom). Numbers differ: EasyEDA numbers per cell (1 upper +, 2 upper -, 3 lower +, 4 lower -; its silk "+" at (20.2, -5.0) and (-20.5, 6.0) match the maker top view: upper cell - left / + right, lower cell + left / - right, peg upper left). Ours: 1 = lower-left = pack + (BAT), 2 = upper-left = pack - (GND), 3/4 = right end, series link (BT_LINK). Both describe the same tabs; the netlist uses ours | 0. Never 180: a holder turned 180 degrees reverses the pack, and its peg misses the hole. The tool's geometry fit cannot see the hole and ties 0/180, so the fix is a pad map (`PAD_MAP`, done, see the status below) | 0.00 mm | The EasyEDA peg hole lies on our 1.8 mm NPTH at board (45.45, 47.65), beside BT1 pad 2 (GND). The EasyEDA "+" silk next to our pad 1 (BAT, board (29.5, 43.2)) and the other "+" at the far end on the pad 4 side |
+| 2450AT42A100E (C2917719) | ANT1 board A top (KiCad 90 -> CPL 90) | Ours: Johanson land (Doc 36S0021A Rev 2.0 p3): feed pad 1.0 x 1.8, gap 3.9, stub pad 4.0 x 1.8, 8.9 overall; the 5.00 x 2.00 body (p2, terminals a = 0.50 +-0.30) spans the gap, so its centre is the gap centre = our footprint origin. EasyEDA: two 0.8 x 2.3 pads at +-2.5 about the body centre, pad 1 = "ANT" (feed) with its polarity dot; pad 2 lies inside our stub pad. Pad 1 = feed = brown-mark end in both | 0 | 0.00 mm: the CPL centre must be our footprint origin (35.00, 11.65 board, y down). The tool's least-squares centre is 0.75 mm toward the stub: WRONG; the feed terminal would sit half off its 1.0 mm pad. `ORIGIN_FIT` pins it (done) | The body lies centred on the 3.9 mm gap, both terminals on copper. The EasyEDA dot and brown-mark end is at the feed pad (board y 14.1, toward the RF line) |
+| Boom 2.54-2x4P vertical SMD pin (C192300) | J4 board B bottom (KiCad 180 in board B -> CPL 270; in the panel KiCad 0 -> CPL 90) | Ours: maker drawing PZ2.54-2xNAT P.C.B layout, 2.00 x 1.0 pads, 9.00 +-0.2 outer to outer, so row centres 7.0 mm, 2.54 pitch. EasyEDA: 1.27 x 2.8 pads, rows 5.6 mm apart (title LS7.4 = the 7.40 leg span), drawn turned 90 degrees. Both cover the feet (leg tips 7.40 apart, plastic 5.0 wide, so each foot runs from 2.5 to 3.7 mm off the centre). The part has 8 identical pins and no pin-1 feature on the drawing, so pin 1 is a netlist matter only | 270 in the bottom convention (CPL = (180 - KiCad) + 270: board B alone 270, panel 90; 90 and 270 give the same physical result) | 0.00 mm | The 8 legs on the 8 pads; the plastic centred between the two rows |
 | HC-PM254-8.5H female (C22373945) | J3 board A top (KiCad 0 -> CPL 270) | Fits by number within 0.15 mm (row OK, not printed) | 270 | 0.00 mm | Legs on pads, body centred |
 
-Open for the tool owner (the gate still FAILS on ANT1, BT1, J4 and 14 of the 16 LEDs; see the report of 2026-11-23):
-- `GEOMETRY_OK` holds only the LED's correction 90. The 4 equal LED pads fit equally at every angle, so the geometry fit's pick is float
-  noise: D1 and D9 pass, the others show FAIL (never a wrong OK). BT1 ties 0/180 because the peg hole is not part of the fit. ANT1 and J4
-  exceed `LAND_TOL_MM` (0.70 mm) because the maker lands are longer than EasyEDA's. A table entry cannot express these cases.
-- Proposed (backwards compatible, tested on both boards: `placement fit tree-a: OK`, `tree-b: OK`): a `PAD_MAP` table (EasyEDA ->
-  KiCad pad numbers for C965834 {1:3, 2:4, 3:2, 4:1} and C964881 {1:4, 2:2, 3:1, 4:3}), then a by-number fit. Plus an `ORIGIN_FIT`
-  table (C2917719 1.5 mm, C192300 0.75 mm) that pins the CPL centre to the footprint origin and accepts the longer maker land as LAND.
-- Bottom-side CPL rows (D9-D16 on board A, J4 on board B) are not written: `fab_package.py` stops for an assembled bottom part outside
-  `--fit-only`. Before a board A order, someone must settle JLC's bottom rotation convention against its placement preview (UNVERIFIED) and
-  extend the tool.
+### Bottom-side rule, settled 2026-11-25 (fab_package.py; evidence level: P = JLC page, S = source code of a tool, F = forum / issue text, E = our own check)
+The rule written to the CPL: Layer "Bottom"; Mid X / Mid Y = the part's plain board coordinates (not mirrored, y negated like every KiCad position
+file, so the CPL numbers are the gerber coordinates); Rotation = the angle of the fab's own top-view footprint BEFORE the board is turned over
+about its vertical axis. In KiCad terms (theta = the orientation KiCad stores for the bottom footprint): **bottom CPL = (180 - theta) + correction,
+top CPL = theta + correction, the same correction on both sides**. The tool does not apply the formula: it fits the EasyEDA footprint mirrored in x
+onto the placed pads and reads the rotation off the fit (CPL = minus the fit angle); the formula is the cross-check.
+| Statement | Evidence |
+|---|---|
+| JLC's pages say rotation is in degrees, positive counter-clockwise, Layer is Top / Bottom, one CPL file carries both sides. They say nothing about bottom-side rotation or mirroring ("pick-place-file-for-pcb-assembly", "advice-for-bom-and-cpl-files-preparation", the KiCad BOM/CPL guide, read 2026-11-25) | P |
+| JLC's KiCad guide recommends Fabrication Toolkit (bennymeg) as "the recommended path for JLCPCB orders". Its `plugins/process.py` (commit of 2026-09-29): bottom `rotation = 180 - rotation`, then the database correction is ADDED; comment: "JLC expect 'Rotation' to be 'as viewed from above component', so bottom needs inverting, and ends up 180 degrees out as well"; a position offset has its x sign flipped on the bottom; Mid X / Mid Y are board coordinates minus the auxiliary origin (none set = absolute) | P for the recommendation, S for the code |
+| kicad-jlcpcb-tools (Bouni, `fabrication.py`, commit of 2026-11-23): `if footprint.GetLayer() != 0: rotation = (180 - rotation) % 360` ("bottom angles need to be mirrored on Y-axis"), then `+ correction`; offset x negated on the bottom | S |
+| KiBot's JLCPCB template: filter `_rot_footprint_jlcpcb` = `mirror_bottom: true, negative_bottom: false`, documented as "(180 - component rot + angle) ... This is used by JLCPCB"; doc: "KiCad mirrors components on the bottom side, but JLCPCB doesn't (november 2023)" | S |
+| Against it: KiBot issue 510 (2023-11): "JLCPCB changed at least three times the way bottom rotation must be applied"; the plugin of that date computed `180 - (rot + angle)`, which KiBot calls wrong (the toolkit's current code is the corrected form above). EasyEDA forum threads: default exports with bottom parts "rotated 180 degrees" in the preview, support: the preview is "not a 100 % reference" | F |
+| KiCad stores a bottom footprint as pad = centre + rotate(mirror_y(land pad), theta): checked on the panel file, D9 (theta 180): land pad 1 at (-0.4, -0.4) sits at (+0.4, -0.4) from the centre. With JLC's model (rotate the top-view footprint, then turn the board over about the vertical axis) this gives exactly the formula above | E (tool output) |
+| The fit of the mirrored fab footprint gives CPL 90 for D9-D16 (KiCad 180) and 270 for D1-D8 (KiCad 180, top): correction 90 on both sides, as the formula says; `fab_package.py --selftest` proves rotation, centre and correction for every KiCad angle (0, 90, 180, 270) and every correction on a synthetic asymmetric land, top and bottom | E |
+| What JLC really does with a bottom row is UNVERIFIED until the placement preview is read: three open-source tools agree today, JLC states nothing, and JLC changed the rule before | open |
+Rotation table (panel; "naive" = KiCad angle + top correction, what a rule "same as the top" would write; "old fit" = the angle the mirrored fit printed
+before the tool knew the bottom rule, equal to naive here):
+| Part | Side | KiCad angle in the panel | naive / old fit | CPL written now | formula (180 - theta) + corr | note |
+|---|---|---|---|---|---|---|
+| D9-D16 (A) | Bottom | 180 | 270 | 90 | (180 - 180) + 90 = 90 | LED: the two rules differ by 180 degrees: the anode lands on the wrong pad if the rule is wrong |
+| D1-D8 (B, rotated 180 in the panel) | Top | 180 | 270 | 270 | 180 + 90 = 270 | top rule; the +180 of B is inside theta |
+| J4 (B) | Bottom | 0 | 270 | 90 | (180 - 0) + 270 = 450 = 90 | 180-symmetric body: 90 and 270 look the same |
+| SW1 (A) | Bottom | 0 | 180 | 180 | (180 - 0) + 0 = 180 | 2-pad switch, symmetric |
+| TC1 (A) | Bottom | 180 | not assembled | not in the CPL | | pads only, no part |
+Status of the earlier open items (D30, tool owner): `PAD_MAP` (C965834, C964881) and `ORIGIN_FIT` (C2917719, C192300) exist in the tool and the fit
+rows are OK or LAND for both boards and the panel; bottom CPL rows are written (this section); `GEOMETRY_OK` keeps only the parts that need a human
+entry.
 
 ## 8. The two-design panel: BOM, CPL, fiducials (2026-11-24, panel builder; evidence: P page quote, S search snippet, E estimate)
 Built by `gen/panel_pcb.py` (numbers in `panel/BOARD.md`). What changes for the order compared with single boards:
@@ -240,13 +295,75 @@ Built by `gen/panel_pcb.py` (numbers in `panel/BOARD.md`). What changes for the 
    from the pads (`fab_package.py --fit-only --offline hardware/panel/panel.kicad_pcb`: `placement fit panel: OK`, 2026-11-24); nobody
    adds 180 by hand. The J4 mating proof (tree_geometry --kicad-proof) is about the board file; the panel copy is rigid (gate row: worst
    pad deviation 0.000000 mm), so the proof holds in the panel. [E: tool output]
-5. Bottom side: A's D9-D16 and B's J4 are assembled bottom parts. `fab_package.py` refuses bottom CPL rows today (section 7), so the panel
-   package stops at the first one exactly like the board A package would: same open item, same fix (JLC bottom convention from the
-   placement preview, then the tool). [E]
+5. Bottom side: A's D9-D16 and SW1 and B's J4 are assembled bottom parts (10 rows, `Bottom`). `fab_package.py` writes them with the rule of
+   section 7 (CPL = (180 - KiCad angle) + correction, plain board coordinates; source code of three tools, JLC's pages silent). The placement
+   preview of these 10 parts is the human proof (section 6). [S/E, not verified at JLC]
 6. Fiducials: global only, on the rails: FID1-FID3 on the top face, FID4-FID6 on the bottom face at the same three points (1.0 mm copper,
    2.0 mm mask, 3.85 mm from the panel edge, not 180-degree symmetric) [P sizes and 3.85; count "Three to four" P]. No local fiducials on
    the boards (none in the board files; U1 is a 0.4 mm pitch QFN: ask whether local fiducials near U1 are wanted [E]).
 7. Stencils: one per face for the whole panel (two-sided assembly D6), cut from the panel paste layers (both designs). [E]
 8. Rails stay on at delivery unless removal is ordered [P: "Removal requires notice at order placement, and Additional post-processing
    fees will apply" (edge-rails article)]: we break the tabs by hand; keep it.
-9. Size for the quote: 114.8 x 120.0 mm, 4 layers, 1.0 mm, ENIG, black mask, panel by customer, 2 designs, 5 panels (section 2 step 1).
+9. Size for the quote: 114.8 x 120.0 mm, 4 layers, 1.0 mm, ENIG, black mask, panel by customer, 2 designs, 5 panels (section 2 step 1); the exact cart
+   is in section 9.
+
+## 9. The fab package of the panel and the cart (gate 6, 2026-11-25)
+Command (clean committed tree, `source scripts/kicad-env.sh`; the first run without `--offline` fills the EasyEDA footprint cache, the cache is there):
+`python3 -I hardware/tools/fab_package.py --require-clean --stock hardware/panel/panel.kicad_pcb` -> `hardware/out/fab/panel/` (ignored by git; the
+zip name carries the commit, the silk of the three panel texts and the board texts show the same commit). `--stock` needs the network (fab parts
+library, 0.25 s per part). Without a network drop `--stock`.
+Files: `panel-<commit>-gerbers.zip` (11 gerbers + PTH and NPTH drill, flat, fixed time stamps), `panel-bom.csv`, `panel-cpl.csv`, `placement-fit.txt`,
+`checks.txt`, `README-order.txt` (cart and checks as the tool printed them), `previews/` (a PNG per layer, bottom layers seen from the back, face
+overviews, and the two `overview-*-cpl.png` with every CPL point and rotation arrow on the gerber render).
+Gerber settings (JLC KiCad 9 guide, "how-to-generate-gerber-and-drill-files-in-kicad-9", read 2026-11-25 [P]): layers F.Cu, In1.Cu, In2.Cu, B.Cu, F/B
+Mask, F/B Silkscreen, F/B Paste, Edge.Cuts; Protel extensions; check zone fills; drill marks none; scale 1:1; filled plot; X2 attributes ON and netlist
+attributes ON; coordinates 4.6 mm; no job file (dropped); drill: Excellon, mm, absolute origin, decimal zeros, alternate mode for oval holes, PTH and
+NPTH in separate files. Subtract soldermask from silk is kept (KiCad 7/8 guides [P]; the KiCad 9 page does not list it). The earlier tool version plotted
+WITHOUT X2 and netlist attributes (an older reading: the KiCad 5 guide says X2 "don't care", the KiCad 6 guide ticks it); changed because the current
+guide says tick, JLC uses the netlist for its DFM check. The attributes hold layer function, project name `panel`, creation date, net and pin names:
+the privacy scan below covers them. Proposed wording for the `hw-fab-order` skill (line "no X2 or netlist attributes"): "follow the fab's current KiCad
+guide for X2 and netlist attributes (JLC: both on)".
+CART (PCB step; field names from the order form as known, E: the form is behind the login, a renamed field is mapped by the human; the tool prints the
+same table into `README-order.txt`):
+| Field | Setting | Evidence |
+|---|---|---|
+| Base material / layers | FR-4, 4 | board file |
+| Dimensions | 114.8 x 120 mm (the form may show 114.85 x 120.05, the 0.05 mm Edge.Cuts line; question 24) | gerber check |
+| Delivery format | Panel by Customer (no JLC rails, no V-cut) | P: at most 10 designs in the panelized Gerber; complex outlines are panelized by the customer |
+| Different design | 2 (A and B separable at the tabs) | P: boards separable by milling or drill holes count as different; the form's exact semantics: question 20 |
+| PCB quantity | 5 (panels = ornaments) | D1 |
+| PCB thickness | 1.0 mm | board file; P: 1.0 mm offered for 4 layers |
+| Layer stack-up | JLC04101H-7628 (the default for 1.0 mm, D5) | D5; the stack's values are not on the capability page (5b item 5) |
+| Impedance control | No | D5: the 50 ohm line is computed on this stack (calc/impedance.py, 49.4 ohm); open question 5b.5; the fee-paying alternative is impedance control on the F.Cu / In1 pair |
+| PCB colour / silkscreen | Black / White | board file, P: black offered with no surcharge stated |
+| Surface finish | ENIG (D5, fine-pitch QFN, 0201) | board file |
+| Outer / inner copper | 1 oz / 0.5 oz | `board.yaml` stackup (inner 0.0152 mm) |
+| Via covering | Tented | mask layers as plotted; 5b item 3 asks about plugging the thermal vias |
+| Min via hole size | the option that allows 0.20 mm | 267 vias + 22 pad holes at 0.20 mm; P: capability 0.15 mm / 0.25 mm, smaller "costs more", no amount (5b item 7, question 21) |
+| Remove order number | Yes | engineer's job text; fee unknown (question 22) |
+| Confirm production file | Yes | P: JLC advises it for slots and complex files |
+| Outline tolerance, test | form defaults (routed +-0.2 mm, flying probe) | E |
+| Assembly | Standard, side Both, PCBA qty 5, tooling holes / rails / fiducials added by the customer, Confirm parts placement Yes | D6, section 8 |
+| BOM / CPL upload | "files already contain complete panelized data" | P (matching page option), question 14 |
+Bare PCB and shipping stay a MANUAL quote (section 2): the tool cannot read the cart.
+Checks of the run (each prints a row in `checks.txt`; result of 2026-11-25 on the committed boards, all OK):
+| Check | Result |
+|---|---|
+| DRC, all severities, zones refilled, no schematic parity (the panel has none) | 0 errors, 0 open warnings, 0 unconnected, 13 waived warnings (`panel/drc-waivers.csv`, the boards' lib_footprint_mismatch with their reasons) |
+| Placement fit (`--fit-only --offline`, in the package run too) | `placement fit panel: OK`, 67 placements, 10 bottom; LAND rows ANT1, J4 (maker land longer than the fab's, ORIGIN_FIT) |
+| Bottom correction = top correction (C965834 on both sides) | 90 and 90; C192300 (J4) and C49234124 (SW1) are bottom only |
+| Designators unique: CPL 67, BOM 67 in 36 lines, board file 105 footprints | OK |
+| BOM and CPL cover the same 67 parts; BOM = tree-a + tree-b `bom.csv` (same designators per fab number) | OK |
+| CPL spacing (JLC: above 0.2 mm) | closest D12 / R10 0.750 mm over both faces; one face C6 / L3 1.011 mm |
+| Extended parts | 23 unique Extended (22 of tree-a, J4 of tree-b; the 2 Preferred Extended cost nothing, rule UNVERIFIED as in `bom_check.py`) x 1.53 USD = 35.19 USD, the same set as `calc/bom_check.py` (23, order 230.73 USD before PCB and shipping on 2026-11-25, limit 250) |
+| Stock (`--stock`, need = designators x 5) | all 36 fab numbers in stock, no part out of stock (so no alternate needed); lowest margin LED C965834 3641 for 80 (45 x), then U1 C44800139 768 for 5, J3 C22373945 846, J4 C192300 1203, ANT1 C2917719 1528 (lookup 2026-11-25; stock changes: recheck before paying, section 6) |
+| Cart against the board file | ENIG, black, white silk, 1.0 mm, 4 layers: OK |
+| Gerber re-read (`tools/gerber_check.py`, own RS-274X / Excellon reader against `tools/pcb_facts.py` of the board) | 13 files, unit mm 4.6, X2 function of the 4 copper files L1..L4, Edge.Cuts 82 pieces / 6 closed contours / no open end / 114.800 x 120.000 mm / length 1103.16 mm = the board, PTH 406 + NPTH 70 hits equal the board's 476 holes by diameter and position (0.0011 mm), every plated hole on copper of both outer layers, no copper in any non-plated hole |
+| Privacy scan of every file and zip member (home path, user, host and computer name, e-mail) | clean; the scan matches whole words (a 3-letter host name matched "Macros" in a gerber comment) |
+Plated vs non-plated: 406 PTH hits = 267 + 22 at 0.20 mm, 109 at 0.30 mm, 4 slots 0.5 x 1.4 mm (J1), 4 mounts 2.2 mm (MH1-MH4); 70 NPTH = 60 mouse-bite holes
+0.6 mm, 4 tooling holes 2.0 mm, 2 hang / hole 1.4 mm, 3 Tag-Connect pegs 0.991 mm, BT1 peg 1.8 mm.
+Previews read 2026-11-25 (by the builder, not a substitute for the human): overviews and layers show A upright with U1 / J3 / BT1 / U2 / Q1 on the top, B
+turned 180 degrees with D1-D8, rails with the three silk texts, fiducials and tooling holes; the bottom face shows A's D9-D16, TC1 and SW1 (the silk
+designator SW1 appears twice, above and below the switch: a cosmetic point for the engineer), and B's J4; every CPL marker lies on its part on both faces.
+Not covered by any check here: JLC's own DFM and placement preview, the real quote, a third-party gerber viewer (gerbv and gerbonara are not installed
+here; the reader in `gerber_check.py` is the re-import), copper-to-edge and clearance on the plotted gerbers (the DRC runs on the board file).
