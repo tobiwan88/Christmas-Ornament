@@ -129,7 +129,9 @@ FINISH_TRACKS = [
 FINISH_FENCE = [(18.22, 55.38), (14.78, 51.14), (18.05, 46.41), (21.37, 41.78), (24.88, 26.14), (28.22, 18.35),
                 (43.35, 21.52), (44.76, 27.0), (43.31, 32.92), (55.62, 51.37), (68.3, 75.2), (64.5, 75.0), (56.1, 75.2),
                 (50.8, 75.2), (1.57, 75.36), (4.34, 72.2)]
-FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE]
+# decoupling return vias (review B3, reviewer-tested): C7.2 and C8.2 straight into the planes
+FINISH_GND = [(38.78, 25.3), (39.81, 23.9)]
+FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE + FINISH_GND]
 # frozen router vias moved on replay (with their own track ends): (net, (x, y) frozen, (x, y) new)
 FROZEN_MOVES = [
     # 0.13 mm (pad bounding box) to its own C30.1 pad; 'via to SMD pad' 0.15 also for the own net (--proof row)
