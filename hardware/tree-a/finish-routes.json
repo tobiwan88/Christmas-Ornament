@@ -1,5 +1,5 @@
 {
- "_comment": "Gate 5 fix round (power review F2/F3): VBUS re-routed AFTER the freeze on the committed board with every other net locked (KiCadRoutingTools route.py --nets VBUS --track-width 0.127 --clearance 0.15 --escalation off, F.Cu/B.Cu); via 47.80/75.35 moved to 75.43 (0.15 mm to its own C30.1). gen/tree_a_pcb.py drops the frozen VBUS vias and VBUS tracks under 0.12 mm and draws these locked (hand group close_top). Also re-routed whole at 0.127 mm (clearance 0.10, board rules, same-net pad clearance 0.15, In2 allowed for these nets, --escalation off, one at a time): /mcu/TPS_SEL, /leds/LED_L5_MCU; LED_L2, LED_L7_MCU, LED_L6_MCU, LED_L8_MCU, LED_L4_MCU did not route at 0.127 and stay as frozen.",
+ "_comment": "Gate 5 fix round (power review F2/F3): VBUS re-routed AFTER the freeze on the committed board with every other net locked (KiCadRoutingTools route.py --nets VBUS --track-width 0.127 --clearance 0.15 --escalation off, F.Cu/B.Cu); via 47.80/75.35 moved to 75.43 (0.15 mm to its own C30.1). gen/tree_a_pcb.py drops the frozen VBUS vias and VBUS tracks under 0.12 mm and draws these locked (hand group close_top). Also re-routed whole at 0.127 mm (clearance 0.10, board rules, same-net pad clearance 0.15, In2 allowed for these nets, --escalation off, one at a time): /mcu/TPS_SEL, /leds/LED_L5_MCU; LED_L2, LED_L7_MCU, LED_L6_MCU, LED_L8_MCU, LED_L4_MCU did not route at 0.127 and stay as frozen. Panel edge A14 (coordinator item 4): the copper of SWDIO, nRESET_TC, SWDCLK and LED_L1 with an end within 1.0 mm of A14 (42.036/29.555 - 57.0/52.0) is dropped (EDGE_REROUTE) and re-routed with a keep-out band 0.72 mm wide along A14 (0.127 mm, clearance 0.10, same-net pad 0.15, In2 cost 3.0, --escalation off): copper >= 0.72 mm from that edge.",
  "tracks": [
   {
    "net": "VBUS",
@@ -1716,6 +1716,1072 @@
     38.5,
     33.225
    ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    42.3,
+    34.6
+   ],
+   "b": [
+    43.85,
+    36.15
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    43.825,
+    36.25
+   ],
+   "b": [
+    43.825,
+    36.6
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    43.825,
+    36.6
+   ],
+   "b": [
+    45.15,
+    37.925
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    43.85,
+    36.15
+   ],
+   "b": [
+    43.85,
+    36.225
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    43.85,
+    36.225
+   ],
+   "b": [
+    43.825,
+    36.25
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.075,
+    45.2
+   ],
+   "b": [
+    47.075,
+    56.875
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.075,
+    56.875
+   ],
+   "b": [
+    49.0,
+    58.8
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.1,
+    45.1
+   ],
+   "b": [
+    47.1,
+    45.175
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.1,
+    45.175
+   ],
+   "b": [
+    47.075,
+    45.2
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.125,
+    45.05
+   ],
+   "b": [
+    47.125,
+    45.075
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.125,
+    45.075
+   ],
+   "b": [
+    47.1,
+    45.1
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    47.8,
+    44.375
+   ],
+   "b": [
+    47.125,
+    45.05
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    49.7,
+    59.375
+   ],
+   "b": [
+    49.7,
+    59.5
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    49.0,
+    58.8
+   ],
+   "b": [
+    49.475,
+    59.275
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    49.475,
+    59.275
+   ],
+   "b": [
+    49.8,
+    59.275
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    45.15,
+    37.95
+   ],
+   "b": [
+    45.15,
+    38.375
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    45.15,
+    38.375
+   ],
+   "b": [
+    45.525,
+    38.75
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    45.525,
+    38.75
+   ],
+   "b": [
+    45.525,
+    40.35
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    45.525,
+    40.35
+   ],
+   "b": [
+    47.8,
+    42.625
+   ]
+  },
+  {
+   "net": "/leds/LED_L1",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    47.8,
+    42.625
+   ],
+   "b": [
+    47.8,
+    44.35
+   ]
+  },
+  {
+   "net": "/mcu/SWDCLK",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    41.45,
+    32.95
+   ],
+   "b": [
+    46.8,
+    38.3
+   ]
+  },
+  {
+   "net": "/mcu/SWDCLK",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    46.8,
+    38.3
+   ],
+   "b": [
+    46.8,
+    39.275
+   ]
+  },
+  {
+   "net": "/mcu/SWDCLK",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    46.8,
+    39.275
+   ],
+   "b": [
+    48.75,
+    41.225
+   ]
+  },
+  {
+   "net": "/mcu/SWDCLK",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    48.75,
+    41.225
+   ],
+   "b": [
+    48.75,
+    46.175
+   ]
+  },
+  {
+   "net": "/mcu/SWDCLK",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    48.75,
+    46.175
+   ],
+   "b": [
+    50.65,
+    48.075
+   ]
+  },
+  {
+   "net": "/mcu/SWDCLK",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    50.65,
+    48.075
+   ],
+   "b": [
+    50.65,
+    59.5
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    44.775,
+    41.475
+   ],
+   "b": [
+    47.425,
+    44.125
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.375,
+    44.3
+   ],
+   "b": [
+    47.375,
+    44.4
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.375,
+    44.4
+   ],
+   "b": [
+    47.4,
+    44.425
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.4,
+    44.2
+   ],
+   "b": [
+    47.4,
+    44.275
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.4,
+    44.275
+   ],
+   "b": [
+    47.375,
+    44.3
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.4,
+    44.425
+   ],
+   "b": [
+    47.4,
+    44.5
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.4,
+    44.5
+   ],
+   "b": [
+    47.425,
+    44.525
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.425,
+    44.125
+   ],
+   "b": [
+    47.425,
+    44.175
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.425,
+    44.175
+   ],
+   "b": [
+    47.4,
+    44.2
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.425,
+    44.525
+   ],
+   "b": [
+    47.425,
+    44.55
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.425,
+    44.55
+   ],
+   "b": [
+    47.65,
+    44.775
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    47.65,
+    44.775
+   ],
+   "b": [
+    48.25,
+    44.775
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.25,
+    44.775
+   ],
+   "b": [
+    48.275,
+    44.8
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.275,
+    44.8
+   ],
+   "b": [
+    48.35,
+    44.8
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.35,
+    44.8
+   ],
+   "b": [
+    48.375,
+    44.825
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.375,
+    44.825
+   ],
+   "b": [
+    48.4,
+    44.825
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.4,
+    44.825
+   ],
+   "b": [
+    48.95,
+    45.375
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.95,
+    45.375
+   ],
+   "b": [
+    48.95,
+    51.375
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.95,
+    51.375
+   ],
+   "b": [
+    48.975,
+    51.4
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.975,
+    51.4
+   ],
+   "b": [
+    48.975,
+    51.45
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    48.975,
+    51.45
+   ],
+   "b": [
+    50.25,
+    52.725
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    50.25,
+    52.725
+   ],
+   "b": [
+    50.25,
+    53.95
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    50.9,
+    54.25
+   ],
+   "b": [
+    50.75,
+    54.25
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    39.575,
+    29.1
+   ],
+   "b": [
+    39.575,
+    33.075
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    39.575,
+    33.075
+   ],
+   "b": [
+    43.425,
+    36.925
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.25,
+    28.425
+   ],
+   "b": [
+    39.575,
+    29.1
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    41.275,
+    28.425
+   ],
+   "b": [
+    40.25,
+    28.425
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    41.85,
+    27.85
+   ],
+   "b": [
+    41.275,
+    28.425
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    43.425,
+    36.925
+   ],
+   "b": [
+    43.425,
+    39.0
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    43.425,
+    39.0
+   ],
+   "b": [
+    44.775,
+    40.35
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    44.775,
+    40.35
+   ],
+   "b": [
+    44.775,
+    41.475
+   ]
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    50.1,
+    54.1
+   ],
+   "b": [
+    51.05,
+    54.1
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    44.25,
+    36.3
+   ],
+   "b": [
+    45.9,
+    37.95
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    45.9,
+    37.95
+   ],
+   "b": [
+    45.9,
+    38.9
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.275,
+    29.55
+   ],
+   "b": [
+    40.275,
+    29.575
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.275,
+    29.575
+   ],
+   "b": [
+    40.875,
+    30.175
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.375,
+    29.05
+   ],
+   "b": [
+    40.375,
+    29.075
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.375,
+    29.075
+   ],
+   "b": [
+    40.4,
+    29.1
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.375,
+    29.425
+   ],
+   "b": [
+    40.375,
+    29.45
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.375,
+    29.45
+   ],
+   "b": [
+    40.275,
+    29.55
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.4,
+    29.1
+   ],
+   "b": [
+    40.4,
+    29.175
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.4,
+    29.175
+   ],
+   "b": [
+    40.425,
+    29.2
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.4,
+    29.325
+   ],
+   "b": [
+    40.4,
+    29.4
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.4,
+    29.4
+   ],
+   "b": [
+    40.375,
+    29.425
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.425,
+    29.2
+   ],
+   "b": [
+    40.425,
+    29.3
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.425,
+    29.3
+   ],
+   "b": [
+    40.4,
+    29.325
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.575,
+    28.85
+   ],
+   "b": [
+    40.375,
+    29.05
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.875,
+    30.175
+   ],
+   "b": [
+    40.875,
+    30.375
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.875,
+    30.375
+   ],
+   "b": [
+    40.95,
+    30.45
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.95,
+    30.45
+   ],
+   "b": [
+    40.95,
+    31.8
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    40.95,
+    31.8
+   ],
+   "b": [
+    41.7,
+    32.55
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    41.7,
+    32.55
+   ],
+   "b": [
+    41.7,
+    33.15
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    41.7,
+    33.15
+   ],
+   "b": [
+    43.125,
+    34.575
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    43.125,
+    34.575
+   ],
+   "b": [
+    43.125,
+    34.65
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    43.125,
+    34.65
+   ],
+   "b": [
+    44.375,
+    35.9
+   ]
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    44.375,
+    35.9
+   ],
+   "b": [
+    44.375,
+    36.175
+   ]
   }
  ],
  "vias": [
@@ -1814,6 +2880,96 @@
    "at": [
     34.35,
     28.65
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L1",
+   "at": [
+    45.15,
+    37.95
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L1",
+   "at": [
+    47.8,
+    44.35
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L1",
+   "at": [
+    49.0,
+    58.8
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L1",
+   "at": [
+    49.8,
+    59.275
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "at": [
+    44.775,
+    41.475
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "at": [
+    50.1,
+    54.1
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/SWDIO",
+   "at": [
+    51.05,
+    54.1
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "at": [
+    40.575,
+    28.85
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "at": [
+    44.25,
+    36.3
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/nRESET_TC",
+   "at": [
+    45.95,
+    38.95
    ],
    "size": 0.45,
    "drill": 0.2

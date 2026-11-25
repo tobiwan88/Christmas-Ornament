@@ -133,7 +133,7 @@ FINISH_CHG = [(41.81, 78.5), (53.97, 75.25), (56.21, 74.35), (53.21, 72.9), (39.
 # GND edge fence (emi.yaml 5.0 mm pitch on the real outline): the router's --stitch-edge-fence left gaps (no 2-layer
 # fill / no clear site); sites from a clearance search on the frozen board (0.45 / 0.2, 0.8-1.4 mm inset)
 FINISH_FENCE = [(18.22, 55.38), (14.78, 51.14), (18.05, 46.41), (21.37, 41.78), (24.88, 26.14), (28.22, 18.35),
-                (43.35, 21.52), (44.76, 27.0), (43.31, 32.92), (55.62, 51.37), (68.3, 75.2), (64.5, 75.0), (56.1, 75.2),
+                (43.35, 21.52), (44.76, 27.0), (43.18, 33.01), (55.49, 51.46), (68.3, 75.2), (64.5, 75.0), (56.1, 75.2),
                 (50.8, 75.2), (1.57, 75.36), (4.34, 72.2)]
 # decoupling return vias (review B3, reviewer-tested): C7.2 and C8.2 straight into the planes
 FINISH_GND = [(38.78, 25.3), (39.81, 23.9)]
@@ -531,7 +531,21 @@ def load_profile():
 
 FROZEN = BOARD_DIR / "frozen-routes.json"
 FINISH_ROUTES = BOARD_DIR / "finish-routes.json"   # post-freeze re-route (VBUS, fix round): replaces the frozen copper of
-FINISH_REPLACE = {"VBUS": 0.12, "/mcu/TPS_SEL": 9.9, "/leds/LED_L5_MCU": 9.9}         # frozen tracks of these nets below this width + their frozen vias go
+FINISH_REPLACE = {"VBUS": 0.12, "/mcu/TPS_SEL": 9.9, "/leds/LED_L5_MCU": 9.9}
+# panel edge A14 (tabs T1 / T2): frozen copper of these nets with an end within `near` mm of the edge line is dropped,
+# its replacement (routed with a 0.72 mm keep-out band along the edge) is in finish-routes.json
+EDGE_REROUTE = {"line": ((42.036, 29.555), (57.0, 52.0)), "near": 1.0,
+                "nets": ("/mcu/SWDIO", "/mcu/nRESET_TC", "/mcu/SWDCLK", "/leds/LED_L1"),
+                "drop": [("/mcu/SWDIO", (41.85, 27.85), (41.5, 28.2))]}   # stub left by the dropped SWDIO via 41.85/27.85
+
+
+def _edge_near(q):
+    (ax, ay), (cx, cy) = EDGE_REROUTE["line"]
+    L = math.dist((ax, ay), (cx, cy))
+    ux, uy = (cx - ax) / L, (cy - ay) / L
+    d = (q[0] - ax) * -uy + (q[1] - ay) * ux
+    s = (q[0] - ax) * ux + (q[1] - ay) * uy
+    return -1 <= s <= L + 1 and d < EDGE_REROUTE["near"]         # frozen tracks of these nets below this width + their frozen vias go
 
 
 def _opt(args, name, default=None):
@@ -1277,9 +1291,13 @@ def stage2(job_file):
     routes = job.get("routes") or {}
     if "close_top" in P.hand and routes and job.get("finish"):
         fin = job["finish"]
-        routes = {"tracks": [t for t in routes["tracks"] if not (t["net"] in FINISH_REPLACE and t["w"] < FINISH_REPLACE[t["net"]])]
-                  + fin["tracks"],
-                  "vias": [v for v in routes["vias"] if v["net"] not in FINISH_REPLACE] + fin["vias"]}
+        ed = EDGE_REROUTE["nets"]
+        routes = {"tracks": [t for t in routes["tracks"] if not (t["net"] in FINISH_REPLACE and t["w"] < FINISH_REPLACE[t["net"]])
+                             and not (t["net"] in ed and (_edge_near(t["a"]) or _edge_near(t["b"])))
+                             and not any(t["net"] == n_ and {tuple(t["a"]), tuple(t["b"])} == {a_, b_}
+                                         for n_, a_, b_ in EDGE_REROUTE["drop"])] + fin["tracks"],
+                  "vias": [v for v in routes["vias"] if v["net"] not in FINISH_REPLACE
+                           and not (v["net"] in ed and _edge_near(v["at"]))] + fin["vias"]}
 
     def moved(net, q):                       # FROZEN_MOVES (close_top builds only)
         if "close_top" in P.hand:
