@@ -66,7 +66,7 @@ POUR_EDGE_MM = 0.5             # inner pours: back from the outline (the keep-ou
 TRACK_W_DEFAULT = 0.2          # only used by the hand route fallback; routes come with their own widths
 EDGE_W = 0.1
 SILK_TEXT_THICK = 0.15         # rules/jlc-4layer.json min_text_thickness
-SILK_TEXT_H = 1.0              # >= 0.8 mm (rules/jlc-4layer.json min_text_height)
+SILK_TEXT_H = 1.0              # JLC capabilities: text height >= 1.0 mm, stroke >= 0.15 mm (designators too, fix round)
 BOARD_NAME_TEXT = "TREE-01 B"
 NS = uuid.uuid5(uuid.NAMESPACE_URL, "tree-b/pcb")
 
@@ -227,6 +227,13 @@ def footprint(ref: str, fpname: str, x: float, y: float, layer: str, rot: float,
         q = list(p)
         if pn == "Reference":
             q[2] = Q(ref)
+            for eff in children(q, "effects"):       # fix round (render review): designators 1.0 mm (JLC minimum text height)
+                for font in children(eff, "font"):
+                    for sz in children(font, "size"):
+                        sz[1], sz[2] = num(SILK_TEXT_H), num(SILK_TEXT_H)
+            if ref.startswith("D"):                  # 1.0 mm text: 0.3 mm further out, clear of the LED's own silk
+                for at in children(q, "at"):
+                    at[2] = num(float(at[2]) - 0.3 if float(at[2]) < 0 else float(at[2]) + 0.3)
         elif pn == "Value":
             q[2] = Q(props.get("Value", p[2]))
         elif pn == "Datasheet":

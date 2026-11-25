@@ -246,10 +246,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D1"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "aa8a5c0d-389d-5c96-9fba-71c603823cfd")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -369,10 +369,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D2"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "92f3df29-a8b3-528f-bba9-c167aa0d9e01")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -492,10 +492,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D3"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "86779d08-4cd6-51e2-a7af-3f3495ed7e0d")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -615,10 +615,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D4"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "6ea82a60-45a9-55ce-b34f-d09cf40fae38")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -738,10 +738,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D5"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "7f2a3014-f587-54ba-925d-b4559c85614f")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -861,10 +861,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D6"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "bc9039fb-1b30-5dfc-b3cb-ce24b3eaa869")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -984,10 +984,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D7"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "2dfde9f5-1e9f-53aa-b70c-2b10801003d4")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -1107,10 +1107,10 @@
 		)
 		(tags "LED RGB 1010")
 		(property "Reference" "D8"
-			(at 0 -1.62 0)
+			(at 0 -1.92 0)
 			(layer "F.SilkS")
 			(uuid "b1248b74-f950-5cd4-884d-29efa097f45f")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "XL-1010RGB-YG"
 			(at 0 1.62 0)
@@ -1233,7 +1233,7 @@
 			(at 0 6.13 0)
 			(layer "B.SilkS")
 			(uuid "45a97420-bbab-53a0-9261-62609cc63ebb")
-			(effects (font (size 0.8 0.8) (thickness 0.15)) (justify mirror))
+			(effects (font (size 1 1) (thickness 0.15)) (justify mirror))
 		)
 		(property "Value" "2x4 M"
 			(at 0 -6.13 0)
@@ -1407,7 +1407,7 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "fa4e828b-91b6-5753-9c20-7aa57f883e28")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "MountingHole_Pad"
 			(at 0 3.15 0)
@@ -1477,7 +1477,7 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "993dd68d-a9c8-5e78-a913-0dc764c2a580")
-			(effects (font (size 0.8 0.8) (thickness 0.15)))
+			(effects (font (size 1 1) (thickness 0.15)))
 		)
 		(property "Value" "MountingHole_Pad"
 			(at 0 3.15 0)
