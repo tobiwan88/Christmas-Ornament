@@ -10,3 +10,10 @@ CLAUDE.local.md
 hardware/*/datasheets/*
 !hardware/*/datasheets/README.md
 .venv/
+
+# KiCad per-user files: the lock file holds the host and user name, .history is a nested git repo of local snapshots
+*.lck
+.history/
+
+# local render output (Blender scene, frames, video, about 800 MB): generated, not part of the hardware record
+/render/
