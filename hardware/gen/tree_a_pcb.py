@@ -117,6 +117,25 @@ CLOSE_TRACKS = [
 CLOSE_VIAS = [("VDD", 19.45, 43.75, 0.45, 0.2), ("/charger/VBUS_DET", 22.95, 39.50, 0.45, 0.2),
               ("/mcu/BTN_SW1", 31.35, 21.35, 0.45, 0.2), ("/charger/VBUS_DET", 30.65, 21.55, 0.45, 0.2),
               ("VDD", 29.75, 21.75, 0.45, 0.2)]
+# gate 5 finish, AFTER the freeze (generator only, not in tree_a_edit.py, so a plan re-run reproduces the frozen router
+# result; drawn locked with "close_top"): emi_check / --proof fixes on top of the frozen copper.
+FINISH_TRACKS = [
+    # TPS63900 input loop: the router's VIN track crosses C20.1 mid-segment (no end in the pad); a stub from the pad
+    # centre to that track's end gives emi_check's copper graph the C20.1 -> U2.10 path (same copper, 0.75 mm)
+    ("VIN", "F.Cu", 0.3, [(17.13, 60.23), (17.75, 59.80)]),
+]
+# GND edge fence (emi.yaml 5.0 mm pitch on the real outline): the router's --stitch-edge-fence left gaps (no 2-layer
+# fill / no clear site); sites from a clearance search on the frozen board (0.45 / 0.2, 0.8-1.4 mm inset)
+FINISH_FENCE = [(18.22, 55.38), (14.78, 51.14), (18.05, 46.41), (21.37, 41.78), (24.88, 26.14), (28.22, 18.35),
+                (43.35, 21.52), (44.76, 27.0), (43.31, 32.92), (55.62, 51.37), (68.3, 75.2), (64.5, 75.0), (56.1, 75.2),
+                (50.8, 75.2), (1.57, 75.36), (4.34, 72.2)]
+FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE]
+# frozen router vias moved on replay (with their own track ends): (net, (x, y) frozen, (x, y) new)
+FROZEN_MOVES = [
+    # 0.13 mm (pad bounding box) to its own C30.1 pad; 'via to SMD pad' 0.15 also for the own net (--proof row)
+    ("VBUS", (47.75, 75.35), (47.75, 75.38)),
+    ("/leds/LED_L4_MCU", (28.775, 33.25), (28.725, 33.25)),   # 0.131 mm to its own R4.1 (0.155 after, 0.35 to VDD)
+]
 CLOSE_DROP = {   # (net, layer, a, b) router tracks and (net, None, at, None) router vias the closing copper replaces
     "tracks": [("VBUS", "B.Cu", (20.85, 42.05), (22.95, 39.95)), ("VBUS", "B.Cu", (22.95, 39.95), (22.95, 39.5)),
                ("VBUS", "F.Cu", (20.85, 42.05), (18.55, 44.35)), ("VBUS", "F.Cu", (22.15, 40.95), (22.15, 40.98)),
@@ -1224,7 +1243,7 @@ def stage2(job_file):
     P.group = "fanout"
     floorplan(P)
     if "close_top" in P.hand:                # gate 5 closing copper ON TOP of the frozen router run (CLOSE_TRACKS / VIAS), locked
-        for net, layer, w, pts in CLOSE_TRACKS:
+        for net, layer, w, pts in CLOSE_TRACKS + FINISH_TRACKS:
             for a, b in zip(pts, pts[1:]):
                 tr = pcbnew.PCB_TRACK(board)
                 tr.SetStart(V(*a))
@@ -1234,7 +1253,7 @@ def stage2(job_file):
                 tr.SetNet(nets[net])
                 tr.SetLocked(True)
                 board.Add(tr)
-        for net, x, y, d, dr in CLOSE_VIAS:
+        for net, x, y, d, dr in CLOSE_VIAS + FINISH_VIAS:
             v = pcbnew.PCB_VIA(board)
             v.SetPosition(V(x, y))
             v.SetViaType(pcbnew.VIATYPE_THROUGH)
@@ -1247,10 +1266,17 @@ def stage2(job_file):
     # gate 5: frozen router result (hardware/tree-a/frozen-routes.json, gen/tree_a_krt.py = KiCadRoutingTools) replayed as
     # LOCKED copper, so a rebuild is repeatable and a later router run keeps it; never the router's own board file
     routes = job.get("routes") or {}
+
+    def moved(net, q):                       # FROZEN_MOVES (close_top builds only)
+        if "close_top" in P.hand:
+            for n, old, new in FROZEN_MOVES:
+                if n == net and math.dist(q, old) < 0.001:
+                    return new
+        return q
     for t in routes.get("tracks", []):
         tr = pcbnew.PCB_TRACK(board)
-        tr.SetStart(V(*t["a"]))
-        tr.SetEnd(V(*t["b"]))
+        tr.SetStart(V(*moved(t["net"], t["a"])))
+        tr.SetEnd(V(*moved(t["net"], t["b"])))
         tr.SetWidth(mm(t["w"]))
         tr.SetLayer(board.GetLayerID(t["layer"]))
         tr.SetNet(nets[t["net"]])
@@ -1258,7 +1284,7 @@ def stage2(job_file):
         board.Add(tr)
     for v in routes.get("vias", []):
         vi = pcbnew.PCB_VIA(board)
-        vi.SetPosition(V(*v["at"]))
+        vi.SetPosition(V(*moved(v["net"], v["at"])))
         vi.SetViaType(pcbnew.VIATYPE_THROUGH)
         vi.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
         vi.SetWidth(mm(v["size"]))
