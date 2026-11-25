@@ -1,6 +1,4 @@
 type,ref,reason
-track_dangling,*,gate 4 U1 fan-out: locked exit stubs end open by design; gate 5 routes from their ends (no dangling track may remain at fab)
-via_dangling,*,gate 4 U1 fan-out: locked dog-bone vias are on F.Cu only until gate 5 routes B.Cu (no dangling via may remain at fab)
 lib_footprint_mismatch,C30,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
 lib_footprint_mismatch,C31,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library
 lib_footprint_mismatch,C50,B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library

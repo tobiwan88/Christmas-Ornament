@@ -72,7 +72,7 @@ J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: 
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
 NO_POUR_PADS = (("C9", "2"), ("C11", "2"))   # 0201 GND pads: own via, no connection to GND_F_local
 POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"), ("C1", "2"), ("U1", "49"), ("U1", "44"), ("C4", "2"),
-                   ("C50", "2"))   # U1.49 (EP thermal vias, starved In2 spokes), U1.44 / C4.2 / C50.2 / C1.2 (round 3 KRT runs): gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
+                   ("C50", "2"), ("C7", "2"), ("C12", "2"))   # C7.2 / C12.2: gate 5 finish, one spoke left after the closing routes   # U1.49 (EP thermal vias, starved In2 spokes), U1.44 / C4.2 / C50.2 / C1.2 (round 3 KRT runs): gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
 MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
@@ -93,9 +93,12 @@ IN2_SIGNAL_CUTS = {}           # {IN2_NO_SIGNAL name: [(x0, y0, x1, y1)]} cut-ou
 # 22.95/39.5 (In2, routed by the plan's closing step). CLOSE_DROP = the router copper this replaces (removed in the plan's
 # edit step, so it is never in frozen-routes.json).
 CLOSE_TRACKS = [
-    ("VDD", "B.Cu", 0.3, [(22.15, 39.45), (20.00, 41.60), (20.00, 42.30)]),
-    ("VDD", "F.Cu", 0.3, [(20.00, 42.30), (20.00, 43.60), (18.95, 44.65)]),
-    ("VBUS", "F.Cu", 0.3, [(18.55, 44.35), (18.55, 41.30), (22.04, 41.30)]),
+    # board edge (left slope 13/52 - 27.96/29.55, 0.30 mm copper-to-edge): VBUS runs 0.38 mm (centre) inside the edge at the
+    # router's own necked width 0.127, VDD crosses it on B.Cu and drops at 19.45/43.75 (0.79 mm from the edge, between
+    # VBUS and the LED_L3 B.Cu diagonal)
+    ("VDD", "B.Cu", 0.3, [(22.15, 39.45), (19.45, 43.75)]),
+    ("VDD", "F.Cu", 0.3, [(19.45, 43.75), (18.95, 44.65)]),
+    ("VBUS", "F.Cu", 0.127, [(18.55, 44.35), (20.283, 41.75), (20.733, 41.30), (22.04, 41.30)]),
     ("/charger/VBUS_DET", "F.Cu", 0.127, [(22.04, 40.20), (22.55, 40.75), (23.06, 41.30)]),
     ("/charger/VBUS_DET", "F.Cu", 0.127, [(22.55, 40.75), (22.55, 39.75), (22.95, 39.50)]),
     # U1 end: pins 37 (BTN_SW1) and 38 (VBUS_DET) shared one via spot in every run (the router took it for one of them).
@@ -107,7 +110,7 @@ CLOSE_TRACKS = [
     ("VDD", "F.Cu", 0.3, [(30.10, 20.95), (30.10, 21.40), (29.75, 21.75)]),
     ("VDD", "B.Cu", 0.3, [(29.60, 21.25), (29.75, 21.40), (29.75, 21.75)]),
 ]
-CLOSE_VIAS = [("VDD", 20.00, 42.30, 0.45, 0.2), ("/charger/VBUS_DET", 22.95, 39.50, 0.45, 0.2),
+CLOSE_VIAS = [("VDD", 19.45, 43.75, 0.45, 0.2), ("/charger/VBUS_DET", 22.95, 39.50, 0.45, 0.2),
               ("/mcu/BTN_SW1", 31.35, 21.35, 0.45, 0.2), ("/charger/VBUS_DET", 30.65, 21.55, 0.45, 0.2),
               ("VDD", 29.75, 21.75, 0.45, 0.2)]
 CLOSE_DROP = {   # (net, layer, a, b) router tracks and (net, None, at, None) router vias the closing copper replaces

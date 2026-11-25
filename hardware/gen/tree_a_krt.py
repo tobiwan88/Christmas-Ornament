@@ -388,15 +388,26 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # Default track 0.127, necked to the 0.10 minimum only where a net needs it: --escalation board), no floor rung below the
 # class, In2 only for the still-open nets of IN2_ALLOWED, GND return vias within 1.5 mm of every signal via.
 IN2_ALLOWED = ["/leds/LED_L*", "/mcu/SWD*", "/mcu/SWO", "/mcu/nRESET_TC", "/mcu/BTN_SW1", "/charger/VBUS_DET",
-               "/charger/CHG_STAT", "/mcu/TPS_SEL"]   # TPS_SEL (gate 5 finish): static TPS63900 SEL line, not RF / crystal / DCC / power
+               "/charger/CHG_STAT"]
+# allowed on In2 in the closing steps only (gate 5 finish): TPS_SEL is the static TPS63900 SEL line (not RF / crystal /
+# DCC / power). Kept out of the main passes so the measured base (f6) and its closing chain replay unchanged.
+IN2_LATE = ["/mcu/TPS_SEL"]
+
+
+def in2_ok(n: str, late: bool = False) -> bool:
+    from fnmatch import fnmatch
+    return any(fnmatch(n, q) for q in IN2_ALLOWED + (IN2_LATE if late else []))
+CLOSE_ARGS = ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12, "--ordering", "mps"]
 PLAN = dict(in2_net="GND", hand=["rf", "close", "close_decd"], escapes=["vdd"], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
             rules=None, gnd_via_mm=1.5,
             standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="repair",
             edit=True,   # tree_a_pcb.CLOSE_DROP / CLOSE_TRACKS (VBUS_DET node at R43 / R42) before the closing steps
-            close=[{"nets": ["/charger/VBUS_DET", "/leds/LED_L7_MCU"], "in2": True,   # measured order (gate 5 finish):
-                    "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12, "--ordering", "mps"]},   # closes LED_L7_MCU
-                   {"nets": ["/mcu/TPS_SEL"], "in2": True,                                  # closes TPS_SEL
-                    "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12, "--ordering", "mps"]}],
+            # closing chain, measured on the edited base (3 open: LED_L7_MCU, VBUS_DET, TPS_SEL): 3 -> 2 -> 2 -> 1 -> 0
+            close=[{"nets": ["/leds/LED_L7_MCU"], "in2": True, "args": CLOSE_ARGS},
+                   {"nets": ["/charger/VBUS_DET"], "in2": True, "args": CLOSE_ARGS},   # VBUS_DET in, LED_L4_MCU out
+                   {"nets": ["/mcu/TPS_SEL"], "in2": True, "args": CLOSE_ARGS},
+                   {"nets": ["/leds/LED_L4_MCU", "/leds/LED_L1_MCU", "/leds/LED_L2_MCU", "/leds/LED_L3_MCU", "/leds/LED_L2"],
+                    "in2": True, "args": CLOSE_ARGS + ["--force-reroute", "--max-ripup", 30]}],   # left U1 row re-laid
             in2_vdd=[], route_args=["--max-ripup", "8", "--ordering", "inside_out"],   # best measured a + b arm (pz6 q3):
             # 3 nets open (LED_L1, LED_L8, XL1), kicad-cli 0 errors; no arm of 20 closed (NOTES round 3, options a + b)
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
@@ -444,12 +455,10 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu", *[str(x) for x in cfg["route_args"]]]
     best = None
 
-    def one_pass(prev, out, ceil, nets, lc, label, extra=()):
+    def one_pass(prev, out, ceil, nets, lc, label, extra=(), late=False):
         if lc[2] != "-1":       # In2 open: every net not allowed on In2 is '!'-negated, so route.py neither routes it
-            from fnmatch import fnmatch          # nor rips and re-routes it this pass (power never lands on In2)
-            names = sorted(set(re.findall(r'\(net "([^"]+)"\)', Path(prev).read_text())))
-            nets = list(nets) + ["!" + n for n in names if not n.startswith("unconnected-")
-                                 and not any(fnmatch(n, q) for q in IN2_ALLOWED)]
+            names = sorted(set(re.findall(r'\(net "([^"]+)"\)', Path(prev).read_text())))   # nor rips it this pass
+            nets = list(nets) + ["!" + n for n in names if not n.startswith("unconnected-") and not in2_ok(n, late)]
         # --clearance (not the ceiling): the Default class routes at the rung, Power / RF keep their own 0.15 (board.yaml),
         # which kicad-cli grades; a ceiling would route them at the rung too (measured: 49 Power-class clearance errors)
         rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, *extra, "--clearance", ceil, "--layer-costs", *lc,
@@ -575,7 +584,7 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
         print(f"   edit: {g} open {names}", flush=True)
         best, cur = (out, g, names), out
     # closing steps (coordinator, gate 5 finish): targeted route.py runs for the last open nets on the deterministic
-    # result, before the fence so their vias get return vias too; a step is kept only when it lowers the open count
+    # result, before the fence so their vias get return vias too; a step is kept when it does not raise the open count
     for k, st in enumerate(cfg.get("close") or []):
         if not best or best[1] == 0:
             break
@@ -583,12 +592,13 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
         nets = st["nets"]
         if nets == "open":                     # the still-open nets (In2 step: only the allowed ones)
             from fnmatch import fnmatch
-            nets = [n for n in best[2] if n != "GND" and (not st.get("in2") or any(fnmatch(n, q) for q in IN2_ALLOWED))]
+            nets = [n for n in best[2] if n != "GND" and (not st.get("in2") or in2_ok(n, True))]
             if not nets:
                 continue
         r = one_pass(cur, out, cfg["standard"], nets, ["1.0", "-1", "3.0" if st.get("in2") else "-1", "1.0"],
-                     f"close {k + 1}: {nets}{' (In2)' if st.get('in2') else ''}", tuple(str(a) for a in st.get("args", ())))
-        if r is not None and r[0] < best[1]:
+                     f"close {k + 1}: {nets}{' (In2)' if st.get('in2') else ''}", tuple(str(a) for a in st.get("args", ())),
+                     late=True)
+        if r is not None and r[0] <= best[1]:   # kept when it does not raise the count (a step may trade one net for another)
             best, cur = (out, r[0], r[1]), out
     if cfg["fence"]:
         f = workdir / "s8_fence.kicad_pcb"
@@ -623,34 +633,33 @@ def _krt_open(board: Path) -> tuple[int, list]:
     return (int(m.group(1)) if m else 999), names
 
 
-def in2_report(frozen: Path, board: Path, dist: float = 1.5) -> dict:
-    """Option a bookkeeping: In2 track length per net (frozen copper) and, for the vias of those nets, KRT's
-    check_return_vias at `dist` (a GND via or drilled GND pad within dist of every such via)."""
-    from fnmatch import fnmatch
+def in2_report(frozen: Path, board: Path, dist: float = 1.5, dist_in2: float = 2.5) -> dict:
+    """In2 bookkeeping and return vias (coordinator, gate 5 finish): In2 track length per net (frozen copper); a via on an
+    end of a net's In2 track (F.Cu <-> In2 change) needs a GND via / drilled GND pad within dist_in2 (2.5 mm); every other
+    signal via (F.Cu <-> B.Cu through the stack) within dist (1.5 mm). Misses are listed as exceptions (net, x, y,
+    nearest mm) for BOARD.md, they do not fail the plan (no room for --add-gnd-vias around U1 is accepted)."""
     r = json.loads(frozen.read_text())
     per = {}
     for t in r["tracks"]:
         if t["layer"] == "In2.Cu":
             per[t["net"]] = per.get(t["net"], 0.0) + math.dist(t["a"], t["b"])
     rep = {"in2_mm": {k: round(v, 1) for k, v in sorted(per.items())},
-           "not_allowed": sorted(n for n in per if n != "GND" and not any(fnmatch(n, q) for q in IN2_ALLOWED))}
+           "not_allowed": sorted(n for n in per if n != "GND" and not in2_ok(n, True))}
     per.pop("GND", None)
-    if per:
-        js = board.parent / "return_vias.json"
-        subprocess.run([str(KRT_PY), str(KRT / "py_tools" / "check_return_vias.py"), str(board), "--nets", *per,
-                        "--distance", str(dist), "--json", str(js)], capture_output=True, text=True, cwd=str(KRT))
-        d = json.loads(js.read_text()) if js.exists() else {}
-        # an "In2 signal via" = a via of the net that sits on an end of one of the net's In2 tracks (the layer change
-        # onto / off In2); the other vias of these nets are F.Cu <-> B.Cu changes and are reported separately
-        ends = {(t["net"], round(x, 3), round(y, 3)) for t in r["tracks"] if t["layer"] == "In2.Cu" for x, y in (t["a"], t["b"])}
-        in2v = [v for v in r["vias"] if v["net"] in per and any(n == v["net"] and math.dist((x, y), v["at"]) < 0.01
-                                                                for n, x, y in ends)]
-        unc = [(u.get("net"), u.get("x"), u.get("y"), u.get("nearest_mm")) for u in d.get("uncovered_vias", [])]
-        is_in2 = lambda u: any(v["net"] == u[0] and math.dist(v["at"], (u[1], u[2])) < 0.01 for v in in2v)
-        rep["in2_vias"] = len(in2v)
-        rep["uncovered"] = [u for u in unc if is_in2(u)]
-        rep["other_vias_of_in2_nets"] = d.get("signal_vias", 0) - len(in2v)
-        rep["other_uncovered"] = [u for u in unc if not is_in2(u)]
+    js = board.parent / "return_vias.json"
+    subprocess.run([str(KRT_PY), str(KRT / "py_tools" / "check_return_vias.py"), str(board), "--distance", str(dist),
+                    "--json", str(js)], capture_output=True, text=True, cwd=str(KRT))
+    d = json.loads(js.read_text()) if js.exists() else {}
+    ends = {(t["net"], round(x, 3), round(y, 3)) for t in r["tracks"] if t["layer"] == "In2.Cu" for x, y in (t["a"], t["b"])}
+    in2v = [v for v in r["vias"] if v["net"] in per and any(n == v["net"] and math.dist((x, y), v["at"]) < 0.01
+                                                            for n, x, y in ends)]
+    unc = [(u.get("net"), u.get("x"), u.get("y"), u.get("nearest_mm")) for u in d.get("uncovered_vias", [])]
+    is_in2 = lambda u: any(v["net"] == u[0] and math.dist(v["at"], (u[1], u[2])) < 0.01 for v in in2v)  # noqa: E731
+    far = lambda u: u[3] is None or u[3] > dist_in2  # noqa: E731
+    rep["in2_vias"] = len(in2v)
+    rep["signal_vias"] = d.get("signal_vias")
+    rep["uncovered"] = [u for u in unc if is_in2(u) and far(u)]           # In2 transitions beyond 2.5 mm
+    rep["other_uncovered"] = [u for u in unc if not is_in2(u)]            # F.Cu <-> B.Cu vias beyond 1.5 mm
     return rep
 
 
@@ -682,6 +691,39 @@ def trim_dangling(frozen: Path, drc_json: Path) -> int:
     return n0 - len(r["vias"]) - len(r["tracks"])
 
 
+def nudge_rounding(frozen: Path, drc_json: Path) -> int:
+    """kicad-cli reads a router via placed exactly at a clearance as 0.149999 mm ('via to SMD pad' 0.15): move such a via
+    (and the ends of its own tracks on it) 0.01 mm straight away from the pad. Only violations short by less than 0.001 mm
+    are touched; same rule on every rebuild. Returns the count."""
+    d = json.loads(drc_json.read_text())
+    r = json.loads(frozen.read_text())
+    n = 0
+    for v in d.get("violations", []):
+        m = re.search(r"clearance ([0-9.]+) mm; actual ([0-9.]+) mm", v.get("description", ""))
+        if v["type"] != "clearance" or not m or float(m.group(1)) - float(m.group(2)) > 0.001:
+            continue
+        via = [i for i in v["items"] if i["description"].startswith("Via [")]
+        pad = [i for i in v["items"] if i["description"].startswith("Pad ")]
+        if len(via) != 1 or len(pad) != 1:
+            continue
+        at = (via[0]["pos"]["x"], via[0]["pos"]["y"])
+        q = next((q for q in r["vias"] if math.dist(q["at"], at) < 0.01), None)
+        if q is None:
+            continue
+        dx, dy = at[0] - pad[0]["pos"]["x"], at[1] - pad[0]["pos"]["y"]
+        L = math.hypot(dx, dy) or 1.0
+        old, new = list(q["at"]), [round(q["at"][0] + 0.01 * dx / L, 4), round(q["at"][1] + 0.01 * dy / L, 4)]
+        q["at"] = new
+        for t in r["tracks"]:
+            if t["net"] == q["net"]:
+                for k in ("a", "b"):
+                    if math.dist(t[k], old) < 0.001:
+                        t[k] = list(new)
+        n += 1
+    frozen.write_text(json.dumps(r, indent=1) + "\n")
+    return n
+
+
 def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
     cfg = {**PLAN, **cfg}
     t0 = time.time()
@@ -700,18 +742,21 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
         res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"] + (["close_top"] if cfg.get("edit") else []),
                     cfg["rules"], cfg["in2_vdd"])
         cut = trim_dangling(frozen, workdir / "grade" / "drc.json")      # frozen file (same rule on every rebuild)
+        cut += nudge_rounding(frozen, workdir / "grade" / "drc.json")
         if not cut:
             break
-        print(f"   trim {k + 1}: removed {cut} dangling router item(s) / hole-to-hole GND return vias, regrading", flush=True)
+        print(f"   trim {k + 1}: removed {cut} dangling router item(s) / hole-to-hole GND return vias / nudged rounding vias, regrading", flush=True)
     print(f"TIME {time.time() - t1:7.1f} s  grade (build with the frozen file + kicad-cli DRC, all severities, parity)")
     print(f"GRADE errors {res['errors']}, unwaived warnings {res['warnings']}, waived {res['waived']}, unconnected "
           f"{res['unconnected']} {res['unconnected_nets']}, parity {res['parity']}")
     for i in res["items"][:30]:
         print("   ", i)
     i2 = in2_report(frozen, workdir / "grade" / f"{NAME}.kicad_pcb", cfg.get("gnd_via_mm") or 1.5)
-    print(f"IN2 per net (mm): {i2['in2_mm']}; not allowed on In2: {i2['not_allowed']}; vias of those nets "
-          f"{i2.get('in2_vias')} on In2 track ends, without a GND via within {cfg.get('gnd_via_mm') or 1.5} mm: {i2.get('uncovered')}")
-    clean = res["errors"] == res["warnings"] == res["unconnected"] == 0 and not i2["not_allowed"] and not i2.get("uncovered")
+    print(f"IN2 per net (mm): {i2['in2_mm']}; not allowed on In2: {i2['not_allowed']}; In2 transition vias "
+          f"{i2.get('in2_vias')}, without a GND via within 2.5 mm: {i2.get('uncovered')}")
+    print(f"RETURN signal vias {i2.get('signal_vias')}, F.Cu <-> B.Cu without a GND via within 1.5 mm (exceptions, BOARD.md): "
+          f"{i2.get('other_uncovered')}")
+    clean = res["errors"] == res["warnings"] == res["unconnected"] == 0 and not i2["not_allowed"]
     (workdir / "grade.json").write_text(json.dumps({**res, "clean": clean, "cfg": cfg, "info": info, "in2": i2}, indent=1,
                                                    default=str))
     if write and clean:
