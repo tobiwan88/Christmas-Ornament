@@ -389,12 +389,14 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # class, In2 only for the still-open nets of IN2_ALLOWED, GND return vias within 1.5 mm of every signal via.
 IN2_ALLOWED = ["/leds/LED_L*", "/mcu/SWD*", "/mcu/SWO", "/mcu/nRESET_TC", "/mcu/BTN_SW1", "/charger/VBUS_DET",
                "/charger/CHG_STAT", "/mcu/TPS_SEL"]   # TPS_SEL (gate 5 finish): static TPS63900 SEL line, not RF / crystal / DCC / power
-PLAN = dict(in2_net="GND", hand=["rf", "close", "close_decd", "close_vbus"], escapes=["vdd"], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
+PLAN = dict(in2_net="GND", hand=["rf", "close", "close_decd"], escapes=["vdd"], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
             rules=None, gnd_via_mm=1.5,
             standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="repair",
-            close=[{"nets": "open", "in2": True, "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12]},
-                   {"nets": "open", "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12]},
-                   {"nets": "open", "in2": True, "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 20]}],
+            edit=True,   # tree_a_pcb.CLOSE_DROP / CLOSE_TRACKS (VBUS_DET node at R43 / R42) before the closing steps
+            close=[{"nets": ["/charger/VBUS_DET", "/leds/LED_L7_MCU"], "in2": True,   # measured order (gate 5 finish):
+                    "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12, "--ordering", "mps"]},   # closes LED_L7_MCU
+                   {"nets": ["/mcu/TPS_SEL"], "in2": True,                                  # closes TPS_SEL
+                    "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12, "--ordering", "mps"]}],
             in2_vdd=[], route_args=["--max-ripup", "8", "--ordering", "inside_out"],   # best measured a + b arm (pz6 q3):
             # 3 nets open (LED_L1, LED_L8, XL1), kicad-cli 0 errors; no arm of 20 closed (NOTES round 3, options a + b)
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
@@ -561,6 +563,17 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             if best[1] == 0 or not gained:
                 break
     cur = best[0] if best else cur
+    if cfg.get("edit") and best:              # gate 5 closing edit: tree_a_pcb.CLOSE_DROP out, CLOSE_TRACKS / VIAS in (locked)
+        out = workdir / "s5_edit.kicad_pcb"
+        _copy_siblings(cur, out)
+        r = subprocess.run([os.environ["KICAD_PYTHON"], str(HERE / "tree_a_edit.py"), str(cur), str(out)],
+                           capture_output=True, text=True)
+        print("   " + (r.stdout + r.stderr).strip().replace("\n", "\n   "), flush=True)
+        if r.returncode:
+            raise SystemExit("closing edit: listed router items not found (the router result changed); see above")
+        g, names = _krt_open(out)
+        print(f"   edit: {g} open {names}", flush=True)
+        best, cur = (out, g, names), out
     # closing steps (coordinator, gate 5 finish): targeted route.py runs for the last open nets on the deterministic
     # result, before the fence so their vias get return vias too; a step is kept only when it lowers the open count
     for k, st in enumerate(cfg.get("close") or []):
@@ -684,7 +697,8 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
     print_metrics(metrics(json.loads(frozen.read_text())))
     t1 = time.time()
     for k in range(4):             # router leftovers: dangling vias / track ends that kicad-cli reports are cut from the
-        res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"], cfg["rules"], cfg["in2_vdd"])
+        res = grade(frozen, workdir / "grade", cfg["escapes"], None, "GND", cfg["hand"] + (["close_top"] if cfg.get("edit") else []),
+                    cfg["rules"], cfg["in2_vdd"])
         cut = trim_dangling(frozen, workdir / "grade" / "drc.json")      # frozen file (same rule on every rebuild)
         if not cut:
             break
@@ -705,7 +719,8 @@ def run_plan(workdir: Path, cfg: dict, write: bool) -> int:
                            "step by step with GND on In1 and In2, settings tree_a_krt.PLAN + 'build'). Board coordinates of "
                            "tree_outline. Replayed as locked copper by gen/tree_a_pcb.py with the 'build' options. Re-freeze "
                            "only on purpose: tree_a_pcb.py --route krt." % (KRT / "VERSION").read_text().strip(),
-               "build": {"in2_net": "GND", "hand": cfg["hand"], "escapes": cfg["escapes"], "in2_vdd": cfg["in2_vdd"]},
+               "build": {"in2_net": "GND", "hand": cfg["hand"] + (["close_top"] if cfg.get("edit") else []),
+                         "escapes": cfg["escapes"], "in2_vdd": cfg["in2_vdd"]},
                **json.loads(frozen.read_text())}
         FROZEN.write_text(json.dumps(doc, indent=1) + "\n")
         print("wrote", FROZEN.relative_to(HW.parent))

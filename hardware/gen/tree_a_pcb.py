@@ -79,15 +79,57 @@ TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
-HAND = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc", "close_vbus")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+HAND = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc", "close_top")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
                  "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
 IN2_SIGNAL_CUTS = {}           # {IN2_NO_SIGNAL name: [(x0, y0, x1, y1)]} cut-outs for "close" hand copper (option c, D9)
 # gate 5 closing copper (coordinator: the last open nets as hand-drawn LOCKED copper on top of the router run; --hand
 # group "close"). Tracks: (net, layer, width, [points]); vias: (net, x, y, diameter, drill). Explicit nets, no pad match.
-CLOSE_TRACKS = []
-CLOSE_VIAS = []
+# VBUS_DET node R43.1 / R42.2 (left wing): in every router run VBUS (via 22.95/39.5 -> F.Cu down the R43 / R42 column
+# gap into R42.1) and VDD (B.Cu hop + F.Cu wiggle at x 21.4 beside the column) boxed it in. Hand rework: VBUS comes up
+# x 18.55 and enters R42.1 from the left on F.Cu; VDD crosses it on B.Cu (via 22.15/39.45 -> via 20.0/42.3); VBUS_DET
+# joins R43.1 - R42.2 diagonally through the pad gap (0.27 mm clear of R43.2 / R42.1) and goes down at the freed via
+# 22.95/39.5 (In2, routed by the plan's closing step). CLOSE_DROP = the router copper this replaces (removed in the plan's
+# edit step, so it is never in frozen-routes.json).
+CLOSE_TRACKS = [
+    ("VDD", "B.Cu", 0.3, [(22.15, 39.45), (20.00, 41.60), (20.00, 42.30)]),
+    ("VDD", "F.Cu", 0.3, [(20.00, 42.30), (20.00, 43.60), (18.95, 44.65)]),
+    ("VBUS", "F.Cu", 0.3, [(18.55, 44.35), (18.55, 41.30), (22.04, 41.30)]),
+    ("/charger/VBUS_DET", "F.Cu", 0.127, [(22.04, 40.20), (22.55, 40.75), (23.06, 41.30)]),
+    ("/charger/VBUS_DET", "F.Cu", 0.127, [(22.55, 40.75), (22.55, 39.75), (22.95, 39.50)]),
+    # U1 end: pins 37 (BTN_SW1) and 38 (VBUS_DET) shared one via spot in every run (the router took it for one of them).
+    # VDD's via at C4.1 moves 0.4 mm left (29.75/21.75), BTN_SW1 goes down at 31.35/21.35 (0.53 mm from VDD's B.Cu run,
+    # 0.5 mm hole-to-hole to VDD 36's via) with its In2 run north of the new VBUS_DET via 30.65/21.55 (0.19 mm to C4.1)
+    ("/mcu/BTN_SW1", "F.Cu", 0.127, [(31.60, 21.75), (31.35, 21.50), (31.35, 21.35)]),
+    ("/mcu/BTN_SW1", "In2.Cu", 0.127, [(31.35, 21.35), (31.35, 20.95), (31.00, 20.60), (30.15, 20.60), (29.80, 20.95)]),
+    ("/charger/VBUS_DET", "F.Cu", 0.127, [(30.75, 21.45), (30.65, 21.55)]),
+    ("VDD", "F.Cu", 0.3, [(30.10, 20.95), (30.10, 21.40), (29.75, 21.75)]),
+    ("VDD", "B.Cu", 0.3, [(29.60, 21.25), (29.75, 21.40), (29.75, 21.75)]),
+]
+CLOSE_VIAS = [("VDD", 20.00, 42.30, 0.45, 0.2), ("/charger/VBUS_DET", 22.95, 39.50, 0.45, 0.2),
+              ("/mcu/BTN_SW1", 31.35, 21.35, 0.45, 0.2), ("/charger/VBUS_DET", 30.65, 21.55, 0.45, 0.2),
+              ("VDD", 29.75, 21.75, 0.45, 0.2)]
+CLOSE_DROP = {   # (net, layer, a, b) router tracks and (net, None, at, None) router vias the closing copper replaces
+    "tracks": [("VBUS", "B.Cu", (20.85, 42.05), (22.95, 39.95)), ("VBUS", "B.Cu", (22.95, 39.95), (22.95, 39.5)),
+               ("VBUS", "F.Cu", (20.85, 42.05), (18.55, 44.35)), ("VBUS", "F.Cu", (22.15, 40.95), (22.15, 40.98)),
+               ("VBUS", "F.Cu", (22.5, 39.95), (22.95, 39.5)), ("VBUS", "F.Cu", (22.5, 40.6), (22.15, 40.95)),
+               ("VBUS", "F.Cu", (22.5, 40.6), (22.5, 39.95)),
+               ("VDD", "B.Cu", (21.35, 40.5), (22.15, 39.7)), ("VDD", "B.Cu", (22.15, 39.7), (22.15, 39.45)),
+               ("VDD", "F.Cu", (18.95, 44.65), (21.35, 42.25)),
+               ("/charger/VBUS_DET", "F.Cu", (22.04, 40.2), (22.05, 40.2)),
+               ("/mcu/BTN_SW1", "F.Cu", (30.8, 20.95), (31.6, 21.75)), ("/mcu/BTN_SW1", "In2.Cu", (30.8, 20.95), (29.8, 20.95)),
+               ("VDD", "F.Cu", (30.1, 21.65), (30.1, 20.95)), ("VDD", "B.Cu", (29.65, 21.2), (30.15, 21.7)),
+               ("/charger/VBUS_DET", "F.Cu", (31.05, 21.75), (31.0977, 21.7364)),
+               ("/charger/VBUS_DET", "F.Cu", (31.05, 21.75), (31.1, 21.75)),
+               ("/charger/VBUS_DET", "F.Cu", (31.1, 21.75), (31.0977, 21.7364))]
+              + [("VDD", "F.Cu", a, b) for a, b in zip(
+                  [(21.45, 40.65), (21.45, 40.85), (21.4, 40.9), (21.4, 40.95), (21.35, 41.0), (21.35, 41.1), (21.4, 41.15),
+                   (21.4, 41.45), (21.35, 41.5), (21.35, 41.6), (21.4, 41.65), (21.4, 41.8), (21.35, 41.85)],
+                  [(21.45, 40.85), (21.4, 40.9), (21.4, 40.95), (21.35, 41.0), (21.35, 41.1), (21.4, 41.15), (21.4, 41.45),
+                   (21.35, 41.5), (21.35, 41.6), (21.4, 41.65), (21.4, 41.8), (21.35, 41.85), (21.35, 42.25)])],
+    "vias": [("VBUS", (20.85, 42.05)), ("VBUS", (22.95, 39.5)), ("VDD", (21.35, 40.5)), ("/mcu/BTN_SW1", (30.8, 20.95)),
+             ("VDD", (30.15, 21.7))]}
 IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
 RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
@@ -294,13 +336,6 @@ def floorplan(P):
     T([(23.06, 40.20), (23.10, 39.35)])
     V(23.10, 39.35)                           # R43 GND via into In1 (escape proof: the pad was walled in by BTN / VBUS_DET)
     P.put("R42", 22.55, 41.30, 0.0)           # variant B VBUS_DET divider top (VBUS from J1 under the holder)
-    # gate 5 closing copper (coordinator): VBUS_DET node R43.1 - R42.2 diagonally between the four pads (0.27 mm clear of
-    # R43.2 / R42.1) and its via above R43.1 (In2 to U1 pin 38); in every router run VBUS / VDD boxed this node in
-    P.group = "close_vbus"
-    T([P.pad("R43", "1"), P.pad("R42", "2")], 0.127)
-    T([P.pad("R43", "1"), (P.pad("R43", "1")[0], 39.35)], 0.127)
-    V(P.pad("R43", "1")[0], 39.35, d=0.45, dr=0.2)
-    P.group = "fanout"
     P.put("R10", 22.55, 42.40, 0.0)           # BTN_SW1 series 1 k (pin 37)
     P.put("R40", 22.55, 48.60, 0.0)           # battery divider top, VIN pad 1 next to Q1's source
     P.put("R41", 22.55, 49.70, 0.0)           # battery divider bottom (VBAT_SENSE pad 1 left, GND right)
@@ -1181,7 +1216,7 @@ def stage2(job_file):
     P.hand = tuple(job.get("hand", HAND)) + ("escape",)
     P.group = "fanout"
     floorplan(P)
-    if "close" in P.hand:                    # gate 5 closing copper (CLOSE_TRACKS / CLOSE_VIAS), locked, explicit nets
+    if "close_top" in P.hand:                # gate 5 closing copper ON TOP of the frozen router run (CLOSE_TRACKS / VIAS), locked
         for net, layer, w, pts in CLOSE_TRACKS:
             for a, b in zip(pts, pts[1:]):
                 tr = pcbnew.PCB_TRACK(board)
@@ -1335,7 +1370,7 @@ def stage2(job_file):
     for nm, box in IN2_NO_SIGNAL.items():
         x0, y0, x1, y1 = box
         cuts = [[(a0, b0), (a1, b0), (a1, b1), (a0, b1)] for (a0, b0, a1, b1) in IN2_SIGNAL_CUTS.get(nm, ())
-                if "close" in P.hand]
+                if "close_top" in P.hand]
         zone([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], ["In2.Cu"], name=f"in2_no_signal_{nm}",
              rule=dict(tracks=True, vias=False, pour=False, footprints=False), holes=cuts)
     # In2 signal exception (coordinator decision option c, gate 5): signal tracks on In2 only inside the LED-bus box
