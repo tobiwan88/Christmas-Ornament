@@ -72,14 +72,18 @@ J1_XY = (41.75, 86.0)         # USB-C on the RIGHT trunk edge (x = 48), rot 90: 
 U2_XY = (19.5, 61.0)          # TPS63900 power stage, left wing (TI SLVSET3D 10.2 Figure 10-1 arrangement, turned)
 NO_POUR_PADS = (("C9", "2"), ("C11", "2"))   # 0201 GND pads: own via, no connection to GND_F_local
 POUR_SOLID_PADS = (("C51", "2"), ("NT1", "2"), ("C10", "2"), ("C1", "2"), ("U1", "49"), ("U1", "44"), ("C4", "2"),
-                   ("C50", "2"), ("C7", "2"), ("C12", "2"))   # C7.2 / C12.2: gate 5 finish, one spoke left after the closing routes   # U1.49 (EP thermal vias, starved In2 spokes), U1.44 / C4.2 / C50.2 / C1.2 (round 3 KRT runs): gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
+                   ("C50", "2"))
+# solid only in the final build (hand group close_top), not in the router input: a pad's zone connection changes the KRT
+# result (measured: C7 / C12 solid in the input moved the deterministic run, closing step 4 left LED_L4_MCU open)
+POUR_SOLID_PADS_FINAL = (("C7", "2"), ("C12", "2"))   # gate 5 finish: one spoke left after the closing routes   # U1.49 (EP thermal vias, starved In2 spokes), U1.44 / C4.2 / C50.2 / C1.2 (round 3 KRT runs): gate 5 round 3, starved spokes once the power-cluster hand copper went (--hand rf)                        # 0402+ GND pads where two thermal spokes do not fit (DRC starved_thermal)
 MOUNT_REF = {"H_MOUNT1": "MH1", "H_MOUNT2": "MH2"}   # D31: the M2 holes are plated GND mounts (tree_a.MOUNT_REFS; B: MH3/MH4)
 TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO.TC_POS (35, 99.4) its NPTH alignment
                               # holes land inside BT1's courtyard (the TC2030 pins would poke into the holder body)
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
-HAND = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc", "close_top")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+HAND_GROUPS = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc", "close_top")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+HAND = ("rf", "close", "close_decd", "close_top")   # default build = the frozen KRT run (frozen-routes.json "build", gate 5)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
                  "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
@@ -371,7 +375,7 @@ def floorplan(P):
     P.put("R31", 52.0, 72.9, 0.0)
 
 
-ESCAPES = ("d9", "vdd")      # groups of led_escapes on the board; "d10" measured worse (walls the left neck); --escapes
+ESCAPES = ("vdd",)           # gate 5 frozen build (frozen-routes.json "build"); was ("d9", "vdd"); groups of led_escapes on the board; "d10" measured worse (walls the left neck); --escapes
 ESCAPE_GROUPS = ("d9", "d10", "vdd", "rdog")
 
 
@@ -563,7 +567,7 @@ def stage1(args):
                "in2_vdd": [[float(v) for v in b.split(",")] for b in
                            _opt(args, "--in2-vdd", ";".join(",".join(map(str, b)) for b in (IN2_VDD or []))).split(";")
                            if b and b != "none"],
-               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND],
+               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND_GROUPS],
                "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
                "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b],
                "in2_zone": [float(v) for v in _opt(args, "--in2-zone", ",".join(map(str, IN2_ZONE or ()))).split(",") if v]
@@ -1309,7 +1313,7 @@ def stage2(job_file):
         for pad in fps[ref].Pads():
             if pad.GetNumber() == num:
                 pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_NONE)
-    for ref, num in POUR_SOLID_PADS:
+    for ref, num in POUR_SOLID_PADS + (POUR_SOLID_PADS_FINAL if "close_top" in P.hand else ()):
         for pad in fps[ref].Pads():
             if pad.GetNumber() == num:
                 pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
