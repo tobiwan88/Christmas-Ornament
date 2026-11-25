@@ -388,10 +388,13 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # Default track 0.127, necked to the 0.10 minimum only where a net needs it: --escalation board), no floor rung below the
 # class, In2 only for the still-open nets of IN2_ALLOWED, GND return vias within 1.5 mm of every signal via.
 IN2_ALLOWED = ["/leds/LED_L*", "/mcu/SWD*", "/mcu/SWO", "/mcu/nRESET_TC", "/mcu/BTN_SW1", "/charger/VBUS_DET",
-               "/charger/CHG_STAT"]
-PLAN = dict(in2_net="GND", hand=["rf", "close"], escapes=["vdd"], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
+               "/charger/CHG_STAT", "/mcu/TPS_SEL"]   # TPS_SEL (gate 5 finish): static TPS63900 SEL line, not RF / crystal / DCC / power
+PLAN = dict(in2_net="GND", hand=["rf", "close", "close_decd", "close_vbus"], escapes=["vdd"], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
             rules=None, gnd_via_mm=1.5,
             standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="repair",
+            close=[{"nets": "open", "in2": True, "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12]},
+                   {"nets": "open", "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 12]},
+                   {"nets": "open", "in2": True, "args": ["--track-width", 0.1, "--grid-step", 0.025, "--max-ripup", 20]}],
             in2_vdd=[], route_args=["--max-ripup", "8", "--ordering", "inside_out"],   # best measured a + b arm (pz6 q3):
             # 3 nets open (LED_L1, LED_L8, XL1), kicad-cli 0 errors; no arm of 20 closed (NOTES round 3, options a + b)
             power=[["GN[D/]", 0.3], ["VD[D/]", 0.3], ["VI[N/]", 0.3], ["BAT", 0.3], ["/power/LX*", 0.3], ["VBU[S/]", 0.3],
@@ -439,7 +442,7 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             "--layers", "F.Cu", "In1.Cu", "In2.Cu", "B.Cu", *[str(x) for x in cfg["route_args"]]]
     best = None
 
-    def one_pass(prev, out, ceil, nets, lc, label):
+    def one_pass(prev, out, ceil, nets, lc, label, extra=()):
         if lc[2] != "-1":       # In2 open: every net not allowed on In2 is '!'-negated, so route.py neither routes it
             from fnmatch import fnmatch          # nor rips and re-routes it this pass (power never lands on In2)
             names = sorted(set(re.findall(r'\(net "([^"]+)"\)', Path(prev).read_text())))
@@ -447,7 +450,7 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
                                  and not any(fnmatch(n, q) for q in IN2_ALLOWED)]
         # --clearance (not the ceiling): the Default class routes at the rung, Power / RF keep their own 0.15 (board.yaml),
         # which kicad-cli grades; a ceiling would route them at the rung too (measured: 49 Power-class clearance errors)
-        rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance", ceil, "--layer-costs", *lc,
+        rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, *extra, "--clearance", ceil, "--layer-costs", *lc,
                     "--json-out", out.with_suffix(".json")], out.with_suffix(".log"), nets=nets)
         times.append((f"route.py {label}", t, rc))
         if not out.exists():
@@ -558,6 +561,22 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             if best[1] == 0 or not gained:
                 break
     cur = best[0] if best else cur
+    # closing steps (coordinator, gate 5 finish): targeted route.py runs for the last open nets on the deterministic
+    # result, before the fence so their vias get return vias too; a step is kept only when it lowers the open count
+    for k, st in enumerate(cfg.get("close") or []):
+        if not best or best[1] == 0:
+            break
+        out = workdir / f"s5_close{k + 1}.kicad_pcb"
+        nets = st["nets"]
+        if nets == "open":                     # the still-open nets (In2 step: only the allowed ones)
+            from fnmatch import fnmatch
+            nets = [n for n in best[2] if n != "GND" and (not st.get("in2") or any(fnmatch(n, q) for q in IN2_ALLOWED))]
+            if not nets:
+                continue
+        r = one_pass(cur, out, cfg["standard"], nets, ["1.0", "-1", "3.0" if st.get("in2") else "-1", "1.0"],
+                     f"close {k + 1}: {nets}{' (In2)' if st.get('in2') else ''}", tuple(str(a) for a in st.get("args", ())))
+        if r is not None and r[0] < best[1]:
+            best, cur = (out, r[0], r[1]), out
     if cfg["fence"]:
         f = workdir / "s8_fence.kicad_pcb"
         rc, t = sh([py, "-u", rt / "route_planes.py", cur, f, "--nets", "GND", "GND", "--plane-layers", "In1.Cu", "In2.Cu",

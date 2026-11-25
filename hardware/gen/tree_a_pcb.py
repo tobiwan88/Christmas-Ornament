@@ -79,7 +79,7 @@ TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
-HAND = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+HAND = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc", "close_vbus")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
                  "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
@@ -294,6 +294,13 @@ def floorplan(P):
     T([(23.06, 40.20), (23.10, 39.35)])
     V(23.10, 39.35)                           # R43 GND via into In1 (escape proof: the pad was walled in by BTN / VBUS_DET)
     P.put("R42", 22.55, 41.30, 0.0)           # variant B VBUS_DET divider top (VBUS from J1 under the holder)
+    # gate 5 closing copper (coordinator): VBUS_DET node R43.1 - R42.2 diagonally between the four pads (0.27 mm clear of
+    # R43.2 / R42.1) and its via above R43.1 (In2 to U1 pin 38); in every router run VBUS / VDD boxed this node in
+    P.group = "close_vbus"
+    T([P.pad("R43", "1"), P.pad("R42", "2")], 0.127)
+    T([P.pad("R43", "1"), (P.pad("R43", "1")[0], 39.35)], 0.127)
+    V(P.pad("R43", "1")[0], 39.35, d=0.45, dr=0.2)
+    P.group = "fanout"
     P.put("R10", 22.55, 42.40, 0.0)           # BTN_SW1 series 1 k (pin 37)
     P.put("R40", 22.55, 48.60, 0.0)           # battery divider top, VIN pad 1 next to Q1's source
     P.put("R41", 22.55, 49.70, 0.0)           # battery divider bottom (VBAT_SENSE pad 1 left, GND right)
@@ -1140,7 +1147,7 @@ def stage2(job_file):
                 self.ends.append((a, net))
                 self.ends.append((b, net))
 
-        def via(self, x, y, netname=None):
+        def via(self, x, y, netname=None, d=0.6, dr=0.3):
             if self.group not in self.hand:
                 return
             net = nets[netname] if netname else next((n for (q, n) in self.ends if abs(q[0] - x) < 1e-6 and abs(q[1] - y) < 1e-6), None)
@@ -1150,8 +1157,8 @@ def stage2(job_file):
             v.SetPosition(V(x, y))
             v.SetViaType(pcbnew.VIATYPE_THROUGH)
             v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
-            v.SetWidth(mm(0.6))
-            v.SetDrill(mm(0.3))
+            v.SetWidth(mm(d))
+            v.SetDrill(mm(dr))
             v.SetNet(net)
             v.SetLocked(True)
             board.Add(v)
