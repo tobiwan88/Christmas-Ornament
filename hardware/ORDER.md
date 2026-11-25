@@ -26,7 +26,7 @@ marked OPEN is a human step or a fact to confirm. Copies to keep in step (hw-bas
 Computed (parts at the price tier of the order quantity, Extended fees, setup, stencil, handling, fixture, SMT joints, panel fee):
 `python3 hardware/calc/bom_check.py hardware/tree-a --stock --qty 5` (variant A and variant B rows; `--separate` for panel vs two orders).
 Fee table: `RESEARCH-2026-11-23.md` section JLCPCB; the values are in `board.yaml fab.extra_fees` with their UNVERIFIED tags. Result
-2026-11-23: variant A 230.66 USD, variant B 231.92 USD before PCB and shipping, limit 250 USD (D20).
+2026-11-25: variant A 230.73 USD, variant B 232.00 USD before PCB and shipping (23 / 25 unique Extended parts), limit 250 USD (D20): 19.27 USD (A) or 18.00 USD (B) are left for the bare PCB and shipping. Superseded 2026-11-23 values: 230.66 / 231.92.
 
 **Manual step (OPEN, human): cart quote for the bare PCB and shipping.** The fab's quote API needs the account session and is not scripted.
 1. Upload the panel gerbers (gate 6 output of `fab_package.py`, the zip in `hardware/out/fab/panel/`) in the JLC order page with the cart of
@@ -35,8 +35,10 @@ Fee table: `RESEARCH-2026-11-23.md` section JLCPCB; the values are in `board.yam
 2. Write the bare PCB price and the shipping price (country, method, date of the quote) here and put the sum into `board.yaml`
    `fab.pcb_quote_usd`. Do not copy order or account numbers into the repo (public repository).
 3. Rerun `python3 hardware/calc/bom_check.py hardware/tree-a --strict --stock --qty 5`: the row "PCB + shipping" turns OK and the row
-   "all-in" compares the sum with the 250 USD cap. With the quote still `null` the row prints WARN and FAILs under `--strict`: that is the
-   only intended strict failure of the cost model.
+   "all-in" compares the sum with the 250 USD cap. With the quote still `null` the row "PCB + shipping" prints WARN and the row "all-in ESTIMATE" prints MISSING ("NOT TESTED:
+   PCB + shipping missing", with the margin left under the cap: 19.27 USD on 2026-11-25); both FAIL under `--strict`: that is the only intended
+   strict failure of the cost model. The margin is small: a 4-layer 114.8 x 120 mm ENIG panel x 5 plus shipping may exceed it (UNVERIFIED, no
+   price is estimated in the repo); section 6 lists the fallbacks if the quote does.
 4. Optional: a quote for A alone and B alone, to re-check the panel decision (D1, `panel/BOARD.md`).
 Quote (OPEN): PCB ____ USD, shipping ____ USD, date ____.
 
@@ -100,6 +102,12 @@ Added 2026-11-25 with the fab package (gate 6; evidence levels as above):
 24. Detected size: the Edge.Cuts centre line is 114.800 x 120.000 mm, with the 0.05 mm line 114.850 x 120.050 mm. Which size does the form show?
 25. Four plated slots (0.5 x 1.4 mm, the shell pins of J1, USB-C, not fitted in variant A) are drilled although J1 is not assembled; plated slot
     minimum 0.35 mm [P: capability page]. Any slot fee? (Option: drop them in a variant A board revision: the engineer's call.)
+Added 2026-11-25 with the independent review of the fab package (B1):
+26. Via in pad with an open top: the 22 exposed-pad vias (U1 16, U2 6; 0.20 mm drill, 0.45 mm pad) sit in ONE F.Mask opening per pad, so they are
+    open on top and tented on the bottom only (the 376 free vias are tented on both sides; 5b item 3). Paste covers 62 % (U1) / 73 % (U2) of the
+    opening by the pad polygons (the review: 54-61 %), 12 of 16 and 4 of 6 hole centres lie under a paste window. Is a via in pad with an open
+    top and this paste coverage accepted for Standard assembly? Can the holes be plugged (resin-filled) or tented on top, and at what fee per
+    board or per hole? Does the "Via covering: tented" form option change anything for holes inside a pad opening?
 
 ## 4. Variant switch before a variant B order (DS-C4)
 The production BOM and CPL come from the PCB file's DNP flags (`tools/fab_package.py` lines that skip `dnp`), not from a csv. The generators
@@ -199,8 +207,17 @@ Ask JLC support or check in the order page's DFM check; write each answer here w
    4.7 + B.Cu 2.0 + F.Cu 0.8 (tree-a/BOARD.md Routing). VBUS, TPS_SEL and DCC are 0.127 mm or wider. Default clearance 0.100 mm.
    If JLC refuses, the fallback is widening those nets: a layout step, not an order step.
 2. Copper to board edge 0.3 mm on the routed edges (0.6 mm behind each mouse-bite hole row, `panel/BOARD.md`): accepted?
-3. Thermal vias in pads are tented: U1 16 vias, U2 6 vias. Ask whether JLC plugs (resin-fills) or only tents them, and the cost; a via
-   in the pad under the QFN with open mask can wick solder.
+3. Via covering, as built (corrected 2026-11-25 after the review; `fab_package.py` row "via holes inside a mask opening" reports the numbers, so
+   this text cannot drift): the 376 free vias are tented on both sides. The 22 exposed-pad vias (U1 16, U2 6; 0.20 mm drill, 0.45 mm pad) are
+   NOT tented on top: each exposed pad has ONE F.Mask opening (U1 4.66 x 4.66 mm, U2 1.2 x 2.0 mm) that contains the holes, so they are open on
+   top; the bottom has no mask opening there, so they are tented on the bottom only. The paste stencil (F.Paste, 9 windows on U1, the U2 windows)
+   covers 12 of the 16 U1 holes and 4 of the 6 U2 holes by hole centre; paste area against mask opening area 13.5 / 21.7 mm2 = 62 % (U1) and
+   1.75 / 2.40 mm2 = 73 % (U2) from the pad polygons in the file (the review quoted 54-61 %: recompute from the plotted gerber paste layer
+   before relying on either figure, UNVERIFIED). Risk: solder wicks through an open via in the pad into the bottom side and starves the
+   joint (voids, a thin exposed-pad joint). Ask JLC (question 26) whether a via in pad
+   with an open top and 54-62 % paste coverage is accepted, whether the holes can be plugged (resin) or tented on top, and what that costs;
+   the fallback in a layout step is a mask web over the holes or a paste pattern that keeps clear of them (the engineer decides; board
+   files and footprints are frozen for this review).
 4. 0201 parts (C9, C11, L4, L5): solder-mask dam between 0201 pads in BLACK mask: black mask resolution is coarser than green; does JLC
    keep the dam, and what is the minimum dam in black?
 5. Impedance: the stackup JLC04101H-7628 at 1.0 mm is not published with values on JLC's impedance page (only 1.6 mm stackups are).
@@ -211,6 +228,10 @@ Ask JLC support or check in the order page's DFM check; write each answer here w
    engineer's instruction, confirm it against the JLC capability page). The generators' silk is checked against this at gate 6.
    Checked 2026-11-25 on jlcpcb.com/capabilities: minimum text height "40 mil (1.0mm)", line width ">= 0.15mm"; tree-a rules
    file min_text_height 1.0, board A / B designators 1.0 / 0.15.
+   Stroke widths in the panel file (`fab_package.py` row "silk stroke width", from `pcb_facts.py`, 2026-11-25): F.SilkS 0.100 mm x8, 0.120 mm
+   x139, 0.150 mm x13, 0.180 mm x3, 0.200 mm x3; B.SilkS 0.100 mm x8, 0.120 mm x11, 0.150 mm x9. So 166 of 194 strokes (F.SilkS 147 of 166, B.SilkS 19 of 28) are under the page's 0.15 mm line width: JLC thickens or drops strokes thinner than
+   its limit, it does not reject the file. Expect heavier or missing fine silk (which items carry the 0.12 / 0.10 mm strokes was not traced); the
+   gerber preview of the silk layers is the place to look. A footprint change is the engineer's, not made here.
 
 7. Via size: 267 vias and 22 thermal-via pad holes have 0.20 mm drill (0.45 mm pad), 109 vias 0.30 mm (`hardware/out/fab/panel/gerbers/panel-PTH.drl`,
    tools T1 to T3). The capability page lists multilayer vias down to 0.15 mm hole / 0.25 mm diameter [P], the form has a "min via hole size" option
@@ -221,6 +242,20 @@ Ask JLC support or check in the order page's DFM check; write each answer here w
    the 0.45 mm pad hole-to-hole figure on purpose (question 19).
 
 ## 6. Before payment (hw-fab-order checklist)
+If the quote exceeds the cap (250 USD all in, D20; 19.27 USD are left for the bare PCB and shipping on 2026-11-25): OPTIONS for the engineer, none
+chosen, each to be priced with `bom_check.py` and the cart before it is taken:
+- Fewer panels: 3 or 4 instead of 5 (the minimum PCB quantity of the fab for 4 layers and the minimum PCBA quantity must be checked in the cart;
+  the per-unit fees of the order (setup, stencil, handling, fixture, panel fee, Extended loading) are fixed per order, so the per-ornament price rises
+  while the total falls: compare `bom_check.py --qty 3` and `--qty 4` with the quote at each quantity; the price tiers of the parts change too).
+- Drop one Extended part group: each unique Extended part costs 1.53 USD per order (`board.yaml fab.extended_fee_usd`, UNVERIFIED), 23 in the order
+  (35.19 USD). A part moved to a Basic or Preferred equivalent, or hand-fitted after delivery, saves its 1.53 USD (a netlist and part change: the
+  engineer's, with the alternates in `board.yaml`).
+- Consolidate the stencil: one stencil per face is counted (setup + stencil 67.54 USD of which stencil 16.42); ask whether the two faces can share
+  one framework or whether a stencil can be left out for a hand-pasted face (question list, section 3).
+- Order the bare panel in a cheaper option: a different thickness or stack-up, ENIG against HASL (lead-free, with the QFN and 0201 in mind: the
+  engineer decides), colour other than black, no impedance option, "Different design" = 1 if the quote accepts it, fewer or larger vias (the
+  0.20 mm via option fee, question 21), the remove-order-number fee dropped (question 22).
+- Raise the cap: an engineer decision (D20), not a tool setting.
 - [ ] Routed board, gate OK at all DRC severities; `hw-check.sh --strict --stock --qty 5` OK (needs the manual quote above); clean tree.
 - [ ] Engineer's KiCad review done; `fab_package.py --require-clean` run; fab capability page read against the smallest track/via used.
 - [ ] Stock rechecked right before paying (nRF54L10 C44800139, antenna, J3, J4).
@@ -338,7 +373,7 @@ same table into `README-order.txt`):
 | PCB colour / silkscreen | Black / White | board file, P: black offered with no surcharge stated |
 | Surface finish | ENIG (D5, fine-pitch QFN, 0201) | board file |
 | Outer / inner copper | 1 oz / 0.5 oz | `board.yaml` stackup (inner 0.0152 mm) |
-| Via covering | Tented | mask layers as plotted; 5b item 3 asks about plugging the thermal vias |
+| Via covering | Tented (form option) | as plotted: free vias (376) tented both sides; the 22 exposed-pad vias open on top, tented on the bottom; 5b item 3, question 26 |
 | Min via hole size | the option that allows 0.20 mm | 267 vias + 22 pad holes at 0.20 mm; P: capability 0.15 mm / 0.25 mm, smaller "costs more", no amount (5b item 7, question 21) |
 | Remove order number | Yes | engineer's job text; fee unknown (question 22) |
 | Confirm production file | Yes | P: JLC advises it for slots and complex files |
@@ -356,9 +391,11 @@ Checks of the run (each prints a row in `checks.txt`; result of 2026-11-25 on th
 | BOM and CPL cover the same 67 parts; BOM = tree-a + tree-b `bom.csv` (same designators per fab number) | OK |
 | CPL spacing (JLC: above 0.2 mm) | closest D12 / R10 0.750 mm over both faces; one face C6 / L3 1.011 mm |
 | Extended parts | 23 unique Extended (22 of tree-a, J4 of tree-b; the 2 Preferred Extended cost nothing, rule UNVERIFIED as in `bom_check.py`) x 1.53 USD = 35.19 USD, the same set as `calc/bom_check.py` (23, order 230.73 USD before PCB and shipping on 2026-11-25, limit 250) |
-| Stock (`--stock`, need = designators x 5) | all 36 fab numbers in stock, no part out of stock (so no alternate needed); lowest margin LED C965834 3641 for 80 (45 x), then U1 C44800139 768 for 5, J3 C22373945 846, J4 C192300 1203, ANT1 C2917719 1528 (lookup 2026-11-25; stock changes: recheck before paying, section 6) |
+| Stock (`--stock`, need = designators x 5) | all 36 fab numbers in stock, no part out of stock (so no alternate needed); lowest margin LED C965834 3641 for 80 (45 x), then U1 C44800139 for 5 (stock is time-bound, recheck before payment: 763 on 2026-11-25), J3 C22373945 846, J4 C192300 1203, ANT1 C2917719 1528 (lookup 2026-11-25; stock changes: recheck before paying, section 6) |
 | Cart against the board file | ENIG, black, white silk, 1.0 mm, 4 layers: OK |
 | Gerber re-read (`tools/gerber_check.py`, own RS-274X / Excellon reader against `tools/pcb_facts.py` of the board) | 13 files, unit mm 4.6, X2 function of the 4 copper files L1..L4, Edge.Cuts 82 pieces / 6 closed contours / no open end / 114.800 x 120.000 mm / length 1103.16 mm = the board, PTH 406 + NPTH 70 hits equal the board's 476 holes by diameter and position (0.0011 mm), every plated hole on copper of both outer layers, no copper in any non-plated hole |
+| Via holes inside a mask opening (WARN row, numbers from the board file: `pcb_facts.py` -> `fab_package.py`) | 22 holes open on top: U1 16 (12 under paste, paste 13.53 of 21.72 mm2 = 62 %), U2 6 (4 under paste, 1.75 of 2.40 mm2 = 73 %); free vias 376, tented front 376 / back 376 |
+| Silk stroke width (WARN row) | below 0.15 mm: F.SilkS 0.100 x8, 0.120 x139; B.SilkS 0.100 x8, 0.120 x11 (5b item 6): JLC thickens or drops them, not a rejection |
 | Privacy scan of every file and zip member (home path, user, host and computer name, e-mail) | clean; the scan matches whole words (a 3-letter host name matched "Macros" in a gerber comment) |
 Plated vs non-plated: 406 PTH hits = 267 + 22 at 0.20 mm, 109 at 0.30 mm, 4 slots 0.5 x 1.4 mm (J1), 4 mounts 2.2 mm (MH1-MH4); 70 NPTH = 60 mouse-bite holes
 0.6 mm, 4 tooling holes 2.0 mm, 2 hang / hole 1.4 mm, 3 Tag-Connect pegs 0.991 mm, BT1 peg 1.8 mm.

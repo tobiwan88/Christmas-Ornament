@@ -39,19 +39,19 @@ Full list with reversal costs: ../DECISIONS.md. The ones that shape this board (
 Command: `python3 hardware/calc/bom_check.py hardware/tree-a --stock --qty 5 --separate` (network; 2026-11-23 after the D21 commits fb724f2 / 24f8efb; prices at the tier of the order quantity; rerun and retype after a BOM change). One ORDER = 5 panels = 5 ornaments (A + B); fees are per order. `?` = no number yet: not in the model, a person must supply it.
 | Item | Order USD (5 panels) | Per ornament USD | Source / note |
 |---|---|---|---|
-| Parts A + B (first order, variant A) | 51.71 | 10.34 | bom_check `order at qty 5` (tier price); B alone 0.44 per board |
+| Parts A + B (first order, variant A) | 51.76 | 10.35 | bom_check `order at qty 5` (tier price); B alone 0.44 per board |
 | Loading fee, 23 unique Extended parts x 1.53 | 35.19 | 7.04 | `fab.extended_fee_usd` (UNVERIFIED engineer figure, digest 1.53) |
 | Setup 51.12 + stencil 16.42 | 67.54 | 13.51 | D6, digest |
 | Handling (minimum) | 14.93 | 2.99 | digest `>= 14.93`, UNVERIFIED |
 | Fixture, 1 counted | 8.21 | 1.64 | digest `8.21 each`, count UNVERIFIED |
-| SMT joints 245 per panel x 5 x 0.0016 | 1.96 | 0.39 | joints counted from footprint pads, rule UNVERIFIED |
+| SMT joints 247 per panel x 5 x 0.0016 | 1.98 | 0.40 | joints counted from footprint pads, rule UNVERIFIED |
 | Panel fee for 2 designs ((designs - 1) x setup) | 51.12 | 10.22 | digest 'if counted so', UNVERIFIED; the panel still saves 41.09 USD against two orders (../panel/BOARD.md) |
-| **Computed total before PCB + shipping** | **230.66** | **46.13** | limit 250 USD (D20): 19.34 USD margin |
+| **Computed total before PCB + shipping** | **230.73** | **46.15** | limit 250 USD (D20): 19.27 USD margin (`bom_check.py hardware/tree-a --qty 5 --stock`, 2026-11-25; the 2026-11-23 figure was 230.66) |
 | Bare PCB (114.8 x 120 mm, 4 layers, ENIG, black) + shipping | ? | ? | manual cart quote, ../ORDER.md (MANUAL row; FAIL with `--strict`); no research-digest price |
 | 2 AAA cells (variant A) or pouch (variant B) | ? | ? | bought outside the fab, not priced yet |
 | 2 nylon standoffs M2 x 12 + 2 screws M2 x 5 | ? | ? | not at LCSC, bought separately, not priced yet |
 | Printed housing material | ? | ? | not priced yet (R2.2) |
-Variant B (same command, variant B rows): 231.92 USD before PCB + shipping, 25 unique Extended parts. No part carries an unconfirmed Basic/Extended class (`?`); every line still reads "status not VERIFIED" (datasheet card and stock checked 2026-11-23, no engineer sign-off): WARN rows in the gate.
+Variant B (same command, variant B rows): 232.00 USD before PCB + shipping (18.00 USD margin; 2026-11-25, was 231.92), 25 unique Extended parts. No part carries an unconfirmed Basic/Extended class (`?`); every line still reads "status not VERIFIED" (datasheet card and stock checked 2026-11-23, no engineer sign-off): WARN rows in the gate.
 
 ## Floorplan (gate 4)
 2026-11-23, built by `gen/tree_a_pcb.py` (placement, zones, keep-outs, planes); 2026-11-24 re-placed around U1 with the U1

@@ -156,8 +156,8 @@ hits equal the board's holes); privacy scan clean.
 ## Cost: panel against two separate orders
 Command (needs network; model and fee sources in `calc/bom_check.py` and `board.yaml` `fab.extra_fees`):
 `python3 hardware/calc/bom_check.py hardware/tree-a --stock --qty 5 --separate`
-Result 2026-11-23 (variant A, after D21): one panel order 230.66 USD against tree-a alone 175.47 USD + tree-b alone 96.28 USD =
-271.75 USD as two orders: **the panel saves 41.09 USD** in parts and assembly fees. The saving is exactly one stencil (16.42), one handling
+Result 2026-11-25 (variant A; `bom_check.py hardware/tree-a --stock --qty 5 --separate`; the 2026-11-23 figures were 230.66 / 175.47 / 96.28 / 271.75): one panel order 230.73 USD against tree-a alone 175.53 USD + tree-b alone 96.28 USD =
+271.82 USD as two orders: **the panel saves 41.09 USD** in parts and assembly fees. The saving is exactly one stencil (16.42), one handling
 fee (14.93, a minimum), one fixture (8.21, count UNVERIFIED) and one loading fee for the LED that both boards carry (1.53). Setup is a
 wash: two separate setups (2 x 51.12) equal one setup plus the panel fee for the second design ((designs - 1) x setup = 51.12, 'if counted
 so', UNVERIFIED). If JLC does not charge that panel fee the saving is 92.21 USD; if it charges more ('usually charged more', digest) it shrinks.
