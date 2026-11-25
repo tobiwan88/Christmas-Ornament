@@ -278,3 +278,24 @@ Lessons:
   (`tree_a_krt.py in2report`).
 - A starved thermal moves with the routing (C1.2, C4.2, C50.2, U1.44, U1 EP vias on In2): a solid connection on those pads
   is cheaper than an In2 no-signal box (the box cost routes).
+
+### Gate 5 finish (coordinator: stop sweeps, close by hand on top, freeze; 2026-11-25; append only)
+Result: 0 open, kicad-cli 0 / 0 / 0, frozen. Base = the deterministic repair arm (3 open: LED_L7_MCU, VBUS_DET,
+TPS_SEL); a closing edit (router items dropped, hand copper locked) and 4 targeted route.py steps closed it.
+Lessons:
+- Hand copper drawn BEFORE routing reshuffles everything (close_vbus: 10 open, DC/DC cluster: 7). Put it on the router
+  result instead: an edit step that removes named router items and adds locked copper, then short route.py steps for the
+  nets still open. The plan replays bit-identically (f10 = f11 = f13).
+- A closing step may trade one net for another (VBUS_DET in, LED_L4_MCU out) and the next step wins it back: keep a step
+  when the open count does not rise, not only when it falls.
+- Anything that touches the router input moves the result, even a pad's zone connection (C7 / C12 solid: step 4 left
+  LED_L4_MCU open). Fixes needed after the freeze go into generator-only lists drawn on the final build (FINISH_*,
+  FROZEN_MOVES), never into the edit step.
+- route.py does not check board-edge clearance of LOCKED copper it is given: the first R42 hand copper sat outside the
+  slope edge and only kicad-cli caught it. Check hand copper against the outline before a 10-minute run.
+- kicad-cli reads a via placed exactly at 0.15 mm from an SMD pad as 0.149999: nudge it 0.01 mm away in the frozen file
+  (rule-based, repeatable).
+- A net allowed on In2 only in the closing steps (TPS_SEL) keeps the measured base unchanged; allowing it from the start
+  gave a different base.
+- KRT `--stitch-edge-fence` at 4.2 mm left 7 gaps over 5 mm along the slopes (no 2-layer fill / no clear site): the
+  fence has to go into the router input (or the edge band be reserved) if the 5 mm pitch is a hard rule.

@@ -167,28 +167,58 @@ Open decisions (engineer), default first:
      position must be the body centre.
 
 ## Routing
-Status 2026-11-24 (gate 5 round 3): NOT routed. No `frozen-routes.json`; the committed board is the gate-4 placement with the
-locked hand copper (RF column / ANT_FEED, U1 fan-out, XL lanes, TPS63900 stage). Planes per D34 (engineer): In1 and In2
-solid GND, power on the outer layers, a local VDD pour on In2 only if routing needs it (`tree_a_pcb.IN2_VDD`, none set).
-- Router: KiCadRoutingTools v0.24.2 only. `gen/tree_a_krt.py plan` = autoroute.py's own plan run step by step with only
-  the plane map changed (GND on In1 and In2; autoroute.py has no option for the plane map and puts VDD on In2): planes
-  (`route_planes.py --skip-existing-zones`, the generator's pours stay) -> `qfn_fanout.py` on U1 -> route.py passes at
-  0.1 / 0.1, via 0.45 / 0.2 on F.Cu / B.Cu only -> floor rung 0.09 -> GND edge fence + route.py GND. Power / RF keep
-  their 0.15 class clearance; vias keep 0.15 from SMD pads (rule 'via to SMD pad' read as a clearance constraint plus
-  the recorded same-net pad clearance).
-- Options a + b (2026-11-25, engineer): Default / Power clearance 0.10 (`rules/jlc-4layer-tree-a.json`, `board.yaml`,
-  `rules/tree-a.kicad_dru`), RF 0.15, Crystal class 0.15; In2 signals only for still-open LED / SWD / BTN_SW1 / VBUS_DET /
-  CHG_STAT nets, In2 rule areas without tracks under the RF column, X1, X2 and the DC/DC node (`IN2_NO_SIGNAL`);
-  `--hand rf`. Result over 20 graded arms: NOT complete, best 1 open net (LED_L2, not reproducible after the EP fix),
-  reproducible best 3 nets (LED_L1, LED_L8, XL1; kicad-cli 0 errors; `plan` default). D9 (B.Cu, under the RF column)
-  pads 2 / 4 have no free exit; the neck carries 24 non-GND nets in 14.0 mm. Table and lessons: NOTES-routing-lessons.md
-  "Round 3, options a + b". Engineer decision pending: placement / pin change at D9 or option d.
-- Reproduce: `python3 hardware/gen/tree_a_krt.py plan --workdir DIR [--cfg JSON]` (about 13-17 min); `in2report FROZEN
-  BOARD` lists In2 length per net and In2 vias without a GND via within 1.5 mm; freeze with `--write` (only a clean
-  result is written) or `tree_a_pcb.py --route krt`.
+Status 2026-11-25 (gate 5 finish): ROUTED and frozen (`frozen-routes.json`, replayed locked). kicad-cli DRC 0 errors,
+0 unwaived warnings, 0 unconnected, parity 0 (12 waived = B10 DNP paste rows; the gate-4 track_dangling / via_dangling
+waivers are removed). `tree_a_pcb.py --check` twice identical. Planes per D34: In1 and In2 solid GND, power on the outer
+layers, no In2 VDD pour. Classes per options a + b: Default / Power clearance 0.10, Default track 0.127, RF / Crystal 0.15.
+- Flow (`gen/tree_a_krt.py plan`, KiCadRoutingTools v0.24.2, deterministic, about 11 min): planes -> `qfn_fanout` U1 ->
+  route.py outer passes -> repair (In2 for every allowed net, disallowed nets forced off In2, In2 passes '!'-negate every
+  net not allowed there) -> closing edit (`gen/tree_a_edit.py`: drops the router copper in `tree_a_pcb.CLOSE_DROP`, adds
+  `CLOSE_TRACKS` / `CLOSE_VIAS` locked) -> 4 closing route.py steps (`PLAN["close"]`: LED_L7_MCU, VBUS_DET, TPS_SEL,
+  then the left U1 row LED_L1..L4_MCU + LED_L2 force-rerouted; 3 -> 2 -> 2 -> 1 -> 0 open) -> GND edge fence +
+  `--add-gnd-vias` (0.45 / 0.2, 1.5 mm) -> route.py GND -> grade with trim of dangling router items, hole-to-hole return
+  vias and 0.149999 mm rounding vias (`nudge_rounding`). Freeze: `plan --write` (writes only a clean result).
+- After the freeze, generator only (`FINISH_TRACKS`, `FINISH_VIAS`, `FROZEN_MOVES`, drawn with hand group close_top, not
+  in the router input so a re-run reproduces the frozen copper): 16 GND edge-fence vias, a VIN stub C20.1 -> the router's
+  VIN track end (TPS63900 input loop path), VBUS via 47.75/75.35 -> 47.75/75.38 and LED_L4_MCU via 28.775/33.25 ->
+  28.725/33.25 (0.15 mm to their own SMD pads). C7.2 / C12.2 solid pour connection in the final build only
+  (`POUR_SOLID_PADS_FINAL`: in the router input it moved the deterministic run).
+- Nets with hand copper (locked, not router): RF column ANT_FEED, RF_50, RF_N1, RF_N2, ANT_PA, VSS_PA (group rf);
+  XC1, XC2, XL1, XL2, VDD (group close: crystal lanes, VDD pin vias); DECD (close_decd); VDD, VBUS, VBUS_DET, BTN_SW1
+  (close_top: R43 / R42 node, U1 pins 37 / 38 via split, VDD via at C4.1); VIN and GND (finish); VBUS and LED_L4_MCU
+  vias moved.
+- In2 signal tracks (mm): VBUS_DET 16.1, LED_L2 22.0, LED_L4_MCU 7.6, LED_L5_MCU 6.2, LED_L6 14.3, LED_L7 11.7, LED_L8 1.4,
+  LED_L8_MCU 4.8, BTN_SW1 0.8, TPS_SEL 11.0 (allowed in the closing steps only, static SEL line). No power, RF, crystal or
+  DCC net on In2; no In2 track inside the `IN2_NO_SIGNAL` areas (several skirt them at 0.1-0.2 mm); option c (D9 left
+  pads on In2 under the RF column) was not needed.
+- Return vias (coordinator rule): 12 F.Cu <-> In2 transition vias, all with a GND via within 2.5 mm. F.Cu <-> B.Cu
+  signal vias without a GND via within 1.5 mm (net: x/y nearest mm), 41 exceptions, most around U1 where
+  `--add-gnd-vias` found no room (accepted): CHG_STAT 39.15/30.45 4.0, 40.55/34.65 2.6; LED_L1 38.4/28.05 2.8,
+  40.45/27.7 3.4; LED_L1_MCU 32.03/27.23 1.9; LED_L2 33.6/41.65 2.0; LED_L2_MCU 29.63/30.63 2.2; LED_L3 35.05/38.15 2.3;
+  LED_L3_MCU 28.68/30.58 2.6; LED_L4 34.0/40.95 2.7; LED_L5_MCU 34.35/28.65 2.5, 38.3/32.65 3.1; LED_L6 38.1/33.35 2.4,
+  38.95/33.1 2.9; LED_L6_MCU 34.75/29.55 1.6; LED_L7 35.0/42.15 2.0, 35.1/40.05 2.8, 35.15/28.9 2.2, 35.3/43.1 1.5,
+  43.85/37.5 1.5; LED_L8 35.05/40.95 3.0, 37.4/33.35 2.3, 37.65/30.2 2.6, 38.45/30.25 3.4, 40.0/29.25 4.7; SWDCLK
+  48.0/39.5 3.0; SWDIO 41.85/27.85 2.3; SWO 36.55/39.8 1.9, 38.8/24.25 2.0, 40.6/24.9 3.3, 40.6/25.8 3.0; TPS_SEL
+  18.65/63.03 1.7, 23.13/59.15 3.2, 32.2/47.33 1.9, 32.93/46.61 2.5; VBAT_SENSE 22.45/47.2 2.6; XL1 32.55/27.95 2.3,
+  41.3/26.1 2.3; XL2 33.4/28.0 2.3, 39.9/26.1 3.1 (positions of the plan's grade board; `plan` prints the list).
+- Reproduce: `python3 hardware/gen/tree_a_krt.py plan --workdir DIR [--write]`; `in2report FROZEN BOARD`.
 
-## Routing review (date)
-Pair numbers, loops, areas, plane voids, edge gaps, detours accepted, fab-floor tracks/vias, residual risks, where to look first.
+## Routing review (2026-11-25)
+- Checks run on the committed board: kicad-cli DRC 0 / 0 / 0 with parity; KRT check_drc no violations, check_connected
+  all nets, check_weird none (60 advisory off-centre via ends); critical.py OK (known WARN rows unchanged); track_width
+  OK; impedance OK (GCPW 49.4 ohm with mask); `--stack-proof` OK.
+- `--proof` FAILS on two rows (open, engineer): (1) GND fence on the real outline: gaps 6.1 (44.8/27.0), 13.2
+  (43.3/32.9), 5.2 (56.1/75.2), 6.2 (50.8/75.2), 5.0 (18.2/55.4), 5.6 (18.1/46.4), 8.0 mm (21.4/41.8) over 5.0: LED /
+  SWD / VDD copper fills the edge band there, the site search found no clear spot; (2) CC1 (variant B, R30 DNP in A,
+  static) runs 4.2 mm at x 47.6 beside the trunk edge over In1's edge pull-back (y 76.9-81.0), CC2 and a VIN via block a
+  shift inward.
+- emi_check FAILS: parallel XL2 (B.Cu lane y 27.05) beside LED_L1 and XL1 beside LED_L1_MCU within 0.5 mm (crystal rule
+  0.5 mm from other nets; the router keeps only the 0.15 Crystal class); VBAT_SENSE beside LED_L8 / L3 / L5_MCU in the J3
+  middle (6.5 mm within 0.4 mm; slow node, tau 110 ms). Its edge-fence and plane-void rows are not valid for this board
+  (bounding-box edge model; reads the unfilled board): `--proof` measures both on the real outline / a refilled copy.
+- Hand-placed edge copper: VBUS 0.127 mm at 0.38 mm (centre) inside the left slope at R42 (router's own necked width).
+- Look first: the fence gaps and CC1 row above; XL1 / XL2 lanes next to LED_L1 / LED_L1_MCU; the left U1 row
+  (LED_L1..L4_MCU re-laid by closing step 4, VBUS_DET via 30.65/21.55 0.19 mm from C4.1).
 
 ## Commands
 ```
