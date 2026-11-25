@@ -518,7 +518,13 @@ def power_stage(P):
     V(gx, r["R23"][1][1])
 
 
-SILK = [("TREE-01 A", (TO.CX, 79.5)), ("${GIT_SHA}", (TO.CX, 81.3))]
+SILK = [("TREE-01 A", (TO.CX - 1.0, 79.5)), ("${GIT_SHA}", (TO.CX, 81.3))]   # fix round: name 1 mm left (render review)
+# fix round (render review C8-C12, power review C5/C6): designators on silk (1.0 / 0.15, JLC minimum text) placed by a
+# search around the part (no pad within 0.15 mm, no other new silk), pin-1 marks and the BT1 polarity signs moved off
+# copper, B.Silk notes for the parts on the outer face
+SILK_REFS = ("J3", "U1", "U2", "Q1", "BT1", "TC1", "SW1")
+SILK_PIN1_FIX = ("U2", "Q1", "U3")          # their pin-1 triangle moves (<= 0.6 mm) to clear vias / tracks / pads
+SILK_NOTES = [("TC1 pin 1", "TC1", "1"), ("SW1", "SW1", None)]   # B.Silk text next to that pad / part
 
 
 # ======================================================================================================================
@@ -1095,6 +1101,163 @@ def parse_netlist(text):
 FP_OVERRIDE = {"NT1": "tree:NetTie-2_SMD_Bridge0.2mm"}     # D25: the 1.5 x 0.5 mm library net tie does not fit pad 32
 
 
+def silk_fix(board, fps, mm, V):
+    """Fix-round silk: pin-1 marks / BT1 signs off copper, BT1 minus horizontal, designators and B.Silk notes."""
+    import pcbnew
+    tm = pcbnew.ToMM
+    cu = []                                   # copper rectangles per side: (side, x0, y0, x1, y1, margin)
+    for t in board.GetTracks():
+        bb = t.GetBoundingBox()
+        r = (tm(bb.GetLeft()), tm(bb.GetTop()), tm(bb.GetRight()), tm(bb.GetBottom()))
+        if t.GetClass() == "PCB_VIA":
+            cu += [("F",) + r + (0.15,), ("B",) + r + (0.15,)]
+        else:
+            side = {"F.Cu": "F", "B.Cu": "B"}.get(board.GetLayerName(t.GetLayer()))
+            if side and t.GetClass() == "PCB_TRACK":
+                # a track's bounding box over-reads diagonals: sample points along it instead
+                a_, b_ = t.GetStart(), t.GetEnd()
+                w = tm(t.GetWidth()) / 2
+                n = max(1, int(tm(t.GetLength()) / 0.2))
+                for i in range(n + 1):
+                    x = tm(a_.x) + (tm(b_.x) - tm(a_.x)) * i / n
+                    y = tm(a_.y) + (tm(b_.y) - tm(a_.y)) * i / n
+                    cu.append((side, x - w, y - w, x + w, y + w, 0.10))
+    pads = []
+    for fp in fps.values():
+        for pd in fp.Pads():
+            bb = pd.GetBoundingBox()
+            r = (tm(bb.GetLeft()), tm(bb.GetTop()), tm(bb.GetRight()), tm(bb.GetBottom()))
+            for side, lay in (("F", pcbnew.F_Cu), ("B", pcbnew.B_Cu)):
+                if pd.IsOnLayer(lay):
+                    pads.append((side,) + r + (0.15,))
+    placed = []                               # new silk boxes per side
+
+    def gap(box, side, obst):
+        x0, y0, x1, y1 = box
+        g = 9.0
+        for o in obst:
+            if o[0] != side:
+                continue
+            dx = max(o[1] - x1, 0, x0 - o[3])
+            dy = max(o[2] - y1, 0, y0 - o[4])
+            g = min(g, math.hypot(dx, dy) - o[5])
+        return g
+
+    def bbox(it):
+        bb = it.GetBoundingBox()
+        return (tm(bb.GetLeft()), tm(bb.GetTop()), tm(bb.GetRight()), tm(bb.GetBottom()))
+
+    def best_shift(box, side, obst, rmax=0.6):
+        if gap(box, side, obst) >= 0:
+            return (0.0, 0.0)
+        cands = sorted(((i * 0.05, j * 0.05) for i in range(-12, 13) for j in range(-12, 13)
+                        if math.hypot(i, j) * 0.05 <= rmax), key=lambda d: math.hypot(*d))
+        for dx, dy in cands:
+            if gap((box[0] + dx, box[1] + dy, box[2] + dx, box[3] + dy), side, obst) >= 0:
+                return (dx, dy)
+        return None
+    # pin-1 triangles
+    for ref in SILK_PIN1_FIX:
+        fp = fps.get(ref)
+        if fp is None:
+            continue
+        side = "B" if fp.IsFlipped() else "F"
+        for it in fp.GraphicalItems():
+            if "Silk" in board.GetLayerName(it.GetLayer()) and it.GetClass() == "PCB_SHAPE" and it.GetShape() == pcbnew.SHAPE_T_POLY:
+                own = {(round(tm(q.GetBoundingBox().GetLeft()), 4), round(tm(q.GetBoundingBox().GetTop()), 4)) for q in fp.Pads()}
+                op = [o[:5] + (0.05,) if (round(o[1], 4), round(o[2], 4)) in own else o for o in pads]   # own pads: 0.05
+                d = best_shift(bbox(it), side, cu + op) or best_shift(bbox(it), side, [o[:5] + (0.02,) for o in cu] + op, 0.8)
+                if d and d != (0.0, 0.0):
+                    it.Move(V(*d))
+                print(f"silk: {ref} pin-1 mark moved {d}")
+    # BT1 polarity: '-' (the lone vertical stroke) turned horizontal; '+' moved off copper
+    bt = fps.get("BT1")
+    if bt is not None:
+        segs = [it for it in bt.GraphicalItems() if "Silk" in board.GetLayerName(it.GetLayer()) and it.GetClass() == "PCB_SHAPE"
+                and it.GetShape() == pcbnew.SHAPE_T_SEGMENT]
+        cen = [((bbox(it)[0] + bbox(it)[2]) / 2, (bbox(it)[1] + bbox(it)[3]) / 2) for it in segs]
+        for k, it in enumerate(segs):
+            mates = [j for j in range(len(segs)) if j != k and math.dist(cen[j], cen[k]) < 0.3]
+            if not mates and (bbox(it)[3] - bbox(it)[1]) > (bbox(it)[2] - bbox(it)[0]):
+                it.Rotate(V(*cen[k]), pcbnew.EDA_ANGLE(90.0, pcbnew.DEGREES_T))
+                print("silk: BT1 minus turned horizontal")
+        plus = [it for k, it in enumerate(segs) if any(j != k and math.dist(cen[j], cen[k]) < 0.3 for j in range(len(segs)))]
+        if plus:
+            box = (min(bbox(i)[0] for i in plus), min(bbox(i)[1] for i in plus), max(bbox(i)[2] for i in plus), max(bbox(i)[3] for i in plus))
+            d = best_shift(box, "F", cu + pads, 1.5)
+            if d and d != (0.0, 0.0):
+                for i in plus:
+                    i.Move(V(*d))
+            print(f"silk: BT1 plus moved {d}")
+
+    def put_text(txt, near_box, side, h=1.0):
+        w = 0.82 * h * len(txt) + 0.2
+        cx, cy = (near_box[0] + near_box[2]) / 2, (near_box[1] + near_box[3]) / 2
+        hw, hh = (near_box[2] - near_box[0]) / 2, (near_box[3] - near_box[1]) / 2
+        cands = []
+        for gap_ in (0.3, 0.6, 1.0, 1.5, 2.0):
+            cands += [(cx, cy - hh - gap_ - h / 2), (cx, cy + hh + gap_ + h / 2), (cx - hw - gap_ - w / 2, cy),
+                      (cx + hw + gap_ + w / 2, cy)]
+        for want_tracks in (True, False):
+            for x, y in cands:
+                box = (x - w / 2, y - h / 2 - 0.1, x + w / 2, y + h / 2 + 0.1)
+                if gap(box, side, pads) < 0:
+                    continue
+                if any(gap(box, side, [(side,) + q[1:] + (0.2,)]) < 0 for q in placed_side(side)):
+                    continue
+                if want_tracks and gap(box, side, cu) < 0:
+                    continue
+                if not (TO_inside(box)):
+                    continue
+                t = pcbnew.PCB_TEXT(board)
+                t.SetText(txt)
+                t.SetPosition(V(x, y))
+                t.SetLayer(pcbnew.B_SilkS if side == "B" else pcbnew.F_SilkS)
+                t.SetTextSize(V(h, h))
+                t.SetTextThickness(mm(0.15))
+                t.SetMirrored(side == "B")
+                board.Add(t)
+                placed.append((side,) + box)
+                return (round(x, 2), round(y, 2), "over tracks" if not want_tracks else "clear")
+        return None
+
+    def placed_side(side):
+        return [q for q in placed if q[0] == side]
+
+    def TO_inside(box):
+        poly = [tuple(q) for q in TO.OUTLINE_POLY]
+
+        def ins(p):
+            c = False
+            for i in range(len(poly)):
+                a_, b_ = poly[i], poly[(i + 1) % len(poly)]
+                if (a_[1] > p[1]) != (b_[1] > p[1]) and p[0] < a_[0] + (p[1] - a_[1]) * (b_[0] - a_[0]) / (b_[1] - a_[1]):
+                    c = not c
+            return c
+        return all(ins(q) for q in ((box[0] - 0.3, box[1] - 0.3), (box[2] + 0.3, box[1] - 0.3), (box[0] - 0.3, box[3] + 0.3),
+                                    (box[2] + 0.3, box[3] + 0.3)))
+    for ref in SILK_REFS:
+        fp = fps.get(ref)
+        if fp is None:
+            continue
+        side = "B" if fp.IsFlipped() else "F"
+        bb = fp.GetCourtyard(pcbnew.B_CrtYd if side == "B" else pcbnew.F_CrtYd).BBox() if hasattr(fp, "GetCourtyard") else fp.GetBoundingBox()
+        box = (tm(bb.GetLeft()), tm(bb.GetTop()), tm(bb.GetRight()), tm(bb.GetBottom()))
+        print(f"silk: {ref} designator at {put_text(ref, box, side)}")
+    for txt, ref, pad in SILK_NOTES:
+        fp = fps.get(ref)
+        if fp is None:
+            continue
+        side = "B" if fp.IsFlipped() else "F"
+        if pad:
+            pd = [q for q in fp.Pads() if q.GetNumber() == pad][0]
+            bb = pd.GetBoundingBox()
+        else:
+            bb = fp.GetCourtyard(pcbnew.B_CrtYd if side == "B" else pcbnew.F_CrtYd).BBox()
+        box = (tm(bb.GetLeft()), tm(bb.GetTop()), tm(bb.GetRight()), tm(bb.GetBottom()))
+        print(f"silk: note '{txt}' at {put_text(txt, box, side)}")
+
+
 def stage2(job_file):
     import pcbnew
     job = json.loads(Path(job_file).read_text())
@@ -1486,6 +1649,8 @@ def stage2(job_file):
         t.SetTextThickness(mm(0.15))
         t.SetMirrored(True)
         board.Add(t)
+
+    silk_fix(board, fps, mm, V)
 
     # no zone fill in the board file (DRC refills in memory; render() fills a scratch copy): keeps the file small and
     # the drilled-pad mask layers out of the filler's path
