@@ -2,7 +2,8 @@
 # hw-check hook: the A+B customer panel (hardware/gen/panel_pcb.py, hardware/panel/BOARD.md). Selftest, then a rebuild from the
 # CURRENT board files into a temp dir: panel size against tree_outline and the JLC limits, outlines, gaps, rigid copy of both
 # boards, designators, stackup, every tab (width, holes, hole-to-outline, length, nearest part, copper to holes and outline,
-# keep-outs), fiducials, tooling holes, panel DRC (panel-own items must be 0; items inherited from a board file are WARN, FAIL
+# keep-outs), fiducials, tooling holes, per-board net classes (A_ / B_, floors, fab rule files, bite test with test tracks
+# on a copy of the panel: A's 0.10 clearance acts on A's nets only, B's 0.15 on B's), panel DRC (panel-own items must be 0; items inherited from a board file are WARN, FAIL
 # with --strict), freshness of the committed panel files (WARN, FAIL with --strict). About 20-30 s.
 # SKIP lines: a board file missing, or no kicad-cli (then the gate has not checked the panel: source scripts/kicad-env.sh).
 # Run from the repo root by scripts/hw-check.sh with PYTHON exported; exits non-zero on a FAIL row.
@@ -22,6 +23,6 @@ strict=""
 for a in "$@"; do [ "$a" = "--strict" ] && strict="--strict"; done
 rc=0
 out=$("$PY" -I hardware/gen/panel_pcb.py --check $strict 2>&1) || rc=1
-printf '%s\n' "$out" | grep -E '^(FAIL|WARN)|^      |panel size =|tab count|^OK +tab T|panel DRC|fresh' || true
+printf '%s\n' "$out" | grep -E '^(FAIL|WARN)|^      |panel size =|tab count|^OK +tab T|panel DRC|fresh|net class bite test \(summary\)|net classes|panel floors|fab rule files' || true
 printf '%s\n' "$out" | tail -1
 exit $rc

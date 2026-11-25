@@ -1,6 +1,8 @@
 # panel
 
-Status (current state first; history below, dated): BUILT 2026-11-24 from the CURRENT board files by `hardware/gen/panel_pcb.py`
+Status (current state first; history below, dated): REBUILT 2026-11-25 from the CURRENT board files (A committed at cab8ad4's file, B = working tree
+`tree-b.kicad_pcb` sha 'a32b2e7d4d19', a GUI re-save not committed) after board A's option b: each board keeps its own net classes in the panel
+(see "Net classes of the two boards"). BUILT 2026-11-24 first by `hardware/gen/panel_pcb.py`
 (`panel.kicad_pcb`, `.kicad_pro`, `.kicad_dru`, `drc-waivers.csv`, `fp-lib-table`, `panel_preview.png`); gate hook
 `scripts/hw-check.d/70-panel.sh`. Board A is still being routed: the panel carries A's open items (DRC 33 warnings / 103 unconnected
 on 2026-11-24, all inherited, panel-own items 0). Rerun `python3 hardware/gen/panel_pcb.py` after every change of a board file and
@@ -30,7 +32,7 @@ single boards.
 | Fiducials | 3 per face (FID1-3 F.Cu, FID4-6 B.Cu, same points): 1.0 mm copper, 2.0 mm mask opening, centre 3.85 mm from the panel edge: (15.0, 3.85), (99.8, 3.85), (15.0, 116.15); not 180-degree symmetric (row) | JLC pages |
 | Silk (top rails) | "TREE-01 A" on the bottom rail under A's trunk, "TREE-01 B" on the top rail over B's trunk, "TREE-01 PANEL A+B r1 ${GIT_SHA}" top rail left; 1.2 mm text, 0.18 mm stroke; no personal data | job |
 | Stackup | copied from board A: F.Cu 0.035 / prepreg 7628 0.2104 / In1 0.0152 / core 0.5 / In2 0.0152 / prepreg 7628 0.2104 / B.Cu 0.035 (1.0 mm nominal; 1.051 mm with mask), ENIG, mask Black, silk White | D5 |
-| Board copies | rigid: worst pad deviation from the transformed board-file position 0.000000 mm (A 300 pads, B 43 pads incl. J4's 8). Counts copied: A 75 footprints / 130 segments / 35 vias / 7 zones / 2 texts, B 12 / 157 / 92 / 5 / 2 (2026-11-24) | rows |
+| Board copies | rigid: worst pad deviation from the transformed board-file position 0.000000 mm (A 300 pads, B 43 pads incl. J4's 8). Counts copied: A 75 footprints / 152 segments / 36 vias / 11 zones / 2 texts, B 12 / 157 / 92 / 5 / 2 (2026-11-25) | rows |
 | Designators | unchanged and unique across the panel (105 references; mounts MH1/MH2 on A, MH3/MH4 on B; panel parts MB1-MB8, TH1-TH4, FID1-FID6, board-only, not in BOM or CPL) | row |
 | Net names | unchanged, except a name on both boards: B's copy gets "B_" (today GND -> B_GND). Gerbers carry no netlist, so the fab sees no difference | row |
 
@@ -73,19 +75,46 @@ hook are the current values.
 | Inside corners | tab roots are sharp in the file | E: no JLC radius found (S: "an inside corner cannot be sharper than the cutting tool"); the mill leaves its radius in the slot corners at the 32 tab roots (outside the boards or inside the bite zone) |
 
 ## Board setup, DRC and how the rules are merged
-- Project `panel.kicad_pro`: fab floors from `rules/jlc-4layer.json`, net classes of both boards (same Default; A's Power and RF with
-  their patterns), `lib_footprint_*` and `hole_to_hole` as warnings, `missing_courtyard` ignored (MB/TH have no courtyard).
-- `panel.kicad_dru` (generated): A's three rules and B's two, each renamed "A ..." / "B ...". A rule that names references or net
+- Project `panel.kicad_pro`: fab floors = the LOWER of the two boards' rule files per key (A `rules/jlc-4layer-tree-a.json`, B
+  `rules/jlc-4layer.json`, the files their `board.yaml` names; row `fab rule files = board.yaml fab.rules`): today min clearance and
+  min track 0.100 (A 0.100, B 0.127), everything else equal. The generator refuses a clearance or track floor of 0.09 or less (JLC
+  minimum 3.5 mil, 0.09 mm). `lib_footprint_*` and `hole_to_hole` as warnings, `missing_courtyard` ignored (MB/TH have no courtyard).
+  Net classes: see the next section.
+- `panel.kicad_dru` (generated), first a track width floor rule per board whose own file is stricter than the panel floor (today
+  "B fab floor track_width" 0.127 on B's nets; A's 0.10 is the panel floor), then A's three rules and B's two, each renamed "A ..." / "B ...". A rule that names references or net
   names is unique already; a rule on vias / tracks only (A "via to SMD pad", B "via to board edge", B "via clear of SMD pads") gets
   `&& (A.NetName == ...)` with that board's own nets, so it cannot fire on the other board. Plus "panel mouse-bite hole spacing"
-  (hole_to_hole 0.3 mm between MB* holes only).
+  (hole_to_hole 0.3 mm between MB* holes only). There is NO clearance floor rule per board: a custom `clearance` rule replaces the net
+  class clearance of the items it matches (measured 2026-11-25: a 0.127 rule on B's nets turned B's 0.15 class into 0.127), so the clearance floor
+  is checked on the classes (row `net classes above the fab floors`: every class of each board against its own rules file).
 - `fp-lib-table`: the project library `${KIPRJMOD}/../lib/tree.pretty` (same as the boards), so the library checks run.
 - `drc-waivers.csv`: generated union of the boards' waivers (reason prefixed with the board), read by `fab_package.py`.
 - Zones are refilled with kicad-cli in a copy of the panel PROJECT (net classes and rule areas apply); `pcbnew_safe.fill_zones_cli`
   copies the bare board and would fill with default rules.
 - DRC (`--severity-all --refill-zones`, no schematic parity): an item counts as inherited when the board file's own DRC has the same
-  type at the transformed positions, unconnected items per net. 2026-11-24: panel-own 0 violations, 0 unconnected; inherited 33 / 103
+  type at the transformed positions, unconnected items per net. 2026-11-25: panel-own 0 violations, 0 unconnected; inherited 34 / 101
   (all board A, in routing).
+
+## Net classes of the two boards (differing classes; engineer's decision 2026-11-25: both boards keep their own)
+Since board A's option b (Default and Power class clearance 0.10, Default track 0.127) the Default classes differ (A 0.127 / 0.10, B
+0.15 / 0.15), and the panel no longer stops on that. `merge_net_classes()` in `panel_pcb.py` writes into `panel.kicad_pro`:
+| Panel class | From | Clearance / track | Nets |
+|---|---|---|---|
+| `A_Default`, `A_Power`, `A_RF`, `A_Crystal` | board A's classes, own values and priorities (A_Default priority 1000, below A's others) | 0.10 / 0.127, 0.10 / 0.30, 0.15 / 0.35, 0.15 / 0.15 | A's own patterns, plus one exact pattern per A net for A_Default (58 + 7 + 3 + 4 = 72 nets) |
+| `B_Default` | board B's Default (priority 1001) | 0.15 / 0.15 | one exact pattern per B net (9 nets, B's renamed GND as `B_GND`) |
+| `Default` | panel only: lower clearance and track width of the two Defaults | 0.10 / 0.127 | nothing of the boards; netless items (mouse bites, tooling holes, fiducials) |
+Rules: a net of one board never takes a class of the other (patterns are exact net names; the shared name GND / B_GND is proved by bite
+test cell 13). The panel Default is the lenient one, so a netless item against a netless item is graded at 0.10; against any net it is
+graded by that net's class (KiCad takes the larger clearance of the two items). Net names with `* ? [ ]` stop the build (they would be
+read as wildcards). A custom rule that sets `clearance` (A's RF feed 0.30, via to SMD pad 0.15) overrides the class for its own items, as in
+the board file.
+Bite test (`bite_test()` in `panel_pcb.py`, run with the panel DRC in every build and in the hook, row `net class bite test 01..16` and
+`(summary)`): test tracks (0.2 mm, 3 mm long) are added to a COPY of the panel on the top rail, kicad-cli DRC runs with the panel project,
+and each cell must give the expected result: per class a pair 0.01 mm above its clearance (nothing reported) and 0.01 mm below (a
+`clearance` violation); the engineer's example, a pair 0.11 mm apart on two A_Default nets (passes) and on two B nets (reported);
+B_GND 0.14 mm from an A_Default net (reported: B's class acts on B_GND); track width 0.11 mm on an A net (passes), on a B net
+(reported by the B floor 0.127), 0.095 mm on an A net (reported by the panel floor 0.100). Result 2026-11-25: 16 of 16 as expected.
+Nets named by a custom rule are left out of the cells (the rule, not the class, grades them).
 
 ## Assembly of the two-design panel (summary; details and questions in ../ORDER.md section 8)
 BOM and CPL come from the panel file (one BOM, one CPL for the whole panel: the boards' designators are already unique). B's parts carry
@@ -111,7 +140,7 @@ Reversal of D1: two separate orders, two files, two stencils; each board keeps i
 source scripts/kicad-env.sh
 python3 hardware/gen/panel_pcb.py               # rebuild hardware/panel/ from the current board files: rows + preview (about 20 s)
 python3 hardware/gen/panel_pcb.py --check       # gate mode: rebuild in a temp dir, compare with the committed files, DRC (hook 70-panel)
-python3 hardware/gen/panel_pcb.py --selftest    # known answers (s-expression round trip, transform, bite row, outline splitter, arc, rule parser)
+python3 hardware/gen/panel_pcb.py --selftest    # known answers (s-expression round trip, transform, bite row, outline splitter, arc, rule parser, per-board classes, floors)
 python3 hardware/gen/panel_pcb.py --strict      # order time: inherited DRC items and a stale panel FAIL
 python3 -I hardware/tools/fab_package.py --fit-only --offline hardware/panel/panel.kicad_pcb   # CPL fit on the panel
 python3 hardware/gen/tree_outline.py --panel    # table of the arrangements
@@ -130,7 +159,12 @@ assembled bottom part (A's D9-D16, B's J4): bottom-side CPL rows are not handled
   8 mm minimum tab spacing on one run; copper keep-out bands 0.6 mm at every hole row (the panel's pours differ from the board files
   there); 4 tooling holes instead of 3; B's shared net GND renamed B_GND in the panel only; part-distance thresholds 3.0 / 1.5 mm.
 
+- 2026-11-25 (engineer): both boards keep their own net classes in the panel (A_ / B_ prefix, patterns, lower floors, bite test); the
+  generator no longer stops on differing classes. Why: board A's option b made the Default classes differ (0.127 / 0.10 against 0.15 / 0.15).
+
 ## History
+- 2026-11-25: panel rebuilt after board A's option b and the per-board net class change; hook rows `net classes ...`, `panel floors`,
+  `fab rule files`, `net class bite test`.
 - 2026-11-23: NOT STARTED; arrangement and tab positions computed in `tree_outline.py` only.
 - 2026-11-24: first build (`gen/panel_pcb.py`), hook 70-panel, preview read.
 

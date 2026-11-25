@@ -18,8 +18,11 @@ What it does (decisions D1, D5, D17, D31 in hardware/DECISIONS.md; rules and evi
     3 global fiducials per face (1.0 mm copper, 2.0 mm mask opening, centre 3.85 mm from the panel edge, not 180-degree
     symmetric); silk on the top-face rails: TREE-01 A, TREE-01 B and the panel id with ${GIT_SHA}.
   * Board setup: stackup copied from board A (JLC04101H-7628, 1.0 mm, ENIG) with black solder mask and white silk;
-    project file with the fab rules (rules/jlc-4layer.json) and both boards' net classes; custom DRC file = both boards' rules
-    scoped to their own nets / references + the mouse-bite hole spacing rule.
+    project file with the panel floors (lower of the two boards' fab rule files, above the JLC minimum 0.09) and both boards'
+    net classes SEPARATELY (A_<name>, B_<name>, nets assigned by pattern; the boards' Default classes differ since board A's
+    option b); custom DRC file = both boards' rules scoped to their own nets / references + a track width floor rule for the
+    stricter board + the mouse-bite hole spacing rule.  A custom 'clearance' rule replaces the class clearance, so none is
+    used for floors; a bite test (test tracks on a copy, kicad-cli DRC) proves each class acts on its own board's nets.
   * Zones are refilled with kicad-cli INSIDE a copy of the panel project (rules apply), no ZONE_FILLER, no SWIG.
 
 Commands (repo root; `source scripts/kicad-env.sh` first for kicad-cli):
@@ -51,7 +54,10 @@ PANEL_DIR = ROOT / "hardware/panel"
 BOARDS = {"A": ROOT / "hardware/tree-a/tree-a.kicad_pcb", "B": ROOT / "hardware/tree-b/tree-b.kicad_pcb"}
 BOARD_NAME = {"A": "TREE-01 A", "B": "TREE-01 B"}
 PANEL_ID = "TREE-01 PANEL A+B r1"
-FAB_RULES = ROOT / "hardware/rules/jlc-4layer.json"
+FAB_RULES = {"A": ROOT / "hardware/rules/jlc-4layer-tree-a.json", "B": ROOT / "hardware/rules/jlc-4layer.json"}   # = fab.rules of each board.yaml (row)
+JLC_MIN_SPACE = 0.09            # JLC 4-layer minimum track and space, 3.5 mil (the _comment of rules/jlc-4layer.json, jlcpcb.com/capabilities 2026-10): panel floors must stay above it
+CLASS_PREFIX = {"A": "A_", "B": "B_"}   # net classes of the panel: each board keeps its own, renamed A_<name> / B_<name>
+CLASS_PRIO_DEFAULT = {"A": 1000, "B": 1001}   # priority of A_Default / B_Default (lower number wins; the boards' own classes are < 1000, KiCad's Default is INT_MAX)
 
 # ---- panel parameters (sources in hardware/panel/BOARD.md "JLC rules"; P = JLC page quote, S = search snippet, E = estimate)
 PAGE_ORIGIN = (20.0, 20.0)      # top-left corner of the panel on the KiCad sheet (any positive value; gerbers are absolute)
@@ -1080,25 +1086,71 @@ def stackup_summary(setup):
     return th, rows, str(fin[1]) if fin else None
 
 
-def project_json(A, B, netmap_b):
+def panel_floors(per):
+    """Panel floors from per-board rule dicts: the lower value per key; clearance and track width must stay above the JLC minimum."""
+    panel = {key: min(per["A"][key], per["B"][key]) for key in per["A"]}
+    for key in ("min_clearance", "min_track_width"):
+        if panel[key] <= JLC_MIN_SPACE:
+            raise SystemExit("panel: floor %s = %s is not above the JLC minimum %s" % (key, panel[key], JLC_MIN_SPACE))
+    return panel
+
+
+def fab_floors(A, B):
+    """Per-board fab floors (each board's own rules file, the ones board.yaml names) and the panel floor = the lower of the two."""
+    per = {k: dict(json.loads(FAB_RULES[k].read_text())["rules"]) for k in ("A", "B")}
+    return per, panel_floors(per)
+
+
+def merge_net_classes(pa, pb, nets_a, nets_b_panel, netmap_b):
+    """Both boards keep their own net classes in the panel: A's classes become A_<name>, B's B_<name> (each with its own values and
+    priority), the nets of each board are assigned by net-class patterns (A's and B's own patterns, B's net names as renamed in the
+    panel, plus one pattern per net for A_Default / B_Default at the lowest priority).  The panel's own Default (nets of no board:
+    mouse bites, tooling holes, fiducials) takes the lower clearance / track width of the two Defaults.
+    Returns (classes, patterns, assign) with assign = {panel net name: class name} resolved with the wildcard rule of the patterns."""
+    import fnmatch
+    src = {"A": pa["net_settings"], "B": pb["net_settings"]}
+    nets = {"A": sorted(nets_a), "B": sorted(nets_b_panel)}
+    for k in nets:
+        bad = [n for n in nets[k] if re.search(r"[*?\[\]]", n)]
+        if bad:
+            raise SystemExit("panel: net names with pattern wildcards cannot be assigned by exact pattern: %s" % bad)
+    dflt = {k: next(c for c in src[k]["classes"] if c["name"] == "Default") for k in src}
+    top = dict(dflt["A"])
+    for key in ("track_width", "clearance", "via_diameter", "via_drill", "diff_pair_width", "diff_pair_gap"):
+        top[key] = min(dflt["A"][key], dflt["B"][key])
+    classes = [top]
+    pats = []
+    for k in ("A", "B"):
+        for c in src[k]["classes"]:
+            c2 = dict(c, name=CLASS_PREFIX[k] + c["name"])
+            if c["name"] == "Default":
+                c2["priority"] = CLASS_PRIO_DEFAULT[k]
+            elif c["priority"] >= CLASS_PRIO_DEFAULT["A"]:
+                raise SystemExit("panel: board %s class %s priority %s collides with the panel's Default priorities" % (k, c["name"], c["priority"]))
+            classes.append(c2)
+        for p in src[k].get("netclass_patterns") or []:
+            pn = netmap_b.get(p["pattern"], p["pattern"]) if k == "B" else p["pattern"]
+            pats.append({"netclass": CLASS_PREFIX[k] + p["netclass"], "pattern": pn})
+        for n in nets[k]:
+            pats.append({"netclass": CLASS_PREFIX[k] + "Default", "pattern": n})
+    prio = {c["name"]: c["priority"] for c in classes}
+    assign = {}
+    for k in ("A", "B"):
+        for n in nets[k]:
+            hit = [p["netclass"] for p in pats if fnmatch.fnmatchcase(n, p["pattern"]) and p["netclass"].startswith(CLASS_PREFIX[k])]
+            assign[n] = min(hit, key=lambda c: prio[c])
+    return classes, pats, assign
+
+
+def project_json(A, B, netmap_b, nets_a, nets_b_panel):
     pa = json.loads((A["path"].with_suffix(".kicad_pro")).read_text())
     pb = json.loads((B["path"].with_suffix(".kicad_pro")).read_text())
-    fab = json.loads(FAB_RULES.read_text())
-    ds = {"rules": dict(fab["rules"]),
+    _, floors = fab_floors(A, B)
+    ds = {"rules": dict(floors),
           "rule_severities": {"lib_footprint_issues": "warning", "lib_footprint_mismatch": "warning", "hole_to_hole": "warning",
                               "missing_courtyard": "ignore", "track_dangling": "warning", "via_dangling": "warning"},
           "defaults": pa["board"]["design_settings"].get("defaults", {})}
-    ca = {c["name"]: c for c in pa["net_settings"]["classes"]}
-    cb = {c["name"]: c for c in pb["net_settings"]["classes"]}
-    keys = ("track_width", "clearance", "via_diameter", "via_drill")
-    for name in set(ca) & set(cb):
-        if any(abs(ca[name][k] - cb[name][k]) > 1e-9 for k in keys):
-            raise SystemExit("panel: net class %s differs between the boards (%s vs %s): engineer decides" % (
-                name, {k: ca[name][k] for k in keys}, {k: cb[name][k] for k in keys}))
-    classes = [dict(ca[n]) for n in sorted(ca, key=lambda n: (n != "Default", n))] + [dict(cb[n]) for n in sorted(cb) if n not in ca]
-    pats = list(pa["net_settings"].get("netclass_patterns") or [])
-    for p in pb["net_settings"].get("netclass_patterns") or []:
-        pats.append(dict(p, pattern=netmap_b.get(p["pattern"], p["pattern"])))
+    classes, pats, _ = merge_net_classes(pa, pb, nets_a, nets_b_panel, netmap_b)
     tv = dict(pa.get("text_variables") or {})
     return {"board": {"design_settings": ds}, "boards": [], "meta": {"filename": "panel.kicad_pro", "version": 3},
             "net_settings": {"classes": classes, "meta": {"version": 4}, "netclass_patterns": pats}, "text_variables": tv}
@@ -1128,6 +1180,18 @@ def dru_text(A, B, nets_a, nets_b_panel, tabs):
                 body = body[:m.start()] + '(condition "%s")' % cond + body[m.end():]
             out.append(body.replace('(rule "%s"' % name, '(rule "%s %s"' % (key, name), 1))
     mb = ["MB%d" % int(t["name"][1:]) for t in tabs]
+    per, floors = fab_floors(A, B)
+    out.append("\n# ---- fab floors per board ----")
+    out.append("# The project floors are the lower of the two boards' fab rule files (%s). A board whose own file is stricter keeps its" % ", ".join(
+        "%s: %s" % (k, FAB_RULES[k].name) for k in ("A", "B")))
+    out.append("# track width floor through these rules, scoped to its own nets. No 'clearance' floor rule: a custom clearance rule REPLACES the")
+    out.append("# net class clearance of the items it matches (measured: a 0.127 rule on board B's nets turned its 0.15 class into 0.127), so the")
+    out.append("# clearance floor of each board is checked on its net classes instead (row 'net classes above the fab floors').")
+    for key, nets in (("A", nets_a), ("B", nets_b_panel)):
+        fk, cn = "min_track_width", "track_width"
+        if per[key][fk] > floors[fk] + 1e-9:
+            out.append('(rule "%s fab floor %s"\n\t(constraint %s (min %smm))\n\t(condition "%s"))' % (
+                key, cn, cn, fmt(per[key][fk]), _cond_nets("A", nets)))
     out.append("\n# ---- panel ----")
     out.append("# Mouse bites: JLC wants 0.35-0.4 mm hole edge to hole edge, minimum 0.3 (mouse-bite guide, hardware/panel/BOARD.md);")
     out.append("# the fab hole-to-hole floor (0.5 mm, rules/jlc-4layer.json) is meant for drilled holes of the boards, not for perforations.")
@@ -1232,7 +1296,7 @@ def compose(ctx):
     root = head + body + [["embedded_fonts", "no"]]
     text = dump(root) + "\n"
     return dict(text=text, tabs=tabs, pieces=pieces, info=info, silk=silk_info, setup=setup,
-                pro=project_json(A, B, ctx["netmap_b"]),
+                pro=project_json(A, B, ctx["netmap_b"], ctx["nets_a"], {ctx["netmap_b"].get(n, n) for n in ctx["nets_b"]}),
                 dru=dru_text(A, B, ctx["nets_a"], {ctx["netmap_b"].get(n, n) for n in ctx["nets_b"]}, tabs),
                 waivers=waivers_csv(A, B))
 
@@ -1543,6 +1607,117 @@ def check_drc(ctx, pcb, rows, tmpdir):
     return d
 
 
+def check_classes(ctx, comp, rows):
+    """Per-board net classes in the panel project: names, assignment of every net, each class above its own board's fab floors, panel
+    floors above the JLC minimum, fab rule files = board.yaml fab.rules."""
+    import yaml
+    per, floors = fab_floors(ctx["A"], ctx["B"])
+    pro = comp["pro"]["net_settings"]
+    names = [c["name"] for c in pro["classes"]]
+    _, _, assign = merge_net_classes(json.loads(ctx["A"]["path"].with_suffix(".kicad_pro").read_text()),
+                                     json.loads(ctx["B"]["path"].with_suffix(".kicad_pro").read_text()),
+                                     ctx["nets_a"], {ctx["netmap_b"].get(n, n) for n in ctx["nets_b"]}, ctx["netmap_b"])
+    n_nets = len(ctx["nets_a"]) + len(ctx["nets_b"])
+    per_class = {}
+    for n, c in assign.items():
+        per_class[c] = per_class.get(c, 0) + 1
+    rows.add("OK" if len(assign) == n_nets else "FAIL", "net classes per board (panel project)",
+             "classes %s; %d nets assigned (A %d, B %d): %s; panel Default clearance %.3f / track %.3f for nets of no board" % (
+                 names, len(assign), len(ctx["nets_a"]), len(ctx["nets_b"]), ", ".join("%s %d" % kv for kv in sorted(per_class.items())),
+                 pro["classes"][0]["clearance"], pro["classes"][0]["track_width"]))
+    bad = []
+    for c in pro["classes"][1:]:
+        k = c["name"][0]
+        for ck, fk in (("clearance", "min_clearance"), ("track_width", "min_track_width"), ("via_diameter", "min_via_diameter")):
+            if c[ck] < per[k][fk] - 1e-9:
+                bad.append("%s %s %.3f < %s floor %.3f" % (c["name"], ck, c[ck], k, per[k][fk]))
+        if c["via_drill"] < per[k]["min_through_hole_diameter"] - 1e-9:
+            bad.append("%s via_drill %.3f < floor %.3f" % (c["name"], c["via_drill"], per[k]["min_through_hole_diameter"]))
+    rows.add("FAIL" if bad else "OK", "net classes above the fab floors", "each class against its own board's rules file (A %s, B %s): %s" % (
+        FAB_RULES["A"].name, FAB_RULES["B"].name, "; ".join(bad) if bad else "all clearance, track width, via and drill values at or above the floors"))
+    rows.add("OK", "panel floors = lower of the two",
+             "min clearance %.3f (A %.3f, B %.3f), min track %.3f (A %.3f, B %.3f); JLC minimum %.2f; B track floor rule: %s" % (
+                 floors["min_clearance"], per["A"]["min_clearance"], per["B"]["min_clearance"], floors["min_track_width"],
+                 per["A"]["min_track_width"], per["B"]["min_track_width"], JLC_MIN_SPACE,
+                 "A_ and B_ scoped" if per["A"]["min_track_width"] != per["B"]["min_track_width"] else "not needed (equal)"))
+    wrong = []
+    for k, b in (("A", ctx["A"]), ("B", ctx["B"])):
+        y = yaml.safe_load((b["path"].parent / "board.yaml").read_text())
+        decl = (b["path"].parent / y["fab"]["rules"]).resolve()
+        if decl != FAB_RULES[k].resolve():
+            wrong.append("%s: board.yaml names %s, panel uses %s" % (k, y["fab"]["rules"], FAB_RULES[k].name))
+    rows.add("FAIL" if wrong else "OK", "fab rule files = board.yaml fab.rules", "; ".join(wrong) if wrong else "A %s, B %s" % (FAB_RULES["A"].name, FAB_RULES["B"].name))
+
+
+def _bite_cells(ctx, classes, floors):
+    """Test track pairs for bite_test: (label, net1, net2, width, gap, expect_violation_type or None).  Per net class of each board
+    one pair just above the class clearance (must pass) and one just below (must be reported), the engineer's example (0.11 mm on a
+    board A Default net passes, on a board B net is reported), and the track width floors (0.11 mm: board A passes, board B is
+    reported by its own floor; 0.095 mm: reported on A by the panel floor)."""
+    _, _, assign = merge_net_classes(json.loads(ctx["A"]["path"].with_suffix(".kicad_pro").read_text()),
+                                     json.loads(ctx["B"]["path"].with_suffix(".kicad_pro").read_text()),
+                                     ctx["nets_a"], {ctx["netmap_b"].get(n, n) for n in ctx["nets_b"]}, ctx["netmap_b"])
+    classes = {c["name"]: c for c in classes}
+    named = "".join(b["path"].with_suffix(".kicad_dru").read_text() for b in (ctx["A"], ctx["B"]) if b["path"].with_suffix(".kicad_dru").exists())
+    by_class = {}
+    for n, c in sorted(assign.items()):     # nets a custom rule names (RF feed) would be graded by that rule, not by the class
+        if not n.startswith("unconnected-") and ("'%s'" % n) not in named:
+            by_class.setdefault(c, []).append(n)
+    cells = []
+    for cn in sorted(c for c in classes if c in by_class and len(by_class[c]) >= 2):
+        n1, n2 = by_class[cn][:2]
+        c = classes[cn]["clearance"]
+        cells.append(("%s pair %.3f above its clearance %.2f" % (cn, c + 0.01, c), n1, n2, 0.2, c + 0.01, None))
+        cells.append(("%s pair %.3f below its clearance %.2f" % (cn, c - 0.01, c), n1, n2, 0.2, c - 0.01, "clearance"))
+    a1, a2 = by_class["A_Default"][:2]
+    b1, b2 = by_class["B_Default"][:2]
+    cells.append(("A_Default nets 0.11 mm apart (engineer's example)", a1, a2, 0.2, 0.11, None))
+    cells.append(("B_Default nets 0.11 mm apart (engineer's example)", b1, b2, 0.2, 0.11, "clearance"))
+    shared = sorted(ctx["netmap_b"].values())     # a net name that is on both boards (B's copy renamed B_GND): its class must be B's
+    if shared:
+        cells.append(("%s (B) next to A_Default net %s, 0.14 mm apart (B class 0.15)" % (shared[0], a1), shared[0], a1, 0.2, 0.14, "clearance"))
+    cells.append(("A net track 0.11 mm wide", a1, None, 0.11, None, None))
+    cells.append(("B net track 0.11 mm wide (B floor %.3f)" % floors["B"]["min_track_width"], b1, None, 0.11, None, "track_width"))
+    cells.append(("A net track 0.095 mm wide (panel floor %.3f)" % floors["panel"]["min_track_width"], a1, None, 0.095, None, "track_width"))
+    return cells
+
+
+def bite_test(ctx, comp, pcb, rows, tmpdir):
+    """Net class bite test on the built panel: test tracks are added to a COPY (rail area, nothing else there), kicad-cli DRC runs on
+    the copy with the panel project, and every cell must give the expected result: the proof that A's classes (clearance 0.10) apply
+    on A's nets only and B's (0.15) on B's, i.e. that kicad-cli honours the per-board classes and patterns."""
+    arr, rot, off, frame, sheet = ctx["arr"]
+    per, panel = fab_floors(ctx["A"], ctx["B"])
+    cells = _bite_cells(ctx, comp["pro"]["net_settings"]["classes"], {"B": per["B"], "panel": panel})
+    td = Path(tmpdir) / "bite"
+    td.mkdir()
+    for f in ("panel.kicad_pro", "panel.kicad_dru", "fp-lib-table"):
+        shutil.copyfile(pcb.parent / f, td / f)
+    text = pcb.read_text()
+    y0 = frame["top_outer"] + RAIL_MM / 2
+    segs, pos = [], []
+    for i, (label, n1, n2, w, gap, exp) in enumerate(cells):
+        x = frame["x0"] + 22.0 + 5.0 * i
+        ys = [y0] if n2 is None else [y0 - (gap + w) / 2, y0 + (gap + w) / 2]
+        for n, y in zip((n1, n2), ys):
+            segs.append('\t(segment\n\t\t(start %s %s)\n\t\t(end %s %s)\n\t\t(width %s)\n\t\t(layer "F.Cu")\n\t\t(net "%s")\n\t\t(uuid "%s")\n\t)\n' % (
+                fmt(x), fmt(y), fmt(x + 3.0), fmt(y), fmt(w), n, uuid.uuid5(uuid.NAMESPACE_URL, "bite/%d/%s" % (i, n))))
+        pos.append((x, x + 3.0))
+    k = text.rindex("\t(embedded_fonts")
+    (td / "panel.kicad_pcb").write_text(text[:k] + "".join(segs) + text[k:])
+    d = drc(td / "panel.kicad_pcb", td / "d.json")
+    allpos = [v for v in d["violations"] if v["type"] in ("clearance", "track_width")]
+    ok_all = True
+    for i, ((label, n1, n2, w, gap, exp), (x0, x1)) in enumerate(zip(cells, pos), 1):
+        hit = [v["type"] for v in allpos if any(x0 - 0.5 <= it["pos"]["x"] <= x1 + 0.5 and abs(it["pos"]["y"] - y0) < 2.0 for it in v["items"])]
+        good = (exp in hit) if exp else not hit
+        ok_all &= good
+        rows.add("OK" if good else "FAIL", "net class bite test %02d" % i, "%s, %s: expected %s, DRC reported %s" % (label, "nets %s / %s" % (n1, n2) if n2 else "net %s" % n1, exp or "nothing", hit or "nothing"))
+    rows.add("OK" if ok_all else "FAIL", "net class bite test (summary)", "%d test track pairs / tracks on the top rail of a copy of the panel, kicad-cli DRC with the panel project: %s" % (
+        len(cells), "every cell as expected (A's classes act on A's nets only, B's on B's)" if ok_all else "a cell differs: the per-board net classes are not honoured"))
+    return ok_all
+
+
 # =================================================================================================================
 # Preview
 # =================================================================================================================
@@ -1651,11 +1826,13 @@ def run(out_dir, rows, do_drc=True, preview=True):
     check_geometry(ctx, comp, rows)
     check_tabs(ctx, comp, rows, feat_final)
     check_rails(ctx, comp, rows)
+    check_classes(ctx, comp, rows)
     if preview:
         render(ctx, comp, out_dir / "panel_preview.png", feat_final)
     if do_drc:
         with tempfile.TemporaryDirectory() as td:
             check_drc(ctx, pcb, rows, td)
+            bite_test(ctx, comp, pcb, rows, td)
     else:
         rows.add("WARN", "panel DRC", "not run (--no-drc)")
     return ctx, comp, pcb
@@ -1739,6 +1916,27 @@ def selftest():
     txt = '(version 1)\n# c\n(rule "x"\n (constraint edge_clearance (min 0.35mm))\n (condition "A.Type == \'Via\'"))\n'
     r = _rules(txt)
     row(len(r) == 1 and r[0][0] == "x" and "edge_clearance" in r[0][1], "custom rule parser", "%s" % r)
+    # 7 per-board net classes: differing Default classes stay separate, nets assigned by pattern, B's renamed net follows B,
+    #   panel floors = lower of the two and above the JLC minimum
+    def cls(name, clr, tw, prio):
+        return {"name": name, "clearance": clr, "track_width": tw, "via_diameter": 0.6, "via_drill": 0.3, "diff_pair_width": 0.1,
+                "diff_pair_gap": 0.1, "priority": prio}
+    fa = {"net_settings": {"classes": [cls("Default", 0.10, 0.127, 2147483647), cls("Power", 0.10, 0.3, 1)],
+                           "netclass_patterns": [{"netclass": "Power", "pattern": "VDD"}]}}
+    fb = {"net_settings": {"classes": [cls("Default", 0.15, 0.15, 2147483647)], "netclass_patterns": []}}
+    cl, pt, asg = merge_net_classes(fa, fb, {"GND", "VDD", "SIG"}, {"B_GND", "LED"}, {"GND": "B_GND"})
+    row([c["name"] for c in cl] == ["Default", "A_Default", "A_Power", "B_Default"] and cl[0]["clearance"] == 0.10 and cl[3]["clearance"] == 0.15
+        and asg == {"GND": "A_Default", "VDD": "A_Power", "SIG": "A_Default", "B_GND": "B_Default", "LED": "B_Default"},
+        "per-board net classes (A_ / B_ prefix)", "classes %s, Default of each board kept (0.10 / 0.15), nets -> %s" % ([c["name"] for c in cl], asg))
+    lo = {"A": {"min_clearance": 0.10, "min_track_width": 0.10}, "B": {"min_clearance": 0.127, "min_track_width": 0.127}}
+    fl = panel_floors(lo)
+    try:
+        panel_floors({"A": {"min_clearance": 0.09, "min_track_width": 0.10}, "B": lo["B"]})
+        guard = False
+    except SystemExit:
+        guard = True
+    row(fl == {"min_clearance": 0.10, "min_track_width": 0.10} and guard, "panel floors: lower of two, above JLC 0.09",
+        "%s; a floor of 0.09 is refused: %s" % (fl, guard))
     print("panel selftest: %s" % ("OK" if ok else "FAILED"))
     return 0 if ok else 1
 

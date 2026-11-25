@@ -13,6 +13,7 @@
   (condition "A.NetName == '/rf/ANT_FEED' && A.Type == 'Track' && B.Net != A.Net && !(B.Type == 'Pad' && (B.Reference == 'U1' || B.Reference == 'NT1' || B.Reference == 'L3' || B.Reference == 'L4' || B.Reference == 'L5' || B.Reference == 'C6' || B.Reference == 'C9' || B.Reference == 'C11' || B.Reference == 'C50' || B.Reference == 'R50' || B.Reference == 'C51'))"))
 (rule "A via to SMD pad"
   (constraint physical_clearance (min 0.15mm))
+  (constraint clearance (min 0.15mm))
   (condition "(A.Type == 'Via' && B.Type == 'Pad' && B.Pad_Type == 'SMD') && (A.NetName == '/charger/CC1' || A.NetName == '/charger/CC2' || A.NetName == '/charger/CHG_STAT' || A.NetName == '/charger/PROG' || A.NetName == '/charger/STAT' || A.NetName == '/charger/VBUS_DET' || A.NetName == '/leds/LED_L1' || A.NetName == '/leds/LED_L1_MCU' || A.NetName == '/leds/LED_L2' || A.NetName == '/leds/LED_L2_MCU' || A.NetName == '/leds/LED_L3' || A.NetName == '/leds/LED_L3_MCU' || A.NetName == '/leds/LED_L4' || A.NetName == '/leds/LED_L4_MCU' || A.NetName == '/leds/LED_L5' || A.NetName == '/leds/LED_L5_MCU' || A.NetName == '/leds/LED_L6' || A.NetName == '/leds/LED_L6_MCU' || A.NetName == '/leds/LED_L7' || A.NetName == '/leds/LED_L7_MCU' || A.NetName == '/leds/LED_L8' || A.NetName == '/leds/LED_L8_MCU' || A.NetName == '/mcu/ANT_PA' || A.NetName == '/mcu/BTN_SW1' || A.NetName == '/mcu/BTN_SW1_PAD' || A.NetName == '/mcu/DCC' || A.NetName == '/mcu/DECA' || A.NetName == '/mcu/DECD' || A.NetName == '/mcu/SWDCLK' || A.NetName == '/mcu/SWDIO' || A.NetName == '/mcu/SWO' || A.NetName == '/mcu/TPS_SEL' || A.NetName == '/mcu/VBAT_SENSE' || A.NetName == '/mcu/VSS_PA' || A.NetName == '/mcu/XC1' || A.NetName == '/mcu/XC2' || A.NetName == '/mcu/XL1' || A.NetName == '/mcu/XL2' || A.NetName == '/mcu/nRESET' || A.NetName == '/mcu/nRESET_TC' || A.NetName == '/power/BT_LINK' || A.NetName == '/power/CFG1' || A.NetName == '/power/CFG2' || A.NetName == '/power/CFG3' || A.NetName == '/power/LX1' || A.NetName == '/power/LX2' || A.NetName == '/rf/ANT_FEED' || A.NetName == '/rf/RF_50' || A.NetName == '/rf/RF_N1' || A.NetName == '/rf/RF_N2' || A.NetName == 'BAT' || A.NetName == 'GND' || A.NetName == 'VBUS' || A.NetName == 'VDD' || A.NetName == 'VIN' || A.NetName == 'unconnected-(ANT1-PCB_Trace-Pad2)' || A.NetName == 'unconnected-(J2-MountPin-PadMP)' || A.NetName == 'unconnected-(U1-P0.01-Pad24)' || A.NetName == 'unconnected-(U1-P0.02-Pad27)' || A.NetName == 'unconnected-(U1-P0.03-Pad28)' || A.NetName == 'unconnected-(U1-P0.04-Pad29)' || A.NetName == 'unconnected-(U1-P1.02{slash}NFC1-Pad3)' || A.NetName == 'unconnected-(U1-P1.03{slash}NFC2-Pad4)' || A.NetName == 'unconnected-(U1-P2.01-Pad12)' || A.NetName == 'unconnected-(U1-P2.02-Pad13)' || A.NetName == 'unconnected-(U1-P2.03-Pad14)' || A.NetName == 'unconnected-(U1-P2.04-Pad15)' || A.NetName == 'unconnected-(U1-P2.05-Pad16)' || A.NetName == 'unconnected-(U1-P2.06-Pad17)' || A.NetName == 'unconnected-(U1-P2.08-Pad19)' || A.NetName == 'unconnected-(U1-P2.09-Pad20)' || A.NetName == 'unconnected-(U1-P2.10-Pad21)')"))
 
 # ---- board B (hardware/tree-b/tree-b.kicad_dru) ----
@@ -22,6 +23,15 @@
 (rule "B via clear of SMD pads, also same net"
 	(constraint hole_clearance (min 0.2mm))
 	(condition "(A.Type == 'Via' && B.Type == 'Pad' && B.Pad_Type == 'SMD') && (A.NetName == '/LED_L1' || A.NetName == '/LED_L2' || A.NetName == '/LED_L3' || A.NetName == '/LED_L4' || A.NetName == '/LED_L5' || A.NetName == '/LED_L6' || A.NetName == '/LED_L7' || A.NetName == '/LED_L8' || A.NetName == 'B_GND')"))
+
+# ---- fab floors per board ----
+# The project floors are the lower of the two boards' fab rule files (A: jlc-4layer-tree-a.json, B: jlc-4layer.json). A board whose own file is stricter keeps its
+# track width floor through these rules, scoped to its own nets. No 'clearance' floor rule: a custom clearance rule REPLACES the
+# net class clearance of the items it matches (measured: a 0.127 rule on board B's nets turned its 0.15 class into 0.127), so the
+# clearance floor of each board is checked on its net classes instead (row 'net classes above the fab floors').
+(rule "B fab floor track_width"
+	(constraint track_width (min 0.127mm))
+	(condition "(A.NetName == '/LED_L1' || A.NetName == '/LED_L2' || A.NetName == '/LED_L3' || A.NetName == '/LED_L4' || A.NetName == '/LED_L5' || A.NetName == '/LED_L6' || A.NetName == '/LED_L7' || A.NetName == '/LED_L8' || A.NetName == 'B_GND')"))
 
 # ---- panel ----
 # Mouse bites: JLC wants 0.35-0.4 mm hole edge to hole edge, minimum 0.3 (mouse-bite guide, hardware/panel/BOARD.md);
