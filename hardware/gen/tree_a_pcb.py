@@ -123,6 +123,9 @@ FINISH_TRACKS = [
     # TPS63900 input loop: the router's VIN track crosses C20.1 mid-segment (no end in the pad); a stub from the pad
     # centre to that track's end gives emi_check's copper graph the C20.1 -> U2.10 path (same copper, 0.75 mm)
     ("VIN", "F.Cu", 0.3, [(17.13, 60.23), (17.75, 59.80)]),
+    # nRESET_TC: the A14 re-route joins the frozen via 42.70/26.60 at its new via 42.075/27.175; the frozen piece beyond it
+    # (to 40.75/28.35 and on) is dropped (EDGE_REROUTE drop), this stub replaces the used part
+    ("/mcu/nRESET_TC", "F.Cu", 0.127, [(42.5, 26.6), (42.075, 27.175)]),
     # charger GND pads into the planes (power review F1, variant B parts; site search on the frozen board): pad centre ->
     # GND via (FINISH_CHG), F.Cu 0.3
     *[("GND", "F.Cu", 0.3, [c, v]) for c, v in (((42.863, 78.5), (41.81, 78.5)), ((53.175, 74.6), (53.97, 75.25)),
@@ -544,7 +547,9 @@ FINISH_REPLACE = {"VBUS": 0.12, "/mcu/TPS_SEL": 9.9, "/leds/LED_L5_MCU": 9.9}
 # its replacement (routed with a 0.72 mm keep-out band along the edge) is in finish-routes.json
 EDGE_REROUTE = {"line": ((42.036, 29.555), (57.0, 52.0)), "near": 1.0,
                 "nets": ("/mcu/SWDIO", "/mcu/nRESET_TC", "/mcu/SWDCLK", "/leds/LED_L1"),
-                "drop": [("/mcu/SWDIO", (41.85, 27.85), (41.5, 28.2))]}   # stub left by the dropped SWDIO via 41.85/27.85
+                "drop": [("/mcu/SWDIO", (41.85, 27.85), (41.5, 28.2)),          # stubs left by dropped vias
+                         ("/mcu/nRESET_TC", (40.75, 28.35), (40.75, 29.05)),
+                         ("/mcu/nRESET_TC", (42.5, 26.6), (40.75, 28.35))]}
 
 
 def _edge_near(q):

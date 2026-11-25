@@ -188,15 +188,16 @@ layers, no In2 VDD pour. Classes per options a + b: Default / Power clearance 0.
   (close_top: R43 / R42 node, U1 pins 37 / 38 via split, VDD via at C4.1); VIN and GND (finish); VBUS and LED_L4_MCU
   vias moved.
 - In2 signal tracks as built (mm, after the fix round): VBUS_DET 16.1, LED_L1 7.5, LED_L2 22.0, LED_L4_MCU 7.6, LED_L5_MCU 5.2,
-  LED_L6 14.3, LED_L7 11.7, LED_L8 1.4, LED_L8_MCU 4.8, BTN_SW1 3.1 (0.8 router + 2.3 hand), SWDIO 18.3, nRESET_TC 9.2,
+  LED_L6 14.3, LED_L7 11.7, LED_L8 1.4, LED_L8_MCU 4.8, BTN_SW1 3.1 (0.8 router + 2.3 hand), SWDIO 7.6, nRESET_TC 17.2,
   TPS_SEL 10.6 (allowed in the closing steps only, static SEL line). No power, RF, crystal or DCC net on In2; no In2
   track inside the `IN2_NO_SIGNAL` areas (several skirt them at 0.1-0.2 mm); option c was not needed.
-- Return vias as built (`check_return_vias --distance 1.5` on the committed board: 127 signal vias, 41 without a GND
+- Return vias as built (`check_return_vias --distance 1.5` on the committed board: 129 signal vias, 44 without a GND
   via within 1.5 mm, most around U1 where `--add-gnd-vias` found no room, accepted). F.Cu <-> In2 transitions over the
-  2.5 mm rule (exceptions, no DRC-clean spot for a GND via): nRESET_TC 40.58/28.85 3.96 mm and LED_L5_MCU 38.30/32.65
-  3.11 mm (both from the fix-round re-routes). Other In2 transitions 1.5-2.4 mm: LED_L2 35.73/41.73 2.40, LED_L5_MCU
-  41.90/35.98 1.52, LED_L8_MCU 35.80/28.15 2.41, SWDIO 41.85/27.85 2.34, 50.10/54.10 2.22, 51.05/54.10 1.83, TPS_SEL
-  37.27/27.77 2.08. F.Cu <-> B.Cu over 1.5 mm (net x/y mm): CHG_STAT 39.15/30.45 4.0, 40.55/34.65 2.3; LED_L1 38.40/28.05
+  2.5 mm rule (exceptions, no DRC-clean spot for a GND via): LED_L5_MCU 38.30/32.65 3.11 mm and nRESET_TC 36.15/40.98
+  2.92 mm (both from the fix-round re-routes). Other In2 transitions 1.5-2.4 mm: LED_L2 35.73/41.73 2.40, LED_L5_MCU
+  41.90/35.98 1.52, LED_L8_MCU 35.80/28.15 2.41, SWDIO 42.58/36.23 1.68, 44.03/34.43 1.65, TPS_SEL 37.27/27.77 2.08,
+  nRESET_TC 46.20/41.90 1.64, 46.90/41.18 1.80. New F.Cu <-> B.Cu vias of the A14 re-route over 1.5 mm: SWDIO 41.85/27.85
+  2.3, 49.80/52.50 2.0; nRESET_TC 42.08/27.18 1.8; LED_L1 38.40/28.05 2.8, 40.45/27.70 2.9. F.Cu <-> B.Cu over 1.5 mm (net x/y mm): CHG_STAT 39.15/30.45 4.0, 40.55/34.65 2.3; LED_L1 38.40/28.05
   2.8, 40.45/27.70 2.9; LED_L1_MCU 32.02/27.23 1.9; LED_L2 33.60/41.65 2.0; LED_L2_MCU 29.62/30.62 2.2; LED_L3 35.05/38.15
   2.3; LED_L3_MCU 28.68/30.57 2.6; LED_L4 34.00/40.95 2.7; LED_L5_MCU 34.35/28.65 2.5; LED_L6 38.10/33.35 2.4, 38.95/33.10
   2.9; LED_L6_MCU 34.75/29.55 1.6; LED_L7 35.00/42.15 2.0, 35.10/40.05 2.8, 35.15/28.90 2.2, 35.30/43.10 1.5, 43.85/37.50
@@ -207,7 +208,8 @@ layers, no In2 VDD pour. Classes per options a + b: Default / Power clearance 0.
   `FINISH_TRACKS` / `FINISH_VIAS` (C7.2 / C8.2 return vias 38.78/25.3, 39.81/23.9; GND via + 0.3 mm stub at U3.2, C31.2,
   R32.2, R31.2, R45.2), `finish-routes.json` (copper re-routed on the committed board with all other nets locked:
   VBUS whole at 0.127 mm with 0.15 mm to every net, TPS_SEL and LED_L5_MCU whole at 0.127 mm, the SWDIO / nRESET_TC /
-  SWDCLK / LED_L1 pieces near edge A14 with a 0.72 mm keep-out band for the panel tabs; `FINISH_REPLACE`,
+  SWDCLK / LED_L1 pieces near edge A14 with a 0.72 mm keep-out band for the panel tabs, In2 cost 10 (an In2 run under
+  a B.Cu track voided its reference: SWDCLK 4.5 mm); `FINISH_REPLACE`,
   `EDGE_REROUTE`), fence vias 43.31/32.92 -> 43.18/33.01 and 55.62/51.37 -> 55.49/51.46, silk (`silk_fix`).
 - Widths as built: VBUS 0.127 (64.9 mm) and 0.3; DCC 0.127 mm for 1.32 mm (class 0.3, the router necked it; 0.54 A per
   IPC-2221). Still at 0.100 mm (no route at 0.127 without opening nets; JLC DFM check, ORDER.md): LED_L2 In2 22.0 + B.Cu
