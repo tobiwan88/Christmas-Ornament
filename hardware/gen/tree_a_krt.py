@@ -389,7 +389,7 @@ def run_auto(workdir: Path, cfg: dict, write: bool) -> int:
 # class, In2 only for the still-open nets of IN2_ALLOWED, GND return vias within 1.5 mm of every signal via.
 IN2_ALLOWED = ["/leds/LED_L*", "/mcu/SWD*", "/mcu/SWO", "/mcu/nRESET_TC", "/mcu/BTN_SW1", "/charger/VBUS_DET",
                "/charger/CHG_STAT"]
-PLAN = dict(in2_net="GND", hand=["rf"], escapes=[], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
+PLAN = dict(in2_net="GND", hand=["rf", "close"], escapes=["vdd"], snpc=0.15, fanout=True, passes=3, floor=False, fence=True,
             rules=None, gnd_via_mm=1.5,
             standard=0.1, floor_clearance=0.1, track=0.127, via=0.45, drill=0.2, grid=0.05, in2_fallback="repair",
             in2_vdd=[], route_args=["--max-ripup", "8", "--ordering", "inside_out"],   # best measured a + b arm (pz6 q3):
@@ -440,6 +440,11 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
     best = None
 
     def one_pass(prev, out, ceil, nets, lc, label):
+        if lc[2] != "-1":       # In2 open: every net not allowed on In2 is '!'-negated, so route.py neither routes it
+            from fnmatch import fnmatch          # nor rips and re-routes it this pass (power never lands on In2)
+            names = sorted(set(re.findall(r'\(net "([^"]+)"\)', Path(prev).read_text())))
+            nets = list(nets) + ["!" + n for n in names if not n.startswith("unconnected-")
+                                 and not any(fnmatch(n, q) for q in IN2_ALLOWED)]
         # --clearance (not the ceiling): the Default class routes at the rung, Power / RF keep their own 0.15 (board.yaml),
         # which kicad-cli grades; a ceiling would route them at the rung too (measured: 49 Power-class clearance errors)
         rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance", ceil, "--layer-costs", *lc,
@@ -500,33 +505,35 @@ def plan_flow(workdir: Path, cfg: dict) -> tuple[Path, list, dict]:
             if r[0] == 0:
                 break
         for cyc in range(1, cfg.get("cycles", 3) + 1):
+            start = best[1]
             bad = sorted({t["net"] for t in extract(prev.read_text())["tracks"] if t["layer"] == "In2.Cu"
                           and t["net"] != "GND" and not any(fnmatch(t["net"], q) for q in IN2_ALLOWED)})   # GND = the plane net
-            if not bad:
-                break
-            out = workdir / f"s4_repair_c{cyc}.kicad_pcb"
-            rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance", cfg["standard"], "--layer-costs", "1.0",
-                        "-1", "-1", "1.0", "--force-reroute", "--json-out", out.with_suffix(".json")], out.with_suffix(".log"),
-                       nets=bad)
-            times.append((f"route.py repair {cyc}: {bad} off In2 (outer layers, force-reroute)", t, rc))
-            if not out.exists():
-                break
-            g, names = _krt_open(out)
-            info["passes"].append((f"repair {cyc} {bad}", g, names, round(t, 1)))
-            print(f"   repair {cyc}: {bad} off In2 -> {g} open {names}, {t:.1f} s", flush=True)
-            best, prev = (out, g, names), out          # disallowed In2 copper must go even if it costs an open net
-            allowed_open = [n for n in names if any(fnmatch(n, q) for q in IN2_ALLOWED)]
+            if bad:
+                out = workdir / f"s4_repair_c{cyc}.kicad_pcb"
+                rc, t = sh([py, "-u", rt / "route.py", prev, out, *base, "--clearance", cfg["standard"], "--layer-costs",
+                            "1.0", "-1", "-1", "1.0", "--force-reroute", "--json-out", out.with_suffix(".json")],
+                           out.with_suffix(".log"), nets=bad)
+                times.append((f"route.py repair {cyc}: {bad} off In2 (outer layers, force-reroute)", t, rc))
+                if not out.exists():
+                    break
+                g, names = _krt_open(out)
+                info["passes"].append((f"repair {cyc} {bad}", g, names, round(t, 1)))
+                print(f"   repair {cyc}: {bad} off In2 -> {g} open {names}, {t:.1f} s", flush=True)
+                best, prev = (out, g, names), out          # disallowed In2 copper must go even if it costs an open net
+            allowed_open = [n for n in best[2] if any(fnmatch(n, q) for q in IN2_ALLOWED)]
             if allowed_open:
                 o2 = workdir / f"s4_repair_c{cyc}_in2.kicad_pcb"
                 r = one_pass(prev, o2, cfg["standard"], allowed_open, ["1.0", "-1", "3.0", "1.0"], f"cycle {cyc}: In2 for {allowed_open}")
                 if r is not None and r[0] < best[1]:
                     best, prev = (o2, r[0], r[1]), o2
-            other_open = [n for n in best[2] if not any(fnmatch(n, q) for q in IN2_ALLOWED)]
+            other_open = [n for n in best[2] if n != "GND" and not any(fnmatch(n, q) for q in IN2_ALLOWED)]
             if other_open:
                 o3 = workdir / f"s4_repair_c{cyc}_outer.kicad_pcb"
                 r = one_pass(prev, o3, cfg["standard"], other_open, ["1.0", "-1", "-1", "1.0"], f"cycle {cyc}: outer for {other_open}")
                 if r is not None and r[0] < best[1]:
                     best, prev = (o3, r[0], r[1]), o3
+            if best[1] == 0 or (not bad and best[1] >= start):
+                break
     if best and best[1] and cfg["in2_fallback"] and cfg["in2_fallback"] not in ("first", "repair"):
         # engineer's fallback (option a): cycles of [In2 for the still-open ALLOWED nets only (In2 3.0, In1 closed)] then
         # [outer layers only for every still-open net]; a step is kept only when it lowers the open count

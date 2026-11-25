@@ -79,10 +79,15 @@ TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
-HAND = ("rf", "fanout", "xl", "power")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+HAND = ("rf", "fanout", "xl", "power", "close")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
                  "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
+IN2_SIGNAL_CUTS = {}           # {IN2_NO_SIGNAL name: [(x0, y0, x1, y1)]} cut-outs for "close" hand copper (option c, D9)
+# gate 5 closing copper (coordinator: the last open nets as hand-drawn LOCKED copper on top of the router run; --hand
+# group "close"). Tracks: (net, layer, width, [points]); vias: (net, x, y, diameter, drill). Explicit nets, no pad match.
+CLOSE_TRACKS = []
+CLOSE_VIAS = []
 IN2_ZONE = None                 # (x0, y0, x1, y1) In2 signal-exception box (None = In2 all GND); --in2-zone for sweeps
 RF50_W = 0.35                 # RF_50 node L5.2 / C11.1 / C50.1 / R50.1 (gate 5: widened from 0.20, see BOARD.md routing)
 RF_W = 0.35                   # board.yaml net_classes.RF.track_mm (GCPW 0.35 / gap 0.30 = 49.4 ohm, calc/impedance.py --cpw)
@@ -148,12 +153,16 @@ def floorplan(P):
     T([(34.00, 20.75), (34.00, 19.76), (33.52, 19.76), (33.30, 19.50)])             # DECA pin 33 to its via
     V(33.30, 19.50)
     T([(33.30, 19.50), (32.75, 19.00)])                             # into C5.1
+    P.group = "close"        # gate 5 closing copper (coordinator): crystal + VDD links hand-drawn, the router does the rest
     T([(33.60, 20.75), (33.60, 20.07), (32.13, 20.07), (32.13, 18.45), (31.45, 18.45)])   # XC1 into X2.1
     T([(33.20, 20.75), (33.20, 20.37), (30.45, 20.37), (30.05, 19.97)])                   # XC2 into X2.3
+    P.group = "fanout"
     # VDD pin 36: side stub to the top-left corner via, C4 left of the via row
     P.put("C4", 29.60, 20.95, 180.0)         # pad 1 (VDD) right
+    P.group = "close"
     T([(32.80, 21.00), (32.05, 21.00)])
     V(32.05, 21.00)
+    P.group = "fanout"
     T([(32.05, 21.00), (31.95, 20.90), (30.08, 20.90)])
     T([(29.12, 20.95), (28.40, 21.60)])
     V(28.40, 21.60)                                                 # C4 GND via (In1)
@@ -169,18 +178,22 @@ def floorplan(P):
     T([(38.20, 22.15), (38.75, 22.15), (39.05, 21.85)])
     V(39.05, 21.85)
     P.put("C8", 39.58, 22.75, 0.0)
+    P.group = "close"
     T([(38.20, 22.55), (39.00, 22.55)])
     T([(39.10, 22.75), (39.10, 23.55)])
     V(39.10, 23.55)                                                 # VDD 22 / C8 to the VDD net (B.Cu)
+    P.group = "fanout"
     T([(38.20, 24.15), (38.70, 24.15), (39.00, 24.45)])
     V(39.00, 24.45)
     # LFXO X1 rotated 180 (B8) to the right side: the left corner is the power cluster now; XL lines leave pins 1/2
     # downwards and cross to the right on B.Cu (gate 5)
     P.put("X1", 40.60, 25.00, 180.0)
+    P.group = "close"
     T([(39.90, 25.00), (39.90, 26.10)])
     V(39.90, 26.10)                                                 # XL2 at X1.2
     T([(41.30, 25.00), (41.30, 26.10)])
     V(41.30, 26.10)                                                 # XL1 at X1.1
+    P.group = "fanout"
     P.put("C7", 39.60, 26.95, 0.0)           # VDD pin 10 (bottom row, right end)
     # left row signals 37-42 (BTN, VBUS_DET, LED_L8..L5): dog-bone vias on a diagonal row 1.08 mm apart (0.05 grid), so that a B.Cu
     # track passes between two vias (0.6 + 2 x 0.15 + 0.15 = 1.05; escape proof: at 0.83 the row walled its own nets in)
@@ -222,10 +235,13 @@ def floorplan(P):
     for k in (5, 6, 7, 8, 9):
         x = 32.8 + 0.4 * (k - 1)
         T([(x, 27.15), (x, 27.60)])
+    P.group = "close"
     T([(36.40, 27.15), (36.40, 27.65), (36.55, 28.00)])
     V(36.55, 28.00)                                                 # VDD pin 10 to B.Cu (C7 / the VDD net)
+    P.group = "fanout"
     T([(36.80, 27.15), (36.80, 27.45), (37.10, 27.75), (37.45, 27.95)])
     V(37.45, 27.95)                                                 # TPS_SEL pin 11 to B.Cu (U2 / R23 in the left wing)
+    P.group = "close"
     T([(32.80, 27.15), (32.80, 27.60), (32.55, 27.95)])
     V(32.55, 27.95)                                                 # XL1 to B.Cu (X1 sits on the right side)
     T([(33.20, 27.15), (33.20, 27.60), (33.40, 28.00)])
@@ -237,7 +253,7 @@ def floorplan(P):
     # gap 0.5); reference plane In2 (GND) under the whole run
     xl1_u, xl2_u, xl2_x, xl1_x = (32.55, 27.95), (33.40, 28.00), (39.90, 26.10), (41.30, 26.10)
     assert xl1_u[0] < xl2_u[0] and xl2_x[0] < xl1_x[0]       # the crossing this drawing resolves
-    P.group = "xl" if "fanout" in P.hand else "-"
+    # (still group "close")
     T([xl1_u, (xl1_u[0], 26.50), (39.25, 26.50), (39.25, 25.35), (xl1_x[0], 25.35), xl1_x], 0.15, "B.Cu")
     T([xl2_u, (xl2_u[0], 27.05), (xl2_x[0], 27.05), xl2_x], 0.15, "B.Cu")
     P.group = "rf"
@@ -494,7 +510,7 @@ def stage1(args):
                "in2_vdd": [[float(v) for v in b.split(",")] for b in
                            _opt(args, "--in2-vdd", ";".join(",".join(map(str, b)) for b in (IN2_VDD or []))).split(";")
                            if b and b != "none"],
-               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND],
+               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND + ("close",)],
                "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
                "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b],
                "in2_zone": [float(v) for v in _opt(args, "--in2-zone", ",".join(map(str, IN2_ZONE or ()))).split(",") if v]
@@ -1150,6 +1166,27 @@ def stage2(job_file):
     P.hand = tuple(job.get("hand", HAND)) + ("escape",)
     P.group = "fanout"
     floorplan(P)
+    if "close" in P.hand:                    # gate 5 closing copper (CLOSE_TRACKS / CLOSE_VIAS), locked, explicit nets
+        for net, layer, w, pts in CLOSE_TRACKS:
+            for a, b in zip(pts, pts[1:]):
+                tr = pcbnew.PCB_TRACK(board)
+                tr.SetStart(V(*a))
+                tr.SetEnd(V(*b))
+                tr.SetWidth(mm(w))
+                tr.SetLayer(board.GetLayerID(layer))
+                tr.SetNet(nets[net])
+                tr.SetLocked(True)
+                board.Add(tr)
+        for net, x, y, d, dr in CLOSE_VIAS:
+            v = pcbnew.PCB_VIA(board)
+            v.SetPosition(V(x, y))
+            v.SetViaType(pcbnew.VIATYPE_THROUGH)
+            v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+            v.SetWidth(mm(d))
+            v.SetDrill(mm(dr))
+            v.SetNet(nets[net])
+            v.SetLocked(True)
+            board.Add(v)
     # gate 5: frozen router result (hardware/tree-a/frozen-routes.json, gen/tree_a_krt.py = KiCadRoutingTools) replayed as
     # LOCKED copper, so a rebuild is repeatable and a later router run keeps it; never the router's own board file
     routes = job.get("routes") or {}
@@ -1225,7 +1262,7 @@ def stage2(job_file):
                 pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
 
     # ---- zones
-    def zone(pts, layers, net=None, name="", rule=None, priority=0, solid=False):
+    def zone(pts, layers, net=None, name="", rule=None, priority=0, solid=False, holes=()):
         z = pcbnew.ZONE(board)
         ls = pcbnew.LSET()
         for l in layers:
@@ -1235,6 +1272,10 @@ def stage2(job_file):
         o.NewOutline()
         for x, y in pts:
             o.Append(mm(x), mm(y))
+        for h in holes:                       # rule-area cut-outs (hand copper allowed there, e.g. IN2_SIGNAL_CUTS)
+            o.NewHole()
+            for x, y in h:
+                o.Append(mm(x), mm(y))
         z.SetZoneName(name)
         z.SetAssignedPriority(priority)
         if rule is not None:
@@ -1278,8 +1319,10 @@ def stage2(job_file):
     # the crystals or the nRF54L DC/DC node (pin 46 - L1). In2 rule areas forbid tracks there (vias and the GND pour stay).
     for nm, box in IN2_NO_SIGNAL.items():
         x0, y0, x1, y1 = box
+        cuts = [[(a0, b0), (a1, b0), (a1, b1), (a0, b1)] for (a0, b0, a1, b1) in IN2_SIGNAL_CUTS.get(nm, ())
+                if "close" in P.hand]
         zone([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], ["In2.Cu"], name=f"in2_no_signal_{nm}",
-             rule=dict(tracks=True, vias=False, pour=False, footprints=False))
+             rule=dict(tracks=True, vias=False, pour=False, footprints=False), holes=cuts)
     # In2 signal exception (coordinator decision option c, gate 5): signal tracks on In2 only inside the LED-bus box
     # around J3 and the R columns (job "in2_zone"); everywhere else an In2 rule area forbids tracks (vias and the GND
     # pour stay allowed), so In2 stays GND outside the box and under the RF line, the crystal lanes and U1.
