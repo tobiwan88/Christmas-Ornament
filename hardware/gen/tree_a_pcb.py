@@ -531,7 +531,7 @@ def load_profile():
 
 FROZEN = BOARD_DIR / "frozen-routes.json"
 FINISH_ROUTES = BOARD_DIR / "finish-routes.json"   # post-freeze re-route (VBUS, fix round): replaces the frozen copper of
-FINISH_REPLACE = {"VBUS": 0.12}                    # these nets below this width plus their frozen vias (close_top builds)
+FINISH_REPLACE = {"VBUS": 0.12, "/mcu/TPS_SEL": 9.9, "/leds/LED_L5_MCU": 9.9}         # frozen tracks of these nets below this width + their frozen vias go
 
 
 def _opt(args, name, default=None):

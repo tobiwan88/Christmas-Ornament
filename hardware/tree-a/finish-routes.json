@@ -1,5 +1,5 @@
 {
- "_comment": "Gate 5 fix round (power review F2/F3): VBUS re-routed AFTER the freeze on the committed board with every other net locked (KiCadRoutingTools route.py --nets VBUS --track-width 0.127 --clearance 0.15 --escalation off, F.Cu/B.Cu); via 47.80/75.35 moved to 75.43 (0.15 mm to its own C30.1). gen/tree_a_pcb.py drops the frozen VBUS vias and VBUS tracks under 0.12 mm and draws these locked (hand group close_top).",
+ "_comment": "Gate 5 fix round (power review F2/F3): VBUS re-routed AFTER the freeze on the committed board with every other net locked (KiCadRoutingTools route.py --nets VBUS --track-width 0.127 --clearance 0.15 --escalation off, F.Cu/B.Cu); via 47.80/75.35 moved to 75.43 (0.15 mm to its own C30.1). gen/tree_a_pcb.py drops the frozen VBUS vias and VBUS tracks under 0.12 mm and draws these locked (hand group close_top). Also re-routed whole at 0.127 mm (clearance 0.10, board rules, same-net pad clearance 0.15, In2 allowed for these nets, --escalation off, one at a time): /mcu/TPS_SEL, /leds/LED_L5_MCU; LED_L2, LED_L7_MCU, LED_L6_MCU, LED_L8_MCU, LED_L4_MCU did not route at 0.127 and stay as frozen.",
  "tracks": [
   {
    "net": "VBUS",
@@ -1196,6 +1196,526 @@
     44.25,
     79.45
    ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    29.9,
+    33.375
+   ],
+   "b": [
+    29.7,
+    33.575
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    36.875,
+    27.375
+   ],
+   "b": [
+    37.2,
+    27.7
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    17.925,
+    63.7
+   ],
+   "b": [
+    19.0,
+    62.625
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    31.625,
+    35.725
+   ],
+   "b": [
+    30.725,
+    34.825
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    36.8,
+    27.325
+   ],
+   "b": [
+    36.85,
+    27.375
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    29.7,
+    34.175
+   ],
+   "b": [
+    26.2,
+    37.675
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    36.8,
+    26.9
+   ],
+   "b": [
+    36.8,
+    27.325
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    30.55,
+    33.375
+   ],
+   "b": [
+    29.9,
+    33.375
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    30.725,
+    34.825
+   ],
+   "b": [
+    30.725,
+    33.55
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    36.85,
+    27.375
+   ],
+   "b": [
+    36.875,
+    27.375
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    26.2,
+    44.0
+   ],
+   "b": [
+    25.9,
+    44.3
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    29.7,
+    33.575
+   ],
+   "b": [
+    29.7,
+    34.175
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    31.9,
+    35.725
+   ],
+   "b": [
+    31.625,
+    35.725
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    30.725,
+    33.55
+   ],
+   "b": [
+    30.55,
+    33.375
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    26.2,
+    37.675
+   ],
+   "b": [
+    26.2,
+    44.0
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    19.4,
+    62.95
+   ],
+   "b": [
+    18.65,
+    62.95
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    23.375,
+    46.675
+   ],
+   "b": [
+    23.375,
+    58.975
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    23.375,
+    58.975
+   ],
+   "b": [
+    19.4,
+    62.95
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    25.75,
+    44.3
+   ],
+   "b": [
+    23.375,
+    46.675
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    34.65,
+    33.075
+   ],
+   "b": [
+    32.525,
+    35.2
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    37.275,
+    27.775
+   ],
+   "b": [
+    37.275,
+    29.675
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    36.025,
+    32.25
+   ],
+   "b": [
+    35.2,
+    33.075
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    35.2,
+    33.075
+   ],
+   "b": [
+    34.65,
+    33.075
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    37.275,
+    29.675
+   ],
+   "b": [
+    36.025,
+    30.925
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    32.525,
+    35.2
+   ],
+   "b": [
+    32.425,
+    35.2
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    36.025,
+    30.925
+   ],
+   "b": [
+    36.025,
+    32.25
+   ]
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    32.425,
+    35.2
+   ],
+   "b": [
+    31.9,
+    35.725
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    38.5,
+    33.225
+   ],
+   "b": [
+    38.5,
+    32.85
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    38.5,
+    32.85
+   ],
+   "b": [
+    38.3,
+    32.65
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    35.55,
+    28.475
+   ],
+   "b": [
+    34.525,
+    28.475
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    34.525,
+    28.475
+   ],
+   "b": [
+    34.35,
+    28.65
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    34.8,
+    27.45
+   ],
+   "b": [
+    34.8,
+    26.9
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    38.3,
+    32.65
+   ],
+   "b": [
+    35.55,
+    29.9
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "B.Cu",
+   "w": 0.127,
+   "a": [
+    35.55,
+    29.9
+   ],
+   "b": [
+    35.55,
+    28.475
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    40.8,
+    33.9
+   ],
+   "b": [
+    41.9,
+    35.0
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    41.9,
+    35.0
+   ],
+   "b": [
+    41.9,
+    35.975
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    34.35,
+    28.65
+   ],
+   "b": [
+    34.35,
+    27.9
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "F.Cu",
+   "w": 0.127,
+   "a": [
+    34.35,
+    27.9
+   ],
+   "b": [
+    34.8,
+    27.45
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    41.9,
+    35.975
+   ],
+   "b": [
+    41.25,
+    35.975
+   ]
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "layer": "In2.Cu",
+   "w": 0.127,
+   "a": [
+    41.25,
+    35.975
+   ],
+   "b": [
+    38.5,
+    33.225
+   ]
   }
  ],
  "vias": [
@@ -1231,6 +1751,69 @@
    "at": [
     47.8,
     75.43
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "at": [
+    18.65,
+    63.025
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "at": [
+    25.9,
+    44.3
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "at": [
+    37.275,
+    27.775
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/mcu/TPS_SEL",
+   "at": [
+    31.9,
+    35.725
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "at": [
+    41.9,
+    35.975
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "at": [
+    38.3,
+    32.65
+   ],
+   "size": 0.45,
+   "drill": 0.2
+  },
+  {
+   "net": "/leds/LED_L5_MCU",
+   "at": [
+    34.35,
+    28.65
    ],
    "size": 0.45,
    "drill": 0.2
