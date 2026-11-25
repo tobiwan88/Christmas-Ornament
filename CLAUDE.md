@@ -1,10 +1,11 @@
 # Christmas tree ornament (TREE-01): agent notes
 
-Battery-powered tree-shaped PCB sandwich (70 x 105 mm, 14.0 mm board to board, 14.8 mm with LEDs): 16 RGB LEDs (charlieplex), nRF54L10 BLE,
+Battery-powered tree-shaped PCB sandwich (70 x 105 mm, 12.0 mm board to board, brass M2 standoffs): 16 RGB LEDs (charlieplex), nRF54L10 BLE,
 TPS63900 3.0/3.5 V rail, 2 x AAA (variant A, first order) or Li-ion + USB-C (variant B). One customer panel with board A (tree-a, main) and
-board B (tree-b, LEDs), 5 panels at JLCPCB 4-layer 1.0 mm ENIG, Standard assembly, cap 250 USD. Status 2026-11-23: gate 3 (schematic) built and
-reviewed once, decisions D1-D25 in `hardware/DECISIONS.md`; layout (gates 4-5) and fab files (gate 6) not started. Computed order cost 230.68 USD
-before bare PCB + shipping (`calc/bom_check.py`); the PCB + shipping cart quote is a manual step (`hardware/ORDER.md`).
+board B (tree-b, LEDs), 5 panels at JLCPCB 4-layer 1.0 mm ENIG, Standard assembly, cap 250 USD. Status 2026-11-25: schematics (gate 3) built, ERC 0, three review rounds done, decisions D1-D35 in `hardware/DECISIONS.md`; board B
+routed (KiCadRoutingTools, frozen), board A routed and frozen with known exceptions (D35), DRC 0 / 0 / 0; panel built (gen/panel_pcb.py);
+independent layout reviews done, fix round and fab files (gate 6) open. Computed order cost 230.68 USD before bare PCB + shipping
+(`calc/bom_check.py`); the PCB + shipping cart quote is a manual step (`hardware/ORDER.md`).
 Gate: `scripts/hw-check.sh` and `--strict` print OK; `--strict --stock --qty N` FAILs on the manual PCB + shipping row until the quote is entered.
 
 <!-- hw-kit:begin (managed by hw-kit; edit the kit, then `hw-kit/install.sh . --force`) -->
