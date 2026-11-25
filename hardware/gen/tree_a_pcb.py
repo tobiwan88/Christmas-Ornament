@@ -137,6 +137,8 @@ FINISH_FENCE = [(18.22, 55.38), (14.78, 51.14), (18.05, 46.41), (21.37, 41.78), 
                 (50.8, 75.2), (1.57, 75.36), (4.34, 72.2)]
 # decoupling return vias (review B3, reviewer-tested): C7.2 and C8.2 straight into the planes
 FINISH_GND = [(38.78, 25.3), (39.81, 23.9)]
+# no return-via spot found for the In2 vias of the fix-round re-routes nRESET_TC 40.575/28.85 (3.96 mm) and LED_L5_MCU
+# 38.30/32.65 (3.11 mm): 41.88/28.85 hits the edge arc, 42.88/29.0 gets no plane fill (dangling); listed in BOARD.md
 FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE + FINISH_GND + FINISH_CHG]
 # frozen router vias moved on replay (with their own track ends): (net, (x, y) frozen, (x, y) new)
 FROZEN_MOVES = [
