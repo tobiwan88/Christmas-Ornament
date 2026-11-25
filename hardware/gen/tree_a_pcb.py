@@ -140,8 +140,7 @@ FINISH_GND = [(38.78, 25.3), (39.81, 23.9)]
 FINISH_VIAS = [("GND", x, y, 0.45, 0.2) for x, y in FINISH_FENCE + FINISH_GND + FINISH_CHG]
 # frozen router vias moved on replay (with their own track ends): (net, (x, y) frozen, (x, y) new)
 FROZEN_MOVES = [
-    # 0.13 mm (pad bounding box) to its own C30.1 pad; 'via to SMD pad' 0.15 also for the own net (--proof row)
-    ("VBUS", (47.75, 75.35), (47.75, 75.38)),
+    # (the VBUS via at C30.1 is now in finish-routes.json, moved there)
     ("/leds/LED_L4_MCU", (28.775, 33.25), (28.725, 33.25)),   # 0.131 mm to its own R4.1 (0.155 after, 0.35 to VDD)
 ]
 CLOSE_DROP = {   # (net, layer, a, b) router tracks and (net, None, at, None) router vias the closing copper replaces
@@ -531,6 +530,8 @@ def load_profile():
 
 
 FROZEN = BOARD_DIR / "frozen-routes.json"
+FINISH_ROUTES = BOARD_DIR / "finish-routes.json"   # post-freeze re-route (VBUS, fix round): replaces the frozen copper of
+FINISH_REPLACE = {"VBUS": 0.12}                    # these nets below this width plus their frozen vias (close_top builds)
 
 
 def _opt(args, name, default=None):
@@ -589,7 +590,7 @@ def stage1(args):
                        check=True, capture_output=True)
         variant = args[args.index("--variant") + 1].upper() if "--variant" in args else "A"
         job = {"netlist": str(net), "pcb": str(Path(td) / f"{NAME}.kicad_pcb"), "stackup": prof["stackup"],
-               "layout": prof["layout"], "variant": variant, "routes": routes, "stub": float(_opt(args, "--stub", 0)),
+               "layout": prof["layout"], "variant": variant, "routes": routes, "finish": json.loads(FINISH_ROUTES.read_text()) if routes and FINISH_ROUTES.exists() else None, "stub": float(_opt(args, "--stub", 0)),
                "in2_net": _opt(args, "--in2-net", IN2_NET),
                "in2_vdd": [[float(v) for v in b.split(",")] for b in
                            _opt(args, "--in2-vdd", ";".join(",".join(map(str, b)) for b in (IN2_VDD or []))).split(";")
@@ -1274,6 +1275,11 @@ def stage2(job_file):
     # gate 5: frozen router result (hardware/tree-a/frozen-routes.json, gen/tree_a_krt.py = KiCadRoutingTools) replayed as
     # LOCKED copper, so a rebuild is repeatable and a later router run keeps it; never the router's own board file
     routes = job.get("routes") or {}
+    if "close_top" in P.hand and routes and job.get("finish"):
+        fin = job["finish"]
+        routes = {"tracks": [t for t in routes["tracks"] if not (t["net"] in FINISH_REPLACE and t["w"] < FINISH_REPLACE[t["net"]])]
+                  + fin["tracks"],
+                  "vias": [v for v in routes["vias"] if v["net"] not in FINISH_REPLACE] + fin["vias"]}
 
     def moved(net, q):                       # FROZEN_MOVES (close_top builds only)
         if "close_top" in P.hand:
