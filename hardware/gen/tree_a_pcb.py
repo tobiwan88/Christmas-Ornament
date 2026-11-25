@@ -79,7 +79,7 @@ TC1_XY = (52.0, 62.0)         # Tag-Connect on the outer face, RIGHT wing: at TO
 VARIANT_B = {"J1", "J2", "U3", "C30", "C31", "R30", "R31", "R32", "R42", "R44"}
 FEED_NO_REF_MAX = 2.40          # ANT_FEED length inside the keep-out (tree_outline ANT_KEEPOUT_H_MM -> ANT1 pad edge 14.65), critical.yaml known deviation
 IN2_NET = "GND"                 # In2.Cu plane net (board.yaml stackup role); --in2-net VDD for the D34 comparison
-HAND = ("rf", "fanout", "xl", "power", "close")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
+HAND = ("rf", "fanout", "xl", "power", "close", "close_decd", "close_esc")   # locked hand-copper groups (--hand); "xl" needs "fanout" (its lanes start at fan-out vias)
 IN2_VDD = None                  # D34 fallback: [[x0, y0, x1, y1], ...] local VDD pours on In2 inside the GND plane; --in2-vdd
 IN2_NO_SIGNAL = {"rf_column": (33.4, 16.6, 39.4, 21.2), "x2_hfxo": (29.4, 18.0, 32.2, 20.3),
                  "x1_lfxo": (38.8, 24.0, 42.4, 26.2), "dcc_node": (28.1, 24.6, 32.2, 26.2)}   # In2: no signal tracks (option a)
@@ -175,8 +175,10 @@ def floorplan(P):
     V(38.00, 21.00)
     P.put("C13", 40.60, 20.90, 0.0)          # nRESET filter: slow node, next to R9's route (known WARN)
     # right row: CHG_STAT 23 and SWO 18 to vias, VDD 22 into C8
+    P.group = "close_esc"    # gate 5 closing copper: CHG_STAT pin 23 dog-bone (router left CHG_STAT open)
     T([(38.20, 22.15), (38.75, 22.15), (39.05, 21.85)])
     V(39.05, 21.85)
+    P.group = "fanout"
     P.put("C8", 39.58, 22.75, 0.0)
     P.group = "close"
     T([(38.20, 22.55), (39.00, 22.55)])
@@ -200,8 +202,10 @@ def floorplan(P):
     for k in range(6):
         y = 21.75 + 0.4 * k
         vx, vy = 31.10 - 1.00 * k, 21.45 + 0.4 * k
+        P.group = "close_esc" if k == 1 else "fanout"     # k 1 = VBUS_DET pin 38 (gate 5 closing copper)
         T([(31.80, y), (vx + 0.30, y), (vx, vy)])
         V(vx, vy)
+    P.group = "fanout"
     # power cluster on the left row: DECA 43, GND 44 (to the exposed pad), DECD 45, DCC 46, VDD 47/48
     P.put("L1", 29.40, 25.45, 180.0)         # pad 1 (DCC) right at pin 46
     P.put("C10", 30.40, 26.82, 180.0)        # VDD 47/48, pad 1 right
@@ -212,13 +216,17 @@ def floorplan(P):
     P.put("C2", 25.90, 26.80, 270.0)         # DECA 2.2 uF
     T([(31.80, 24.15), (27.30, 24.15)])                             # DECA pin 43 to FB1.2 / C12
     T([(32.20, 24.55), (32.80, 24.55)], 0.20)                       # GND pin 44 into the exposed pad
+    P.group = "close_decd"   # gate 5 closing copper: DECD pin 45 - L1.2 - FB1.1 - C1.1 (router left DECD open)
     T([(31.80, 24.95), (31.40, 24.95), (31.00, 24.55), (28.34, 24.55), (28.34, 24.95)])   # DECD 45 into L1.2
+    P.group = "fanout"
     T([(31.80, 25.35), (30.60, 25.35)], 0.25)                       # DCC 46 into L1.1
     T([(31.80, 25.75), (31.50, 25.75), (31.50, 26.15), (31.80, 26.15)])                   # VDD 47 + 48
     T([(31.50, 26.15), (31.30, 26.28), (28.00, 26.28), (28.00, 26.60)])                   # VDD to C10.1 / C3.1
     T([(30.88, 26.28), (30.88, 26.60)])
+    P.group = "close_decd"
     T([(28.34, 25.45), (27.05, 25.40)])                             # DECD: L1.2 - FB1.1
     T([(27.05, 25.40), (27.05, 26.32)])                             # DECD: FB1.1 - C1.1
+    P.group = "fanout"
     T([(27.05, 24.39), (25.90, 24.42)])                             # DECA: FB1.2 - C12.1
     T([(25.90, 24.42), (25.30, 24.42), (25.30, 26.32), (25.90, 26.32)])   # DECA: C12.1 round the left into C2.1
     # GND of C12 / C2 / C1 (B7: C1's via spot): down the 0.53 mm column gap, joined at the bottom pads, via at the left
@@ -510,7 +518,7 @@ def stage1(args):
                "in2_vdd": [[float(v) for v in b.split(",")] for b in
                            _opt(args, "--in2-vdd", ";".join(",".join(map(str, b)) for b in (IN2_VDD or []))).split(";")
                            if b and b != "none"],
-               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND + ("close",)],
+               "hand": [g for g in _opt(args, "--hand", ",".join(HAND)).split(",") if g in HAND],
                "escapes": [g for g in _opt(args, "--escapes", ",".join(ESCAPES)).split(",") if g in ESCAPE_GROUPS],
                "router_keepout": [[float(v) for v in b.split(",")] for b in _opt(args, "--router-keepout", "").split(";") if b],
                "in2_zone": [float(v) for v in _opt(args, "--in2-zone", ",".join(map(str, IN2_ZONE or ()))).split(",") if v]
