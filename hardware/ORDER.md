@@ -169,7 +169,9 @@ continuity test of item 0 needs them), cells last.
 ## 5b. Fab checks for the order (OPEN; added 2026-11-25 from review round 3)
 Ask JLC support or check in the order page's DFM check; write each answer here with the date (no order or account numbers in the repo).
 1. Tracks 0.100 mm with 0.100 mm clearance on the outer layers AND on inner layer 2 (In2): the DFM check must accept them at 4 layers,
-   1.0 mm, ENIG. Nets at 0.100 mm: see tree-a/BOARD.md Routing (placeholder: the list is added when the routing agent publishes it).
+   1.0 mm, ENIG. Nets at 0.100 mm on board A as built (gate 5 fix round, 87.5 mm total): LED_L2 In2 22.0 + B.Cu 9.8, VBUS_DET
+   In2 16.1 + B.Cu 9.2, LED_L7_MCU F.Cu 8.2, LED_L6_MCU F.Cu 8.0 + B.Cu 1.7, LED_L8_MCU In2 4.8 + F.Cu 0.2, LED_L4_MCU In2
+   4.7 + B.Cu 2.0 + F.Cu 0.8 (tree-a/BOARD.md Routing). VBUS, TPS_SEL and DCC are 0.127 mm or wider. Default clearance 0.100 mm.
    If JLC refuses, the fallback is widening those nets: a layout step, not an order step.
 2. Copper to board edge 0.3 mm on the routed edges (0.6 mm behind each mouse-bite hole row, `panel/BOARD.md`): accepted?
 3. Thermal vias in pads are tented: U1 16 vias, U2 6 vias. Ask whether JLC plugs (resin-fills) or only tents them, and the cost; a via
@@ -182,6 +184,8 @@ Ask JLC support or check in the order page's DFM check; write each answer here w
    (49.4 ohm in `calc/impedance.py`) rests on assumed stackup values (UNVERIFIED).
 6. Silk text: silk text minimum height 1.0 mm (check the silk of both boards in the gerber view; the floor is the
    engineer's instruction, confirm it against the JLC capability page). The generators' silk is checked against this at gate 6.
+   Checked 2026-11-25 on jlcpcb.com/capabilities: minimum text height "40 mil (1.0mm)", line width ">= 0.15mm"; tree-a rules
+   file min_text_height 1.0, board A / B designators 1.0 / 0.15.
 
 ## 6. Before payment (hw-fab-order checklist)
 - [ ] Routed board, gate OK at all DRC severities; `hw-check.sh --strict --stock --qty 5` OK (needs the manual quote above); clean tree.

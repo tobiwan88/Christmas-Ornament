@@ -187,20 +187,40 @@ layers, no In2 VDD pour. Classes per options a + b: Default / Power clearance 0.
   XC1, XC2, XL1, XL2, VDD (group close: crystal lanes, VDD pin vias); DECD (close_decd); VDD, VBUS, VBUS_DET, BTN_SW1
   (close_top: R43 / R42 node, U1 pins 37 / 38 via split, VDD via at C4.1); VIN and GND (finish); VBUS and LED_L4_MCU
   vias moved.
-- In2 signal tracks (mm): VBUS_DET 16.1, LED_L2 22.0, LED_L4_MCU 7.6, LED_L5_MCU 6.2, LED_L6 14.3, LED_L7 11.7, LED_L8 1.4,
-  LED_L8_MCU 4.8, BTN_SW1 0.8, TPS_SEL 11.0 (allowed in the closing steps only, static SEL line). No power, RF, crystal or
-  DCC net on In2; no In2 track inside the `IN2_NO_SIGNAL` areas (several skirt them at 0.1-0.2 mm); option c (D9 left
-  pads on In2 under the RF column) was not needed.
-- Return vias (coordinator rule): 12 F.Cu <-> In2 transition vias, all with a GND via within 2.5 mm. F.Cu <-> B.Cu
-  signal vias without a GND via within 1.5 mm (net: x/y nearest mm), 41 exceptions, most around U1 where
-  `--add-gnd-vias` found no room (accepted): CHG_STAT 39.15/30.45 4.0, 40.55/34.65 2.6; LED_L1 38.4/28.05 2.8,
-  40.45/27.7 3.4; LED_L1_MCU 32.03/27.23 1.9; LED_L2 33.6/41.65 2.0; LED_L2_MCU 29.63/30.63 2.2; LED_L3 35.05/38.15 2.3;
-  LED_L3_MCU 28.68/30.58 2.6; LED_L4 34.0/40.95 2.7; LED_L5_MCU 34.35/28.65 2.5, 38.3/32.65 3.1; LED_L6 38.1/33.35 2.4,
-  38.95/33.1 2.9; LED_L6_MCU 34.75/29.55 1.6; LED_L7 35.0/42.15 2.0, 35.1/40.05 2.8, 35.15/28.9 2.2, 35.3/43.1 1.5,
-  43.85/37.5 1.5; LED_L8 35.05/40.95 3.0, 37.4/33.35 2.3, 37.65/30.2 2.6, 38.45/30.25 3.4, 40.0/29.25 4.7; SWDCLK
-  48.0/39.5 3.0; SWDIO 41.85/27.85 2.3; SWO 36.55/39.8 1.9, 38.8/24.25 2.0, 40.6/24.9 3.3, 40.6/25.8 3.0; TPS_SEL
-  18.65/63.03 1.7, 23.13/59.15 3.2, 32.2/47.33 1.9, 32.93/46.61 2.5; VBAT_SENSE 22.45/47.2 2.6; XL1 32.55/27.95 2.3,
-  41.3/26.1 2.3; XL2 33.4/28.0 2.3, 39.9/26.1 3.1 (positions of the plan's grade board; `plan` prints the list).
+- In2 signal tracks as built (mm, after the fix round): VBUS_DET 16.1, LED_L1 7.5, LED_L2 22.0, LED_L4_MCU 7.6, LED_L5_MCU 5.2,
+  LED_L6 14.3, LED_L7 11.7, LED_L8 1.4, LED_L8_MCU 4.8, BTN_SW1 3.1 (0.8 router + 2.3 hand), SWDIO 18.3, nRESET_TC 9.2,
+  TPS_SEL 10.6 (allowed in the closing steps only, static SEL line). No power, RF, crystal or DCC net on In2; no In2
+  track inside the `IN2_NO_SIGNAL` areas (several skirt them at 0.1-0.2 mm); option c was not needed.
+- Return vias as built (`check_return_vias --distance 1.5` on the committed board: 127 signal vias, 41 without a GND
+  via within 1.5 mm, most around U1 where `--add-gnd-vias` found no room, accepted). F.Cu <-> In2 transitions over the
+  2.5 mm rule (exceptions, no DRC-clean spot for a GND via): nRESET_TC 40.58/28.85 3.96 mm and LED_L5_MCU 38.30/32.65
+  3.11 mm (both from the fix-round re-routes). Other In2 transitions 1.5-2.4 mm: LED_L2 35.73/41.73 2.40, LED_L5_MCU
+  41.90/35.98 1.52, LED_L8_MCU 35.80/28.15 2.41, SWDIO 41.85/27.85 2.34, 50.10/54.10 2.22, 51.05/54.10 1.83, TPS_SEL
+  37.27/27.77 2.08. F.Cu <-> B.Cu over 1.5 mm (net x/y mm): CHG_STAT 39.15/30.45 4.0, 40.55/34.65 2.3; LED_L1 38.40/28.05
+  2.8, 40.45/27.70 2.9; LED_L1_MCU 32.02/27.23 1.9; LED_L2 33.60/41.65 2.0; LED_L2_MCU 29.62/30.62 2.2; LED_L3 35.05/38.15
+  2.3; LED_L3_MCU 28.68/30.57 2.6; LED_L4 34.00/40.95 2.7; LED_L5_MCU 34.35/28.65 2.5; LED_L6 38.10/33.35 2.4, 38.95/33.10
+  2.9; LED_L6_MCU 34.75/29.55 1.6; LED_L7 35.00/42.15 2.0, 35.10/40.05 2.8, 35.15/28.90 2.2, 35.30/43.10 1.5, 43.85/37.50
+  1.5; LED_L8 35.05/40.95 3.0, 37.40/33.35 2.3, 37.65/30.20 2.6, 38.45/30.25 3.4, 40.00/29.25 4.1; SWO 36.55/39.80 1.9,
+  40.60/25.80 1.9; TPS_SEL 18.65/63.02 1.7; VBAT_SENSE 22.45/47.20 2.6; XL1 32.55/27.95 2.3, 41.30/26.10 2.3; XL2
+  33.40/28.00 2.3; nRESET_TC 44.25/36.30 2.4.
+- Fix round (2026-11-25, after three reviews; frozen route unchanged, changes are generator data on top):
+  `FINISH_TRACKS` / `FINISH_VIAS` (C7.2 / C8.2 return vias 38.78/25.3, 39.81/23.9; GND via + 0.3 mm stub at U3.2, C31.2,
+  R32.2, R31.2, R45.2), `finish-routes.json` (copper re-routed on the committed board with all other nets locked:
+  VBUS whole at 0.127 mm with 0.15 mm to every net, TPS_SEL and LED_L5_MCU whole at 0.127 mm, the SWDIO / nRESET_TC /
+  SWDCLK / LED_L1 pieces near edge A14 with a 0.72 mm keep-out band for the panel tabs; `FINISH_REPLACE`,
+  `EDGE_REROUTE`), fence vias 43.31/32.92 -> 43.18/33.01 and 55.62/51.37 -> 55.49/51.46, silk (`silk_fix`).
+- Widths as built: VBUS 0.127 (64.9 mm) and 0.3; DCC 0.127 mm for 1.32 mm (class 0.3, the router necked it; 0.54 A per
+  IPC-2221). Still at 0.100 mm (no route at 0.127 without opening nets; JLC DFM check, ORDER.md): LED_L2 In2 22.0 + B.Cu
+  9.8, VBUS_DET In2 16.1 + B.Cu 9.2, LED_L7_MCU F.Cu 8.2, LED_L6_MCU F.Cu 8.0 + B.Cu 1.7, LED_L8_MCU In2 4.8 + F.Cu 0.2,
+  LED_L4_MCU In2 4.7 + B.Cu 2.0 + F.Cu 0.8 (total 87.5 mm).
+- Pads with a solid pour connection: C1.2, C4.2, C10.2, C50.2, NT1.2, C51.2, U1.44, U1.49 (EP) and, final build only,
+  C7.2, C12.2.
+- TPS63900 input loop as built 4.9 mm (C20.1 -> U2.10 1.5, pins 1.6, GND -> C20.2 1.8), output loop 8.0 mm.
+- DECA / DECRF: 14.0 mm of copper between pins 33 and 43; C5 2.73 mm, C12 7.24 mm, C2 8.81 mm from their pins. Decision
+  (coordinator): accept; the nRF54L DC/DC is enabled only after a bring-up ripple measurement, LDO mode as fallback.
+- RF bring-up tuning kit (order with the boards): 0201 C0G for C11 0.0 (0R) / 0.2 / 0.3 pF, C9 1.5 / 2.0 / 2.4 pF;
+  0402 C0G series C 2.3 / 2.7 / 2.9 pF for the R50 slot (ANT_FEED 2.4 mm without ground: about 1.5-1.8 nH series,
+  RL 11-13 dB estimated).
 - Reproduce: `python3 hardware/gen/tree_a_krt.py plan --workdir DIR [--write]`; `in2report FROZEN BOARD`.
 
 ## Routing review (2026-11-25)
@@ -216,7 +236,9 @@ layers, no In2 VDD pour. Classes per options a + b: Default / Power clearance 0.
   0.5 mm from other nets; the router keeps only the 0.15 Crystal class); VBAT_SENSE beside LED_L8 / L3 / L5_MCU in the J3
   middle (6.5 mm within 0.4 mm; slow node, tau 110 ms). Its edge-fence and plane-void rows are not valid for this board
   (bounding-box edge model; reads the unfilled board): `--proof` measures both on the real outline / a refilled copy.
-- Hand-placed edge copper: VBUS 0.127 mm at 0.38 mm (centre) inside the left slope at R42 (router's own necked width).
+- Hand-placed edge copper: VBUS 0.127 mm at 0.38 mm (centre) inside the left slope at R42.
+- Panel edge A14: all copper >= 0.73 mm from the edge 42.036/29.555 - 57.0/52.0 (tabs T1 / T2 can be placed).
+- emi.yaml `known:` lists the accepted parallel-run, fence-gap and CC1 rows with reasons (emi_check does not read it yet).
 - Look first: the fence gaps and CC1 row above; XL1 / XL2 lanes next to LED_L1 / LED_L1_MCU; the left U1 row
   (LED_L1..L4_MCU re-laid by closing step 4, VBUS_DET via 30.65/21.55 0.19 mm from C4.1).
 

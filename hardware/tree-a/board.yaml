@@ -55,9 +55,14 @@ net_classes:                           # full KiCad net names; widths checked by
                                         # its peak coil current is not in the material read (parts/MPL2012S4R7MHT.yaml: UNVERIFIED, L1 Isat
                                         # est. 250 mA), so it takes this class's 0.5 A / 0.3 mm (upper bound); 0.25 mm neck at the 0.4 mm
                                         # pitch pad 46 (1.2 mm long hand track; 0.25 mm carries 0.5 A per calc/track_width.py: min 0.12)
+                                        # AS BUILT (gate 5 fix round): the router built /mcu/DCC at 0.127 mm for 1.32 mm (the class says 0.3,
+                                        # KRT --escalation board necked it); 0.127 mm carries 0.54 A (IPC-2221 outer, 10 C) > the 0.25 mm Isat est.
+                                        # VBUS as built 0.127 mm (re-routed after the freeze, 0.15 mm to every other net; was 57.2 mm at 0.100)
   RF:                                   # 50 ohm single-ended feed to ANT1 (GCPW: F.Cu GND pour beside the line, In1 GND below)
     track_mm: 0.35                      # GCPW over In1 (gate 4, engineer decision 4): calc/impedance.py --cpw 0.35/0.30 => Z0 49.4 ohm with mask (52.1 bare); 0.40/0.30 46.0, 0.30/0.30 53.2. Field solver of the repo, fab calculator cross-check still open (ORDER.md)
     cpw_gap_mm: 0.30                    # ANT_FEED track to the F.Cu GND pour (= the 0.30 'RF feed track clearance' rule of rules/tree-a.kicad_dru)
+                                        # as built (fix round): ANT_FEED gap 0.30 mm to the pour; RF_50 (0.35 mm) has no coplanar ground within
+                                        # 0.8 mm: microstrip over In1, 54 ohm bare per the repo solver (reviewer number)
     clearance_mm: 0.15                  # pad-level floor (0402 pads of the matching network are 0.5 mm apart); RF TRACK clearance 0.30 is a rule in rules/tree-a.kicad_dru
     via_mm: 0.6
     drill_mm: 0.3

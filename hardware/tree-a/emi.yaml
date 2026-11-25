@@ -19,4 +19,13 @@ parallel:                   # {name, victims, aggressors, gap_mm, max_mm}; own t
   - {name: rf_feed_vs_all, victims: ["/rf/*", "/mcu/ANT_PA"], aggressors: ["/leds/*", "/mcu/SW*", "/mcu/XC*", "/mcu/XL*", "/power/*", "VDD", "VIN", "BAT"], gap_mm: 0.5, max_mm: 0.5}
   - {name: hfxo_vs_switching, victims: ["/mcu/XC*", "/mcu/XL*"], aggressors: ["/leds/*", "/power/*", "/mcu/DCC"], gap_mm: 0.5, max_mm: 1.0}
   - {name: led_lines_vs_adc, victims: ["/mcu/VBAT_SENSE"], aggressors: ["/leds/*", "/power/*"], gap_mm: 0.4, max_mm: 3.0}
-known: []
+known:                      # accepted deviations of the routed board (gate 5 fix round; calc/emi_check.py does not read this list
+                            # yet: the rows still print FAIL, the reason is here and in BOARD.md 'Routing review')
+  - {row: parallel hfxo_vs_switching, what: "XL1 / XL2 (32.768 kHz, B.Cu lanes) beside LED_L1, LED_L1_MCU, VDD and SWO, gap down to 0.16 mm",
+     reason: "RF/MCU review: about 7 mV coupled per LED edge, 4 ppm rms timing noise against a 500 ppm budget; bring-up: LFCLK drift with the LED matrix scanning"}
+  - {row: parallel led_lines_vs_adc, what: "VBAT_SENSE beside LED_L7 / LED_L8 in the J3 middle, gap 0.123 mm",
+     reason: "about 5 uV per LED edge on a 110 ms node; firmware rule: sample VBAT with the LED scan paused"}
+  - {row: edge GND fence (tree_a_pcb.py --proof), what: "gaps over 5.0 mm on the real outline: 7.6 mm at (41.9, 29.3), 13.2 mm at (47.6, 38.0), 6.1 at (44.8, 27.0), 5.2 / 6.2 at the right shoulder (56.1 / 50.8, 75.2), 5.0 / 5.6 / 8.0 on the left slope (18.2, 55.4) (18.1, 46.4) (21.4, 41.8)",
+     reason: "LED / SWD / VDD copper fills the 1.6 mm edge band there; a clearance search on the frozen board found no free site; closing them needs the fence in the router input (re-route)"}
+  - {row: track over plane void (--proof), what: "CC1 (variant B, R30 DNP in A, static) 4.2 mm at x 47.6 beside the trunk edge over In1's edge pull-back (y 76.9-81.0)",
+     reason: "CC2 and a VIN via block a shift inward; DC level line, no edge rate"}
