@@ -18,8 +18,8 @@ stock are `hw-parts`. The tool names below are the JLCPCB flow; another fab need
 ## Production files (`tools/fab_package.py`)
 - One command writes gerbers, drill, BOM and CPL into the ignored `out/` folder; it refuses a dirty tree, a DRC that is not
   clean and a part whose placement does not fit.
-- Gerbers follow the fab's KiCad guide: its file extensions, soldermask subtracted from silk, zones checked, no X2 or
-  netlist attributes, all copper, paste, mask, silk and Edge.Cuts layers; drill in mm, plated and non-plated files apart.
+- Gerbers follow the fab's KiCad guide: its file extensions, soldermask subtracted from silk, zones checked, X2 and netlist
+  attributes as the fab's current KiCad guide says (JLC: both on), all copper, paste, mask, silk and Edge.Cuts layers; drill in mm, plated and non-plated files apart.
 - The script stops when any file holds a local path or the user name; still look at silk text and metadata of every new
   binary export (gerbers, STEP, images) before it is committed or uploaded.
 - CPL angle and centre come from fitting the fab's own footprint (its placement preview draws it) onto the placed pads.

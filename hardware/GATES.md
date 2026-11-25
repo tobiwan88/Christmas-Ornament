@@ -19,20 +19,20 @@ Status: every BOM line has a fab number, class and stock (bom_check --stock, 202
 - [ ] every PNG read, findings in `hardware/out/review/review-notes.md`, all fixed or listed
 - [ ] root page shows power flow and every block connection; no UNWIRED net without a reason in BOARD.md
 - [ ] independent review round done (hw-review), decisions recorded in REVIEW-<date>.md
-Status: ERC 0 / net intent 0 differences on both boards; review round 1 done (REVIEW-2026-11-23.md), fixes applied (D21-D24). Open: second review round on the changes; NT1 does not fit pad 32 gap (decision D25).
+Status: ERC 0 / net intent 0 differences on both boards; review rounds 1-3 done (REVIEW-2026-11-23.md and the layout reviews), fixes applied (D21-D26, D31, D33-D35).
 
 ## Gate 4: placement (kicad-layout)
 - [ ] floorplan with citations in BOARD.md; DRC 0; `critical.py --placement` OK; stack/header checks OK
-Status: not started. Outline and stack numbers are checked by scripts/hw-check.d/40-tree-outline.sh; no .kicad_pcb yet.
+Status: done for A and B (floorplans in BOARD.md, DRC 0, stack and header checks OK; scripts/hw-check.d/40-tree-outline.sh).
 
 ## Gate 5: routing (kicad-layout)
 - [ ] fully routed; DRC 0 at all severities with schematic parity; `critical.py`, `emi_check.py`, `track_width.py` OK
 - [ ] renders read; Routing review section in BOARD.md; independent render review; engineer's KiCad review
-Status: not started.
+Status: board B routed and checked; board A routed and frozen (0 open, kicad-cli DRC 0 / 0 / 0, parity 0) with the accepted exceptions of D35; panel built (8 of 8 tabs, panel-own DRC 0); three independent reviews done (render, RF/MCU layout, power/interface layout), no rank A, fix round applied. Open: engineer's KiCad review; the emi_check FAIL rows that only `known:` documents (emi_check does not read it yet); proof rows fence gaps and CC1 void.
 
 ## Gate 6: fab files and order (hw-fab-order)
 - [ ] clean tree; footprint fit OK; `hw-check.sh --strict --stock --qty N` OK; fab capability checked; preview checked
-Status: not started. ORDER.md skeleton exists; PCB quote, JLC questions, variant B switch and bring-up list are open.
+Status: package built 2026-11-25 (`python3 -I hardware/tools/fab_package.py --require-clean --stock hardware/panel/panel.kicad_pcb` -> hardware/out/fab/panel/, 13 gerber/drill files, BOM 36 lines, CPL 67 placements incl. 10 bottom). Open: independent package review, JLC placement preview of the bottom parts, the PCB + shipping quote (manual), JLC questions (ORDER.md section 3), engineer's KiCad review.
 
 ## Working rules (all gates)
 - Helper agents gather; the owner checks every number that drives a decision against the source.
