@@ -1416,12 +1416,15 @@ def _rules(txt):
 
 
 def waivers_csv(A, B):
+    """Union of the boards' waivers (type, ref, reason).  The boards' files write the reason with unquoted commas, so the reason is
+    everything after the second field (fab_package.py reads type and ref only)."""
     rows = [["type", "ref", "reason"]]
     for key, b in (("A", A), ("B", B)):
         f = b["path"].parent / "drc-waivers.csv"
         if f.exists():
-            for r in csv.DictReader(f.open()):
-                rows.append([r["type"], r["ref"], "%s: %s" % (b["path"].parent.name, r["reason"])])
+            for r in list(csv.reader(f.open()))[1:]:
+                if len(r) >= 2 and any(x.strip() for x in r):
+                    rows.append([r[0], r[1], "%s: %s" % (b["path"].parent.name, ",".join(r[2:]).strip())])
     return rows
 
 
@@ -1826,15 +1829,25 @@ def check_drc(ctx, pcb, rows, tmpdir):
     own_u = [v for n, vs in unc_panel.items() for v in vs[unc_board.get(n, 0):]]
     inh_v = len(d["violations"]) - len(own_v)
     inh_u = len(d["unconnected_items"]) - len(own_u)
+    # inherited warnings that the boards waive (type, ref in <board>/drc-waivers.csv = the panel's drc-waivers.csv, same rule as
+    # fab_package.drc_gate: a warning whose items are all waived refs); errors are never waived
+    waived = {(r[0], r[1]) for r in waivers_csv(A, B)[1:]}
+    own_ids = {id(v) for v in own_v}
+    refs = lambda v: [i["description"].split()[-1] for i in v["items"]]
+    inh_waived = [v for v in d["violations"] if id(v) not in own_ids and v["severity"] == "warning" and refs(v)
+                  and all((v["type"], r) in waived for r in refs(v))]
+    inh_open = inh_v - len(inh_waived)
     rows.add("OK" if not own_v and not own_u else "FAIL", "panel DRC, panel-own items (all severities)",
              "%d violations, %d unconnected not present in the board files' own DRC%s" % (
                  len(own_v), len(own_u), "".join("\n      %s %s: %s @ %s %s" % (v["severity"], v["type"], v["description"][:80],
                                                                               _poskey(v, None), [i["description"][:50] for i in v["items"]])
                                                  for v in (own_v + own_u)[:12])))
-    st = "OK" if inh_v == 0 and inh_u == 0 else "WARN!"
+    st = "OK" if inh_open == 0 and inh_u == 0 else "WARN!"
     rows.add(st, "panel DRC, items inherited from the boards",
-             "%d violations, %d unconnected (board A own DRC %d / %d, board B %d / %d): fix them in the board, then rebuild the panel" % (
-                 inh_v, inh_u, counts["A"][0], counts["A"][1], counts["B"][0], counts["B"][1]))
+             "%d open violations, %d unconnected, %d waived warnings (%s; board A own DRC %d / %d, board B %d / %d)%s" % (
+                 inh_open, inh_u, len(inh_waived), ", ".join(sorted({"%s %s" % (v["type"], " ".join(refs(v))) for v in inh_waived}))[:200] or "none",
+                 counts["A"][0], counts["A"][1], counts["B"][0], counts["B"][1],
+                 ": fix them in the board, then rebuild the panel" if inh_open or inh_u else ""))
     return d
 
 

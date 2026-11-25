@@ -1,13 +1,14 @@
 type,ref,reason
-lib_footprint_mismatch,C30,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,C31,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,C50,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,C51,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,J1,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,J2,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,R30,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,R31,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,R32,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,R42,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,R44,tree-a: B10: DNP in variant A
-lib_footprint_mismatch,U3,tree-a: B10: DNP in variant A
+lib_footprint_mismatch,C30,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,C31,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,C50,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,C51,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,J1,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,J2,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,R30,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,R31,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,R32,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,R42,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,R44,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,U3,"tree-a: B10: DNP in variant A, the generator removes F.Paste from its pads (no paste on unfitted pads); copper and courtyard = library"
+lib_footprint_mismatch,BT1,tree-a: fix round (render review): the generator turns BT1's '-' silk stroke horizontal; copper and courtyard = library

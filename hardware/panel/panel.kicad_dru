@@ -38,4 +38,4 @@
 # the fab hole-to-hole floor (0.5 mm, rules/jlc-4layer.json) is meant for drilled holes of the boards, not for perforations.
 (rule "panel mouse-bite hole spacing"
 	(constraint hole_to_hole (min 0.3mm))
-	(condition "(A.Reference == 'MB3' || A.Reference == 'MB4' || A.Reference == 'MB5' || A.Reference == 'MB6' || A.Reference == 'MB7' || A.Reference == 'MB8') && (B.Reference == 'MB3' || B.Reference == 'MB4' || B.Reference == 'MB5' || B.Reference == 'MB6' || B.Reference == 'MB7' || B.Reference == 'MB8')"))
+	(condition "(A.Reference == 'MB1' || A.Reference == 'MB2' || A.Reference == 'MB3' || A.Reference == 'MB4' || A.Reference == 'MB5' || A.Reference == 'MB6' || A.Reference == 'MB7' || A.Reference == 'MB8') && (B.Reference == 'MB1' || B.Reference == 'MB2' || B.Reference == 'MB3' || B.Reference == 'MB4' || B.Reference == 'MB5' || B.Reference == 'MB6' || B.Reference == 'MB7' || B.Reference == 'MB8')"))
