@@ -451,8 +451,14 @@ def _rot_local(fx, fy, frot, px, py):
 
 
 def features(fps, segs, arcs, vias, zones=()):
-    """pads [(ref, layerset, polygon)], courtyards [(ref, polygon)], tracks [(a, b, w)], vias [(c, r)], fills [polygon]."""
+    """pads [(ref, layerset, polygon, centre, kind)], courtyards [(ref, polygon)], tracks [(a, b, w, layer)], vias [(c, r)],
+    fills [(polygon, layer)]; parallel lists pad_nets / track_nets / via_nets (net name or '') for the blocker report."""
     pads, crt, trk, vs, fills = [], [], [], [], []
+    pad_nets, trk_nets, via_nets = [], [], []
+
+    def net_name(node):
+        n = child(node, "net")
+        return str(n[-1]) if n and len(n) > 1 and not _isnum(n[-1]) else ""
     for fp in fps:
         at = child(fp, "at")
         fx, fy = float(at[1]), float(at[2])
@@ -494,21 +500,25 @@ def features(fps, segs, arcs, vias, zones=()):
             if pd[2] == "np_thru_hole" and not any("Cu" in l for l in lys if l != "*.Cu"):
                 lys = {"hole"}
             pads.append((ref, lys, corners, (cx, cy), str(pd[2])))
+            pad_nets.append(net_name(pd))
     for s in segs:
+        trk_nets.append(net_name(s))
         trk.append(((float(child(s, "start")[1]), float(child(s, "start")[2])), (float(child(s, "end")[1]), float(child(s, "end")[2])),
                     float(child(s, "width")[1]), str(child(s, "layer")[1])))
     for s in arcs:
         pts = [(float(child(s, k)[1]), float(child(s, k)[2])) for k in ("start", "mid", "end")]
         ap = arc_points(*pts)
         for p, q in zip(ap, ap[1:]):
+            trk_nets.append(net_name(s))
             trk.append((p, q, float(child(s, "width")[1]), str(child(s, "layer")[1])))
     for v in vias:
+        via_nets.append(net_name(v))
         vs.append(((float(child(v, "at")[1]), float(child(v, "at")[2])), float(child(v, "size")[1]) / 2))
     for z in zones:
         for fpoly in children(z, "filled_polygon"):
             pts = child(fpoly, "pts")
             fills.append(([(float(x[1]), float(x[2])) for x in children(pts, "xy")], str(child(fpoly, "layer")[1])))
-    return dict(pads=pads, courtyards=crt, tracks=trk, vias=vs, fills=fills)
+    return dict(pads=pads, courtyards=crt, tracks=trk, vias=vs, fills=fills, pad_nets=pad_nets, track_nets=trk_nets, via_nets=via_nets)
 
 
 def part_distance(feat, segs_list, skip_refs=()):
@@ -677,24 +687,63 @@ def outward(p, q, poly):
     return n if not T.point_in_poly(m, poly) else (-n[0], -n[1])
 
 
+def _poly_poly_touch(pa, pb):
+    """Distance between two convex polygons: 0 when they cross or one lies inside the other."""
+    if any(T.point_in_poly(p, pb) for p in pa) or any(T.point_in_poly(p, pa) for p in pb):
+        return 0.0
+    return T.poly_poly_dist(pa, pb)
+
+
+BAND_MARGIN = 0.05              # routed copper closer than this to a keep-out band counts as inside (planner safety)
+
+
+def band_blockers(feats, tab, margin=BAND_MARGIN):
+    """Routed copper (tracks, vias, pads with copper; pours are cut by the keep-out and do not count) inside the keep-out polygon
+    of any hole row of the tab, or closer than `margin` to it.  feats = {board key: features()}.  Returns a list of
+    (distance, board, kind, net, layer, (x, y) sheet), nearest first; an empty list = the band is free."""
+    out = []
+    for ri in range(len(tab["rows"])):
+        poly = band_polygon(tab, ri)
+        x0, x1 = min(p[0] for p in poly) - margin - 2, max(p[0] for p in poly) + margin + 2
+        y0, y1 = min(p[1] for p in poly) - margin - 2, max(p[1] for p in poly) + margin + 2
+        for key, f in feats.items():
+            for (a, b, w, ly), net in zip(f["tracks"], f["track_nets"]):
+                if max(a[0], b[0]) < x0 or min(a[0], b[0]) > x1 or max(a[1], b[1]) < y0 or min(a[1], b[1]) > y1:
+                    continue
+                d = poly_seg_dist(poly, a, b) - w / 2
+                if d < margin:
+                    out.append((d, key, "track", net, ly, a if math.dist(a, tab["centre"]) < math.dist(b, tab["centre"]) else b))   # end point nearer the tab
+            for (vc, vr), net in zip(f["vias"], f["via_nets"]):
+                if not (x0 <= vc[0] <= x1 and y0 <= vc[1] <= y1):
+                    continue
+                d = (0.0 if T.point_in_poly(vc, poly) else T.dist_to_boundary(vc, poly)) - vr
+                if d < margin:
+                    out.append((d, key, "via", net, "F.Cu-B.Cu", vc))
+            for (ref, lys, pp, pc, kind), net in zip(f["pads"], f["pad_nets"]):
+                if lys == {"hole"} or not (x0 <= pc[0] <= x1 and y0 <= pc[1] <= y1):
+                    continue
+                d = _poly_poly_touch(pp, poly)
+                if d < margin:
+                    out.append((d, key, "pad " + ref, net, "/".join(sorted(l for l in lys if "Cu" in l)) or "Cu", pc))
+    out.sort(key=lambda r: r[0])
+    return out
+
+
 def band_copper(feat, tab):
-    """Smallest distance of tracks, vias and copper pads of the boards to the hole rows, the rows extended by
-    TAB_KEEPOUT_SIDE at both ends (= the keep-out band's outer edge on the outline)."""
-    best = 1e9
-    for c, u, n in tab_bands(tab):
-        half = tab["width"] / 2 + TAB_KEEPOUT_SIDE
-        a, b = (c[0] - u[0] * half, c[1] - u[1] * half), (c[0] + u[0] * half, c[1] + u[1] * half)
-        for p, q, w, ly in feat["tracks"]:
-            best = min(best, seg_seg_dist(p, q, a, b) - w / 2)
-        for vc, vr in feat["vias"]:
-            best = min(best, T.seg_point_dist(vc, a, b) - vr)
-        for ref, lys, poly, pc, kind in feat["pads"]:
-            if lys != {"hole"} and math.dist(pc, c) < half + 6:
-                best = min(best, poly_seg_dist(poly, a, b))
-    return best
+    """Smallest distance of tracks, vias and copper pads of the boards to the keep-out polygons of the hole rows (negative = inside).
+    Kept for the tab check rows; the planner uses band_blockers."""
+    r = band_blockers({"x": feat}, tab, margin=9.0)
+    return r[0][0] if r else 1e9
 
 
-def make_bb_tab(s, line, n_out, b_lines, xf_b, w=BRIDGE_W):
+def bite_offsets(n):
+    """Hole offsets along a row for n holes (centred, BITE_PITCH apart) and the row span; n below tree_outline's 5 is the
+    fallback of the tab search (JLC: 'not recommended to have fewer than 5 holes in a set')."""
+    offs = [(i - (n - 1) / 2) * BITE_PITCH for i in range(n)]
+    return offs, (n - 1) * BITE_PITCH + BITE_D
+
+
+def make_bb_tab(s, line, n_out, b_lines, xf_b, w=BRIDGE_W, n_holes=BITE_N):
     """Board-board tab centred at parameter s on board A's line: corners on A, far corners on B's facing line."""
     lid, p, q = line
     u, L = unit(p, q)
@@ -718,7 +767,7 @@ def make_bb_tab(s, line, n_out, b_lines, xf_b, w=BRIDGE_W):
     centre_a = P(p[0] + u[0] * s, p[1] + u[1] * s)
     ub, Lb = unit(bp, bq)
     mb = ((f0[0] + f1[0]) / 2, (f0[1] + f1[1]) / 2)
-    offs, span = T.bite_holes(BITE_N)
+    offs, span = bite_offsets(n_holes)
     rows = [[P(centre_a[0] + u[0] * o - n_out[0] * BITE_INSET, centre_a[1] + u[1] * o - n_out[1] * BITE_INSET) for o in offs],
             [P(mb[0] + ub[0] * o + n_out[0] * BITE_INSET, mb[1] + ub[1] * o + n_out[1] * BITE_INSET) for o in offs]]
     # B-side distances from the ends of its line (fillets): keep a margin
@@ -726,20 +775,20 @@ def make_bb_tab(s, line, n_out, b_lines, xf_b, w=BRIDGE_W):
     b_end_margin = min(sb[0], Lb - sb[1])
     return dict(kind="board-board", line=lid, s=s, corners=(c0, c1), far=(f0, f1), far_line=blid, rows=rows,
                 lengths=(far[0][0], far[1][0]), b_end_margin=b_end_margin, a_end_margin=min(s - w / 2, L - s - w / 2),
-                width=w, centre=centre_a)
+                width=w, centre=centre_a, n_holes=n_holes)
 
 
-def make_rail_tab(s, line, n_out, rail_y, w=BRIDGE_W):
+def make_rail_tab(s, line, n_out, rail_y, w=BRIDGE_W, n_holes=BITE_N):
     lid, p, q = line
     u, L = unit(p, q)
     c0 = P(p[0] + u[0] * (s - w / 2), p[1] + u[1] * (s - w / 2))
     c1 = P(p[0] + u[0] * (s + w / 2), p[1] + u[1] * (s + w / 2))
     f0, f1 = P(c0[0], rail_y), P(c1[0], rail_y)
     centre = P(p[0] + u[0] * s, p[1] + u[1] * s)
-    offs, span = T.bite_holes(BITE_N)
+    offs, span = bite_offsets(n_holes)
     rows = [[P(centre[0] + u[0] * o - n_out[0] * BITE_INSET, centre[1] + u[1] * o - n_out[1] * BITE_INSET) for o in offs]]
     return dict(kind="board-rail", line=lid, s=s, corners=(c0, c1), far=(f0, f1), far_line="rail", rows=rows,
-                lengths=(abs(rail_y - c0[1]), abs(rail_y - c1[1])), a_end_margin=min(s - w / 2, L - s - w / 2), width=w, centre=centre)
+                lengths=(abs(rail_y - c0[1]), abs(rail_y - c1[1])), a_end_margin=min(s - w / 2, L - s - w / 2), width=w, centre=centre, n_holes=n_holes)
 
 
 def row_segments(tab):
@@ -758,77 +807,210 @@ def in_avoid(xf, pts):
     return any(T.point_in_poly(xf.local(*p), z) for p in pts for z in zones)
 
 
+# Tab search (2026-11-25): every tab slides along its straight run to the copper-free position closest to the planned one.
+# Copper-free = no routed track, via or copper pad of either board inside the tab's keep-out bands (band_blockers; pours do not count,
+# the keep-out cuts them), nearest part not closer than PART_FAIL_MM, tab ends clear of the fillets and of the avoid zones, length
+# within the accepted range.  When a run has no such position the ladder TAB_LADDER is tried (shorter bridge, then fewer holes).
+TAB_LADDER = [(BITE_N, BRIDGE_W), (4, 4.05), (3, 4.0)]
+# (holes per row, bridge width): 5 holes + 0.3 mm web each side = 5.0 mm (JLC 5-8 holes per set); 4 holes + the same web = 4.05 mm, the
+# shortest bridge that holds a hole row (4 >= TAB_MIN_W); 3 holes in a bridge kept at the 4.0 mm floor.  Own ladder, order from the job:
+# first the bridge shorter (not below 4.0 mm), then fewer holes (not below 3).  JLC: "not recommended to have fewer than 5 holes in a set".
+TAB_RELAX_LEN = 5.0              # report only: a longer bridge (tree_outline.TAB_MAX_LEN is 4.0) that would be copper-free
+NUDGE_MAX = 0.20                # report only: copper that intrudes into a band by at most this much could be nudged by the router
+
+
+def _grid(L, anchors):
+    return sorted({round(k * 0.1, 1) for k in range(int(L / 0.1) + 1)} | {round(a, 6) for a in anchors})
+
+
+def _choose(cand, anchors, k):
+    """Best k tabs from cand [(s, slack)]: both part slack >= 0 first (else the larger worst slack), then the smallest total move
+    from the anchors; two tabs keep TAB_MIN_SPACING between their centres.  Returns [s] or None."""
+    best = None
+    if k == 1:
+        for s, sl in cand:
+            key = (round(min(sl, 0.0), 3), -round(min(abs(s - a) for a in anchors), 3))
+            if best is None or key > best[0]:
+                best = (key, [s])
+    else:
+        for i, (s1, sl1) in enumerate(cand):
+            for s2, sl2 in cand[i + 1:]:
+                if s2 - s1 < TAB_MIN_SPACING:
+                    continue
+                key = (round(min(sl1, sl2, 0.0), 3), -round(abs(s1 - anchors[0]) + abs(s2 - anchors[1]), 3))
+                if best is None or key > best[0]:
+                    best = (key, [s1, s2])
+    return best[1] if best else None
+
+
+def search_run(anchors, L, make, valid, feat, ladder=TAB_LADDER):
+    """Positions for len(anchors) tabs on one straight run.  make(s, n, w) -> tab or None; valid(tab, max_len) -> (ok, reason, blockers).
+    Walks the ladder (shorter bridge, fewer holes); at each step the full count first.  A step that places fewer tabs than planned is
+    kept only when no later step places them all.  When nothing fits, the result carries the report data (board files are never edited):
+    `least` = the least-blocked position of the first step (smallest intrusion, then fewest items), `nudge` = the tabs that would fit
+    if copper intruding by at most NUDGE_MAX moved, `relaxed` = the first position with a bridge up to TAB_RELAX_LEN."""
+    anchors = sorted(anchors)
+    res = dict(picks=[], step=None, n=None, w=None, partial=None, least=None, relaxed=None, nudge=None, combo=None, steps=[])
+
+    def near(s_):
+        return abs(s_ - min(anchors, key=lambda a: abs(a - s_)))
+    first_blocked = []
+    for si, (n, w) in enumerate(ladder):
+        cand, blocked = [], []
+        for s in _grid(L, anchors):
+            t = make(s, n, w)
+            if t is None:
+                continue
+            ok, why, bl = valid(t, T.TAB_MAX_LEN)
+            if why == "copper":
+                intr = max([-b[0] for b in bl] + [0.0])
+                blocked.append((intr, len({(b[2], b[3], b[4], round(b[5][0], 1), round(b[5][1], 1)) for b in bl}), near(s), s, bl,
+                                min(part_slack(feat, row_segments(t))[1], 99.0)))
+            if ok:
+                cand.append((s, min(part_slack(feat, row_segments(t))[0], 2.0)))
+        res["steps"].append((n, w, len(cand), len(blocked)))
+        if si == 0:
+            first_blocked = blocked
+        for k in range(len(anchors), 0, -1):
+            pick = _choose(cand, anchors, k)
+            if pick:
+                if k == len(anchors):
+                    res.update(picks=pick, step=si, n=n, w=w)
+                    return res
+                if res["partial"] is None:
+                    res["partial"] = (pick, si, n, w)
+                break
+    if res["partial"]:
+        pick, si, n, w = res["partial"]
+        res.update(picks=pick, step=si, n=n, w=w)
+    # report data for the tabs that found no position
+    if first_blocked:
+        res["least"] = min(first_blocked, key=lambda g: (round(g[0], 2), g[1], g[2]))
+        near_free = [(g[3], -(g[0] + 0.001 * g[1])) for g in first_blocked if g[0] <= NUDGE_MAX and g[5] >= PART_FAIL_MM]   # least intrusion, then fewest items
+        for k in range(len(anchors), 0, -1):
+            pick = _choose(near_free, anchors, k)
+            if pick:
+                items = {}
+                for s_ in pick:
+                    for g in first_blocked:
+                        if abs(g[3] - s_) < 1e-9:
+                            for b in g[4]:
+                                items[(b[1], b[2], b[3], b[4], round(b[5][0], 1), round(b[5][1], 1))] = max(items.get((b[1], b[2], b[3], b[4], round(b[5][0], 1), round(b[5][1], 1)), 0.0), -b[0])
+                res["nudge"] = (k, pick, items)
+                break
+    if len(res["picks"]) < len(anchors):          # both measures together: bridge up to TAB_RELAX_LEN and copper nudged by <= NUDGE_MAX
+        n, w = ladder[0]
+        cand2, info2 = [], {}
+        for s_ in _grid(L, anchors):
+            t = make(s_, n, w)
+            if t is None:
+                continue
+            ok, why, bl = valid(t, TAB_RELAX_LEN)
+            if ok or (why == "copper" and max(-b[0] for b in bl) <= NUDGE_MAX and part_slack(feat, row_segments(t))[1] >= PART_FAIL_MM):
+                intr = max([-b[0] for b in bl] + [0.0])
+                cand2.append((s_, -(intr + 0.001 * len(bl))))
+                info2[s_] = (bl, sorted(t["lengths"]))
+        for k in range(len(anchors), 0, -1):
+            pick = _choose(cand2, anchors, k)
+            if pick:
+                items = {}
+                for s_ in pick:
+                    for b in info2[s_][0]:
+                        kk = (b[1], b[2], b[3], b[4], round(b[5][0], 1), round(b[5][1], 1))
+                        items[kk] = max(items.get(kk, 0.0), -b[0])
+                res["combo"] = (k, pick, items, [info2[s_][1] for s_ in pick])
+                break
+    if not res["picks"]:
+        for si, (n, w) in enumerate(ladder):
+            found = []
+            for s in _grid(L, anchors):
+                t = make(s, n, w)
+                if t is not None and valid(t, TAB_RELAX_LEN)[0]:
+                    found.append((near(s), s, t))
+            if found:
+                d, s, t = min(found, key=lambda f: f[0])
+                res["relaxed"] = (si, n, w, s, sorted(t["lengths"]), sorted(f[1] for f in found))
+                break
+    return res
+
+
 def plan_tabs(ctx):
-    """Tabs from tree_outline, then slid along their run where a part is closer than PART_TARGET_MM."""
+    """Tabs from tree_outline's candidates, slid along their run to the copper-free position closest to the planned one (search_run).
+    ctx['tab_plan'] keeps every planned tab (also those that have no position) with the search result for the report."""
     arr, rot, off, frame, sheet = ctx["arr"]
     A, B = ctx["A"], ctx["B"]
     xa, xb = A["xf"], B["xf"]
-    feat = ctx["feat_all"]
-    tabs = []
+    feat, fb = ctx["feat_all"], ctx["feat_board"]
+    tabs, plan = [], []
+    nplanned = [0]
+
+    def start_info(tab, valid):
+        if tab is None:
+            return (-9.0, 0.0, "no facing edge")
+        ok, why, bl = valid(tab, T.TAB_MAX_LEN)
+        if ok:
+            return part_slack(feat, row_segments(tab))
+        if bl:
+            b = bl[0]
+            return (-9.0, 0.0, "blocked by %s %s on %s" % (b[3] or "-", b[2], b[4]))
+        return (-9.0, 0.0, {"geometry": "the %.1f mm bridge does not fit there (tab end margin, length or avoid zone)" % BRIDGE_W,
+                            "part": "a part closer than %.1f mm" % PART_FAIL_MM}.get(why, why))
+
+    def run_group(kind, lid, anchors, edge, make, valid, L, extra):
+        names = ["T%d" % (nplanned[0] + i + 1) for i in range(len(anchors))]
+        name_of = {round(a, 6): n_ for a, n_ in zip(anchors, names)}          # a name stays with its planned anchor
+        nplanned[0] += len(anchors)
+        res = search_run(anchors, L, make, valid, feat)
+        starts = [make(a, *TAB_LADDER[0]) for a in sorted(anchors)]
+        sinfo = [start_info(t_, valid) for t_ in starts]
+        entry = dict(kind=kind, line=lid, names=sorted(names, key=lambda n_: int(n_[1:])), anchors=sorted(anchors), res=res, edge=edge, placed=[], **extra)
+        plan.append(entry)
+        # keep the names of the planned tabs in order: the first placed tab takes the first name
+        sa = sorted(anchors)
+        for i, s_ in enumerate(res["picks"]):
+            ai = min(range(len(sa)), key=lambda j: abs(sa[j] - s_)) if len(res["picks"]) < len(sa) else i
+            tab = make(s_, res["n"], res["w"])
+            tab.update(name=name_of[round(sa[ai], 6)], origin_s=sa[ai], moved=abs(s_ - sa[ai]) > 1e-6, start_part=sinfo[ai],
+                       edge=edge, step=res["step"], planned_start=starts[ai], **extra)
+            tabs.append(tab)
+            entry["placed"].append(tab["name"])
+
     # ---- board-board (tree_outline.bridging_tabs: on A's slanted edges, in A local = arrangement coordinates)
-    bt = T.bridging_tabs(arr)
     groups = {}
-    for t in bt:
+    for t in T.bridging_tabs(arr):
         o = t["a_local"]
-        u = t["edge_dir"]
         pt = P(o[0] + sheet[0], o[1] + sheet[1])
-        line = find_line(A["lines"], pt, u)
+        line = find_line(A["lines"], pt, t["edge_dir"])
         n_out = outward(line[1], line[2], A["poly"])
         uu, L = unit(line[1], line[2])
         s0 = (pt[0] - line[1][0]) * uu[0] + (pt[1] - line[1][1]) * uu[1]
-        groups.setdefault(line[0], []).append(dict(s0=s0, line=line, n_out=n_out, run=t["run"], edge=t["a_edge"]))
-
-    def ok_bb(tab):
-        if tab is None:
-            return False
-        if not all(GAP_MM - 0.05 <= l <= T.TAB_MAX_LEN for l in tab["lengths"]):
-            return False
-        if tab["a_end_margin"] < T.TAB_END_MARGIN or tab["b_end_margin"] < T.TAB_END_MARGIN:
-            return False
-        if in_avoid(xa, tab["corners"] + tuple(tab["rows"][0])) or in_avoid(xb, tab["far"] + tuple(tab["rows"][1])):
-            return False
-        return band_copper(feat, tab) >= TAB_KEEPOUT_DEPTH + 0.05
-
+        groups.setdefault(line[0], []).append(dict(s0=s0, line=line, n_out=n_out, edge=t["a_edge"], L=L))
     for lid, grp in sorted(groups.items()):
-        grp.sort(key=lambda g: g["s0"])
         if len(grp) > 2:
             raise SystemExit("panel: more than two tabs on one run (%s): extend the joint search" % lid)
-        line, n_out = grp[0]["line"], grp[0]["n_out"]
-        uu, L = unit(line[1], line[2])
-        starts = [make_bb_tab(g["s0"], line, n_out, B["lines"], xb) for g in grp]
-        d0 = [part_slack(feat, row_segments(t_)) if ok_bb(t_) else (-9.0, 0.0, "invalid with a %.1f mm bridge" % BRIDGE_W) for t_ in starts]
-        spaced = len(grp) < 2 or grp[1]["s0"] - grp[0]["s0"] >= TAB_MIN_SPACING
-        if all(d[0] >= 0 for d in d0) and spaced:
-            picks = [g["s0"] for g in grp]
-        else:
-            cand = []                                        # every valid centre on the run, 0.1 mm grid, with its slack
-            for k in range(int(L / 0.1) + 1):
-                s_ = round(k * 0.1, 1)
-                t_ = make_bb_tab(s_, line, n_out, B["lines"], xb)
-                if ok_bb(t_):
-                    cand.append((s_, min(part_slack(feat, row_segments(t_))[0], 2.0)))
-            best = None
-            if len(grp) == 1:
-                for s_, sl in cand:
-                    key = (round(sl, 3), -abs(s_ - grp[0]["s0"]))
-                    if best is None or key > best[0]:
-                        best = (key, [s_])
-            else:                                            # joint: both tabs valid, spaced, the worse slack as large as possible
-                for i, (s1, sl1) in enumerate(cand):
-                    for s2, sl2 in cand[i:]:
-                        if s2 - s1 < TAB_MIN_SPACING:
-                            continue
-                        key = (round(min(sl1, sl2), 3), -round(abs(s1 - grp[0]["s0"]) + abs(s2 - grp[1]["s0"]), 3))
-                        if best is None or key > best[0]:
-                            best = (key, [s1, s2])
-            picks = best[1] if best else [g["s0"] for g in grp]
-        for g, s_, d in zip(grp, picks, d0):
-            tab = make_bb_tab(s_, line, n_out, B["lines"], xb)
-            tab.update(origin_s=g["s0"], moved=abs(s_ - g["s0"]) > 1e-6, start_part=d, edge=g["edge"])
-            tabs.append(tab)
+        line, n_out, L = grp[0]["line"], grp[0]["n_out"], grp[0]["L"]
+
+        def make(s_, n, w, line=line, n_out=n_out):
+            return make_bb_tab(s_, line, n_out, B["lines"], xb, w=w, n_holes=n)
+
+        def valid(tab, max_len):
+            if not all(GAP_MM - 0.05 <= l <= max_len for l in tab["lengths"]):
+                return False, "geometry", []
+            if tab["a_end_margin"] < T.TAB_END_MARGIN or tab["b_end_margin"] < T.TAB_END_MARGIN:
+                return False, "geometry", []
+            if in_avoid(xa, tab["corners"] + tuple(tab["rows"][0])) or in_avoid(xb, tab["far"] + tuple(tab["rows"][1])):
+                return False, "geometry", []
+            bl = band_blockers(fb, tab)
+            if bl:
+                return False, "copper", bl
+            if part_slack(feat, row_segments(tab))[1] < PART_FAIL_MM:
+                return False, "part", []
+            return True, "ok", []
+        run_group("board-board", lid, [g["s0"] for g in grp], grp[0]["edge"], make, valid, L, dict(board="A", line_obj=line))
     # ---- board-rail (tree_outline.rail_tabs: flat trunk ends facing a rail)
     for key, b in (("A", A), ("B", B)):
         xf = b["xf"]
+        rg = {}
         for t in T.rail_tabs(arr, key):
             pt = P(t["panel_xy"][0] + sheet[0], t["panel_xy"][1] + sheet[1])
             line = find_line(b["lines"], pt, (1.0, 0.0))
@@ -836,35 +1018,31 @@ def plan_tabs(ctx):
             uu, L = unit(line[1], line[2])
             s0 = (pt[0] - line[1][0]) * uu[0] + (pt[1] - line[1][1]) * uu[1]
             rail_y = frame["top_inner"] if t["side"] == "top" else frame["bot_inner"]
-            lo, hi = T.TAB_END_MARGIN + BRIDGE_W / 2, L - T.TAB_END_MARGIN - BRIDGE_W / 2
-            s_start = min(max(s0, lo), hi)
+            rg.setdefault(line[0], []).append(dict(s0=s0, line=line, n_out=n_out, L=L, rail_y=rail_y, side=t["side"]))
+        for lid, grp in sorted(rg.items()):
+            if len(grp) > 2:
+                raise SystemExit("panel: more than two rail tabs on one run (%s)" % lid)
+            line, n_out, L, rail_y, side = grp[0]["line"], grp[0]["n_out"], grp[0]["L"], grp[0]["rail_y"], grp[0]["side"]
 
-            def ok_rt(tab):
-                return (not in_avoid(xf, tab["corners"] + tuple(tab["rows"][0])) and tab["a_end_margin"] >= T.TAB_END_MARGIN - 1e-9
-                        and band_copper(feat, tab) >= TAB_KEEPOUT_DEPTH + 0.05)
-            start = make_rail_tab(s_start, line, n_out, rail_y)
-            d0 = part_slack(feat, row_segments(start))
-            choice = s_start
-            if d0[0] < 0 or not ok_rt(start):
-                best = None
-                s = lo
-                while s <= hi + 1e-9:
-                    t_ = make_rail_tab(round(s, 1), line, n_out, rail_y)
-                    others = [o for o in tabs if o["kind"] == "board-rail" and o["line"] == line[0]]
-                    if ok_rt(t_) and all(abs(o["s"] - t_["s"]) >= TAB_MIN_SPACING for o in others):
-                        d = part_slack(feat, row_segments(t_))[0]
-                        k = (round(min(d, 2.0), 3), -abs(t_["s"] - s0))
-                        if best is None or k > best[0]:
-                            best = (k, t_["s"])
-                    s += 0.1
-                if best:
-                    choice = best[1]
-            tab = make_rail_tab(choice, line, n_out, rail_y)
-            tab.update(origin_s=s0, moved=abs(choice - s0) > 1e-6, start_part=d0, board=key, side=t["side"])
-            tabs.append(tab)
-    for i, t in enumerate(tabs, 1):
-        t["name"] = "T%d" % i
+            def make(s_, n, w, line=line, n_out=n_out, rail_y=rail_y, L=L):
+                if s_ - w / 2 < 0 or s_ + w / 2 > L:
+                    return None
+                return make_rail_tab(s_, line, n_out, rail_y, w=w, n_holes=n)
+
+            def valid(tab, max_len, xf=xf):
+                if in_avoid(xf, tab["corners"] + tuple(tab["rows"][0])) or tab["a_end_margin"] < T.TAB_END_MARGIN - 1e-9:
+                    return False, "geometry", []
+                bl = band_blockers(fb, tab)
+                if bl:
+                    return False, "copper", bl
+                if part_slack(feat, row_segments(tab))[1] < PART_FAIL_MM:
+                    return False, "part", []
+                return True, "ok", []
+            run_group("board-rail", lid, [g["s0"] for g in grp], None, make, valid, L, dict(board=key, side=side, line_obj=line))
+    ctx["tab_plan"] = plan
+    for t in tabs:
         t.setdefault("board", "A")
+    tabs.sort(key=lambda t: int(t["name"][1:]))
     return tabs
 
 
@@ -966,7 +1144,7 @@ def panel_parts(ctx, tabs):
         at = t["centre"]
         holes = [h for row in t["rows"] for h in row]
         pads = [npth(h, at, BITE_D, "%s-%d" % (ref, i)) for i, h in enumerate(holes)]
-        out.append(fp_node("MouseBites_%dx%.1fmm" % (BITE_N, BITE_D), ref, "mouse bites %s" % t["name"], at, "F.Cu", pads))
+        out.append(fp_node("MouseBites_%dx%.1fmm" % (len(t["rows"][0]), BITE_D), ref, "mouse bites %s" % t["name"], at, "F.Cu", pads))
         info["mousebites"].append((ref, t["name"], holes))
     x0, x1 = frame["x0"], frame["x1"]
     tools = [(x0 + TOOL_X, frame["top_outer"] + TOOL_EDGE), (x1 - TOOL_X, frame["top_outer"] + TOOL_EDGE),
@@ -1013,16 +1191,23 @@ def tab_bands(tab):
     return out
 
 
+def band_polygon(tab, ri):
+    """The keep-out polygon of hole row ri: bridge width + TAB_KEEPOUT_SIDE each side, TAB_KEEPOUT_DEPTH into the board behind the row,
+    BITE_D over the holes towards the bridge."""
+    c, u, n = tab_bands(tab)[ri]
+    half = tab["width"] / 2 + TAB_KEEPOUT_SIDE
+    ext = BITE_D                                   # also over the holes and a little into the bridge
+    return [P(c[0] + u[0] * a + n[0] * b, c[1] + u[1] * a + n[1] * b)
+            for a, b in ((-half, TAB_KEEPOUT_DEPTH), (half, TAB_KEEPOUT_DEPTH), (half, -ext), (-half, -ext))]
+
+
 def tab_keepouts(tabs, cu_layers):
     """Rule areas: no copper (tracks, vias, pads, pour) in a band TAB_KEEPOUT_DEPTH deep behind each hole row, so the pours of
     the boards retreat at the tabs (they run to 0.3 mm from the edge elsewhere) and no copper is exposed when a tab breaks."""
     out = []
     for t in tabs:
-        for ri, (c, u, n) in enumerate(tab_bands(t)):
-            half = t["width"] / 2 + TAB_KEEPOUT_SIDE
-            ext = BITE_D                                   # also over the holes and a little into the bridge
-            pts = [P(c[0] + u[0] * a + n[0] * b, c[1] + u[1] * a + n[1] * b)
-                   for a, b in ((-half, TAB_KEEPOUT_DEPTH), (half, TAB_KEEPOUT_DEPTH), (half, -ext), (-half, -ext))]
+        for ri in range(len(t["rows"])):
+            pts = band_polygon(t, ri)
             out.append(["zone", ["layers"] + [Q(l) for l in cu_layers], ["uuid", U("keepout", t["name"], ri)],
                         ["name", Q("tab_%s_%d" % (t["name"], ri))], ["hatch", "edge", "0.5"], ["connect_pads", ["clearance", "0"]],
                         ["min_thickness", "0.25"],
@@ -1263,6 +1448,7 @@ def build_context():
     fa = features(A["items"]["footprint"], A["items"]["segment"], A["items"]["arc"], A["items"]["via"])
     fb = features(B["items"]["footprint"], B["items"]["segment"], B["items"]["arc"], B["items"]["via"])
     ctx["feat_all"] = {k: fa[k] + fb[k] for k in fa}
+    ctx["feat_board"] = {"A": fa, "B": fb}
     return ctx
 
 
@@ -1487,9 +1673,53 @@ def check_tabs(ctx, comp, rows, feat_final):
     tabs = comp["tabs"]
     nbb = sum(t["kind"] == "board-board" for t in tabs)
     nr = {k: sum(1 for t in tabs if t["kind"] == "board-rail" and t["board"] == k) for k in "AB"}
-    rows.add("OK" if nbb >= 4 and nr["A"] >= 2 and nr["B"] >= 2 else "FAIL", "tab count",
-             "%d board-board, rail tabs A %d / B %d (JLC: at least 2 symmetric sets per side for boards under 30 mm, a set every 50-60 mm)" % (nbb, nr["A"], nr["B"]))
-    offs, span = T.bite_holes(BITE_N)
+    plan = ctx["tab_plan"]
+    short = [(e["line"], len(e["anchors"]), len(e["placed"])) for e in plan if len(e["placed"]) < len(e["anchors"])]
+    nplanned = sum(len(e["anchors"]) for e in plan)
+    status = "FAIL" if (nbb < 2 or nr["A"] < 2 or nr["B"] < 2) else ("WARN" if short else "OK")
+    rows.add(status, "tab count",
+             "%d of %d planned tabs: %d board-board, rail tabs A %d / B %d (JLC: at least 2 symmetric sets per side for boards under 30 mm, a set every 50-60 mm)%s" % (
+                 len(tabs), nplanned, nbb, nr["A"], nr["B"],
+                 "; fewer than 2 on: " + ", ".join("%s (%d of %d)" % x for x in short) if short else ""))
+    for e in plan:
+        r = e["res"]
+        lab = "tab edge %s %s %s" % (e["line"], e["kind"], "/".join(e["names"]))
+        if len(e["placed"]) == len(e["anchors"]):
+            moved = ["%s %+.1f mm" % (t["name"], t["s"] - t["origin_s"]) for t in tabs if t["name"] in e["placed"]]
+            rows.add("OK", lab, "%d of %d tabs placed copper-free%s; moved from tree_outline: %s; search steps (holes, bridge, free positions, positions blocked by copper only): %s" % (
+                len(e["placed"]), len(e["anchors"]), "" if r["step"] == 0 else ", LADDER STEP %d (%d holes, bridge %.2f mm)" % (r["step"], r["n"], r["w"]),
+                ", ".join(moved), r["steps"]))
+            continue
+        txt = ["%d of %d tabs placed (%s); steps (holes, bridge, free positions, copper-blocked positions): %s" % (
+            len(e["placed"]), len(e["anchors"]), ", ".join(e["placed"]) or "none", r["steps"])]
+
+        def describe(items):
+            out = []
+            for (key, kind, net, ly, x, y), intr in sorted(items.items(), key=lambda kv: -kv[1]):
+                out.append("%s %s on %s intrudes %.2f mm, board %s local (%.1f, %.1f)" % (net or "-", kind, ly, intr, key, *ctx[key]["xf"].local(x, y)))
+            return out
+        if r["least"]:
+            intr, n_items, _, s_l, bl, _ = r["least"]
+            its = {}
+            for d, key, kind, net, ly, pt in bl:
+                k = (key, kind, net, ly, round(pt[0], 1), round(pt[1], 1))
+                its[k] = max(its.get(k, 0.0), -d)
+            txt.append("least blocked: centre s=%.1f mm along the edge, %d items, worst intrusion %.2f mm into the %.1f mm band: %s" % (
+                s_l, n_items, intr, TAB_KEEPOUT_DEPTH, "; ".join(describe(its)[:8])))
+        if r["nudge"]:
+            k, pick, items = r["nudge"]
+            txt.append("SMALLEST ROUTER-SIDE CHANGE (<= %.2f mm intrusion): %d of %d tabs at centres s=%s if these move inward by that much plus %.2f: %s" % (
+                NUDGE_MAX, k, len(e["anchors"]), ", ".join("%.1f" % x for x in pick), BAND_MARGIN, "; ".join(describe(items)[:8])))
+        if r["combo"]:
+            k, pick, items, lens = r["combo"]
+            txt.append("BOTH MEASURES: bridge up to %.1f mm and copper nudged by <= %.2f mm: %d of %d tabs at centres s=%s (lengths %s); items to move: %s" % (
+                TAB_RELAX_LEN, NUDGE_MAX, k, len(e["anchors"]), ", ".join("%.1f" % x for x in pick), ["%.2f..%.2f" % tuple(l) for l in lens],
+                "; ".join(describe(items)[:10]) or "none"))
+        if r["relaxed"]:
+            si, n, w, s_r, ln, free = r["relaxed"]
+            txt.append("a longer bridge (up to %.1f mm instead of %.1f) would be copper-free: %d holes, bridge %.2f mm, centre s=%.1f, length %.2f..%.2f, free centres %.1f..%.1f" % (
+                TAB_RELAX_LEN, T.TAB_MAX_LEN, n, w, s_r, ln[0], ln[1], free[0], free[-1]))
+        rows.add("WARN", lab, "; ".join(txt))
     for t in tabs:
         holes = [h for row in t["rows"] for h in row]
         # hole to outline: A-side row on the tab line, B-side row on B's line
@@ -1507,7 +1737,7 @@ def check_tabs(ctx, comp, rows, feat_final):
         dout = min(copper_to_outline(feat_final, s[0], s[1]) for s in segs)
         status = "OK"
         notes = []
-        if t["width"] < T.TAB_MIN_W or not (T.BITE_HOLES_MIN <= len(t["rows"][0]) <= T.BITE_HOLES_MAX) or not (0.3 - 1e-9 <= edge_gap):
+        if t["width"] < T.TAB_MIN_W or not (3 <= len(t["rows"][0]) <= T.BITE_HOLES_MAX) or not (0.3 - 1e-9 <= edge_gap):
             status = "FAIL"
         if max(d_out) > 0.2:
             status = "FAIL"
@@ -1515,11 +1745,12 @@ def check_tabs(ctx, comp, rows, feat_final):
             status = "FAIL"
         if dpart[1] < PART_FAIL_MM or dcu[0] < 0.2:
             status = "FAIL"
-        elif (dpart[0] < 0 or dout[0] < COPPER_OUTLINE_WARN - 0.01) and status == "OK":
-            status = "WARN"
+        elif (dpart[0] < 0 or dout[0] < COPPER_OUTLINE_WARN - 0.01 or len(t["rows"][0]) < BITE_N) and status == "OK":
+            status = "WARN"            # also: fewer than 5 holes per set (JLC "not recommended"), a fallback step of the tab search
         loc = A["xf"].local(*t["centre"]) if t["board"] == "A" else B["xf"].local(*t["centre"])
-        moved = (" moved %.1f mm along the edge from tree_outline (there: %.2f mm to %s)" % (t["s"] - t["origin_s"], t["start_part"][1], t["start_part"][2])
-                 if t.get("moved") else "")
+        sp = t["start_part"]
+        moved = (" moved %.1f mm along the edge from tree_outline (there: %s)" % (
+                     t["s"] - t["origin_s"], sp[2] if sp[0] == -9.0 else "%.2f mm to %s" % (sp[1], sp[2])) if t.get("moved") else "")
         rows.add(status, "tab %s %s" % (t["name"], t["kind"]),
                  "board %s local (%.1f, %.1f), width %.1f, %d+%d holes D%.2f edge gap %.2f, length %.2f..%.2f, hole centre to outline %.3f, "
                  "nearest part %.2f (%s, wanted %.1f), copper to hole edge %.2f (%s), copper to outline %.2f (%s)%s" % (
@@ -1784,7 +2015,7 @@ def render(ctx, comp, path, feat_final):
     lx = (pad + (frame["x1"] - frame["x0"]) * sc + 30)
     d.text((pad * ss, 8 * ss), "TREE-01 panel %.1f x %.1f mm: A upright, B turned 180 deg (rails top/bottom 5 mm). Tabs T1..T%d, mouse bites "
            "%d x D%.1f, bridge %.1f mm. Yellow = Edge.Cuts. Generated by gen/panel_pcb.py" % (
-               frame["x1"] - frame["x0"], frame["bot_outer"] - frame["top_outer"], len(comp["tabs"]), BITE_N, BITE_D, BRIDGE_W), font=fb, fill=(30, 30, 30))
+               frame["x1"] - frame["x0"], frame["bot_outer"] - frame["top_outer"], max(int(t["name"][1:]) for t in comp["tabs"]), BITE_N, BITE_D, BRIDGE_W), font=fb, fill=(30, 30, 30))
     for i, t in enumerate(comp["tabs"]):
         c = t["checks"]
         x, y = Pp(t["centre"])
@@ -1798,8 +2029,17 @@ def render(ctx, comp, path, feat_final):
         d.text((lx * ss + 6 * ss, (ty + 15) * ss), "   part %.2f (%s), Cu-hole %.2f, Cu-outline %.2f (%s)" % (
             c["dpart"][1], c["dpart"][2], c["dcu"][0], c["dout"][0], c["dout"][1]), font=font, fill=(40, 40, 40))
         if t.get("moved"):
-            d.text((lx * ss + 6 * ss, (ty + 30) * ss), "   moved %.1f mm from tree_outline (was %.2f mm from %s)" % (
-                t["s"] - t["origin_s"], t["start_part"][1], t["start_part"][2]), font=font, fill=(40, 40, 40))
+            sp = t["start_part"]
+            d.text((lx * ss + 6 * ss, (ty + 30) * ss), "   moved %.1f mm from tree_outline (%s)%s" % (
+                t["s"] - t["origin_s"], sp[2] if sp[0] == -9.0 else "was %.2f mm from %s" % (sp[1], sp[2]),
+                "" if len(t["rows"][0]) == BITE_N else ", %d holes" % len(t["rows"][0])), font=font, fill=(40, 40, 40))
+    ty = pad + 40 + len(comp["tabs"]) * 54
+    for e in ctx["tab_plan"]:
+        if len(e["placed"]) < len(e["anchors"]):
+            missing = [n_ for n_ in e["names"] if n_ not in e["placed"]]
+            d.text((lx * ss + 6 * ss, ty * ss), "%s NOT PLACED (edge %s): routed copper in every position" % ("/".join(missing), e["line"]), font=fb, fill=(200, 0, 0))
+            d.text((lx * ss + 6 * ss, (ty + 15) * ss), "   see BOARD.md and the hook row 'tab edge %s'" % e["line"], font=font, fill=(40, 40, 40))
+            ty += 40
     # mm scale
     for k in range(0, int(frame["x1"] - frame["x0"]) + 1, 10):
         x, y = Pp((frame["x0"] + k, frame["bot_outer"]))
@@ -1937,6 +2177,33 @@ def selftest():
         guard = True
     row(fl == {"min_clearance": 0.10, "min_track_width": 0.10} and guard, "panel floors: lower of two, above JLC 0.09",
         "%s; a floor of 0.09 is refused: %s" % (fl, guard))
+    # 8 tab search on synthetic runs: copper blocks s in 10..20 for the 5-hole bridge (4 holes only 10.5..19.5); nearest free position,
+    #   ladder step, pair spacing, no position at all
+    def fake_make(s_, n, w):
+        return dict(rows=[[(s_ + o, 0.0) for o in bite_offsets(n)[0]]], lengths=(2.0, 2.0))
+    empty = dict(courtyards=[], pads=[], tracks=[], vias=[], fills=[], pad_nets=[], track_nets=[], via_nets=[])
+
+    def fake_valid(blocked):
+        def v(t, max_len):
+            c = t["rows"][0][len(t["rows"][0]) // 2][0]
+            half = 2.5 if len(t["rows"][0]) == 5 else 2.0
+            return (False, "copper", [(-0.1, "A", "track", "N", "F.Cu", (c, 0.0))]) if blocked(c - half, c + half) else (True, "ok", [])
+        return v
+    r1 = search_run([12.0], 30.0, fake_make, fake_valid(lambda a, b: a < 20.0 and b > 10.0), empty)
+    row(r1["step"] == 0 and abs(r1["picks"][0] - 7.5) < 0.11, "tab search: nearest free position", "anchor 12.0, blocked 10..20 -> %s (7.5 = 10 - 2.5)" % r1["picks"])
+    r2 = search_run([12.0], 30.0, fake_make, fake_valid(lambda a, b: b - a > 4.5), empty)       # only the 4-hole bridge (4.0 wide) is free
+    row(r2["step"] == 1 and r2["n"] == 4 and abs(r2["picks"][0] - 12.0) < 1e-9, "tab search: ladder step 2 = shorter bridge, 4 holes", "steps %s, picks %s" % (r2["steps"], r2["picks"]))
+    r3 = search_run([5.0, 8.0], 30.0, fake_make, fake_valid(lambda a, b: False), empty)
+    mv = abs(r3["picks"][0] - 5.0) + abs(r3["picks"][1] - 8.0)
+    row(len(r3["picks"]) == 2 and r3["picks"][1] - r3["picks"][0] >= TAB_MIN_SPACING - 1e-9 and abs(mv - 5.0) < 0.11,
+        "tab search: two tabs keep %.0f mm between centres, smallest total move" % TAB_MIN_SPACING, "anchors 5.0 / 8.0 -> %s (total move %.1f, minimum 5.0)" % (r3["picks"], mv))
+    r4 = search_run([12.0], 30.0, fake_make, fake_valid(lambda a, b: True), empty)
+    row(not r4["picks"] and r4["least"] is not None, "tab search: nothing fits -> blockers reported", "picks %s, least blocked s=%.1f, steps %s" % (r4["picks"], r4["least"][3], r4["steps"]))
+    # 9 keep-out band: a track 0.4 mm behind the outline is inside the 0.6 mm band, one 0.9 mm behind is not
+    tt = make_rail_tab(15.0, ("L0", (0.0, 0.0), (30.0, 0.0)), (0.0, -1.0), -3.0)
+    mk = lambda y: dict(empty, tracks=[((10.0, y), (20.0, y), 0.1, "F.Cu")], track_nets=["N"])
+    b_in, b_out = band_blockers({"A": mk(0.4)}, tt), band_blockers({"A": mk(0.9)}, tt)
+    row(len(b_in) == 1 and not b_out, "keep-out band blockers", "track at 0.4 mm: %d item(s) (net %s); at 0.9 mm: %d" % (len(b_in), b_in[0][3] if b_in else "-", len(b_out)))
     print("panel selftest: %s" % ("OK" if ok else "FAILED"))
     return 0 if ok else 1
 

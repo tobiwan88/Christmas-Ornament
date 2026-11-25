@@ -1,6 +1,4 @@
 type,ref,reason
-track_dangling,*,tree-a: gate 4 U1 fan-out: locked exit stubs end open by design; gate 5 routes from their ends (no dangling track may remain at fab)
-via_dangling,*,tree-a: gate 4 U1 fan-out: locked dog-bone vias are on F.Cu only until gate 5 routes B.Cu (no dangling via may remain at fab)
 lib_footprint_mismatch,C30,tree-a: B10: DNP in variant A
 lib_footprint_mismatch,C31,tree-a: B10: DNP in variant A
 lib_footprint_mismatch,C50,tree-a: B10: DNP in variant A

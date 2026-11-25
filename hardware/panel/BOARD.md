@@ -1,11 +1,12 @@
 # panel
 
-Status (current state first; history below, dated): REBUILT 2026-11-25 from the CURRENT board files (A committed at cab8ad4's file, B = working tree
-`tree-b.kicad_pcb` sha 'a32b2e7d4d19', a GUI re-save not committed) after board A's option b: each board keeps its own net classes in the panel
+Status (current state first; history below, dated): REBUILT 2026-11-25 (second build) from board A as routed and frozen (sha '69d264f3e1a8') and B = working tree
+`tree-b.kicad_pcb` sha 'a32b2e7d4d19' (a GUI re-save, not committed). Tab search added: A's router copper on its right slopes lay in the keep-out bands of the
+planned T1/T2 (panel-own DRC 27 items, T2 copper 0.02 mm from a hole). Result: T3-T8 sit copper-free, **T1/T2 (A's upper right slope, edge A14) have no
+copper-free position at 5.0 / 4.05 / 3.1 mm bridges and are NOT placed**: 6 of 8 tabs, panel-own DRC 0 / 0, decision below. Earlier: rebuilt after board A's option b: each board keeps its own net classes in the panel
 (see "Net classes of the two boards"). BUILT 2026-11-24 first by `hardware/gen/panel_pcb.py`
 (`panel.kicad_pcb`, `.kicad_pro`, `.kicad_dru`, `drc-waivers.csv`, `fp-lib-table`, `panel_preview.png`); gate hook
-`scripts/hw-check.d/70-panel.sh`. Board A is still being routed: the panel carries A's open items (DRC 33 warnings / 103 unconnected
-on 2026-11-24, all inherited, panel-own items 0). Rerun `python3 hardware/gen/panel_pcb.py` after every change of a board file and
+`scripts/hw-check.d/70-panel.sh`. The panel carries A's own DRC items (12 warnings, 0 unconnected on 2026-11-25, all inherited, panel-own items 0). Rerun `python3 hardware/gen/panel_pcb.py` after every change of a board file and
 commit the result; the hook WARNs when the committed panel differs from a rebuild (FAIL with `--strict`). Not ordered. No `board.yaml`
 of its own: the order is priced on tree-a (`fab.order_includes: [../tree-b]`).
 
@@ -24,9 +25,9 @@ single boards.
 | Gaps | board to board 2.000 mm (exact polygon distance), board to rail 2.000 mm | computed |
 | Rails | 5.0 mm, top and bottom only (no side rails); the left and right panel edges are the boards' tier corners | D17 |
 | Outline | 82 Edge.Cuts pieces: both board outlines opened at the tabs (board arcs R1.0 kept), tab sides, rails; every end shared by two pieces (row) | computed |
-| Tabs | 8 mouse-bite tabs: 4 between A and B on A's slanted edges, 2 from A's trunk to the bottom rail, 2 from B's trunk to the top rail | table below |
+| Tabs | 6 mouse-bite tabs placed of 8 planned: 2 between A and B on A's lower right slope (T3, T4), 2 from A's trunk to the bottom rail (T5, T6), 2 from B's trunk to the top rail (T7, T8); T1/T2 on A's upper right slope are not placed (copper) | table below |
 | Mouse bites | 5 NPTH holes D0.60 per row at 0.95 mm pitch (0.35 mm hole edge to hole edge), centred on the board outline; board-board tabs have a row on each board, rail tabs one row on the board | JLC guide |
-| Bridge | 5.0 mm wide (0.3 mm web outside the end holes), 2.2-4.0 mm long | own choice, see rules |
+| Bridge | 5.0 mm wide (0.3 mm web outside the end holes), 2.2-4.0 mm long; ladder when a run has no copper-free position: 4 holes in 4.05 mm, then 3 holes in 4.0 mm (not used today) | own choice, see rules |
 | Copper keep-out at tabs | rule area on all copper layers 0.6 mm deep behind each hole row, bridge width + 0.5 mm each side: tracks, vias and pours kept out (pours of the boards otherwise run to 0.3 mm from the edge and would sit between the holes) | MECHANICAL.md 6 |
 | Tooling holes | 4 x D2.0 NPTH at rail centre (2.5 mm from the outer edge), 5 mm from the panel ends; TH4 (bottom right) 5 mm further in. Panel coordinates from the top-left corner: TH1 (5.0, 2.5), TH2 (109.8, 2.5), TH3 (5.0, 117.5), TH4 (104.8, 117.5) | JLC pages, see rules |
 | Fiducials | 3 per face (FID1-3 F.Cu, FID4-6 B.Cu, same points): 1.0 mm copper, 2.0 mm mask opening, centre 3.85 mm from the panel edge: (15.0, 3.85), (99.8, 3.85), (15.0, 116.15); not 180-degree symmetric (row) | JLC pages |
@@ -36,23 +37,51 @@ single boards.
 | Designators | unchanged and unique across the panel (105 references; mounts MH1/MH2 on A, MH3/MH4 on B; panel parts MB1-MB8, TH1-TH4, FID1-FID6, board-only, not in BOM or CPL) | row |
 | Net names | unchanged, except a name on both boards: B's copy gets "B_" (today GND -> B_GND). Gerbers carry no netlist, so the fab sees no difference | row |
 
-## Tabs (2026-11-24 build; positions start from `tree_outline.bridging_tabs` / `rail_tabs` and slide along their straight run)
+## Tabs (2026-11-25 build; positions start from `tree_outline.bridging_tabs` / `rail_tabs` and slide along their straight run)
+Search (`search_run()` in `panel_pcb.py`, 0.1 mm grid, the planned position included): for each run of planned tabs the generator scans every
+centre along the edge and keeps a position only if (1) the tab ends are 1.0 mm from the fillets, outside the antenna and USB-C zones, and the bridge
+length is within 1.95-4.0 mm, (2) no ROUTED copper of either board lies in a keep-out band (`band_blockers()`: tracks, vias and copper pads of
+both boards against the band polygons that become the rule areas, plus 0.05 mm; pours do not count, the keep-out cuts them), (3) no part is
+closer than 1.0 mm to a hole row. Of the valid positions it takes the single or pair with parts at least 3.0 / 1.5 mm away if one exists (else the
+largest worst slack) and, among equals, the smallest total move from the planned position; two tabs on a run keep their centres 8 mm apart. If a run
+has no position the ladder is walked: first the bridge shorter (5 holes in 5.0 mm, then 4 holes in 4.05 mm, the shortest bridge that holds a row; not
+below 4.0 mm), then fewer holes (3 holes in a 4.0 mm bridge); a step that places all planned tabs wins, a step with fewer is kept only if no later step
+does better. Tabs of a fallback step get a WARN (JLC: fewer than 5 holes per set "not recommended"). If still nothing, the tab is NOT placed and the hook
+row `tab edge <line>` (WARN) names the blocking copper (net, layer, board-local x y, intrusion into the band), the smallest router-side change and the
+effect of a longer bridge. The panel build never edits the boards.
 Nearest part = courtyard or pad of either board to the hole row (edge of the end holes). Wanted: 3.0 mm for stress-sensitive parts
 (C, X, Y, U, R, L, FB, Q, NT), 1.5 mm for the others (LEDs, holder, connectors, mounts, antenna); own thresholds, no JLC figure.
 Copper to hole edge >= 0.2 (DRC hole clearance) is a FAIL limit; copper to outline >= 0.6 in the tab zone is the MECHANICAL.md rule (WARN).
+Positions: the board's own local mm (0..70, 0..105), centre of the hole row on the tab's edge. "Moved" = along the edge from tree_outline's start.
 | Tab | Kind | Centre, own board's local mm | Other end | Length mm | Moved from tree_outline | Nearest part | Cu to hole / to outline |
 |---|---|---|---|---|---|---|---|
-| T1 | A-B | A (47.31, 37.46), tier 2 right edge | B local (65.11, 70.13) | 2.60-3.13 | +4.9 mm (the start (44.6, 33.4) is not valid with a 5.0 mm bridge; it was 3.1 mm from D11, now 3.98 mm pad centre to hole centre) | 3.00 R44 (A), 1.90 MH4 (B) | 0.30 / 0.60 |
-| T2 | A-B | A (51.74, 44.12), tier 2 right edge | B (59.96, 63.95) | 3.46-3.99 | +0.2 | 2.70 D13 (A), 2.86 MH4 (B) | 0.30 / 0.60 |
-| T3 | A-B | A (60.07, 64.09), tier 3 right edge | B (51.86, 44.30) | 3.46-3.99 | -0.2 | 2.72 MH2 (A), 2.82 D5 (B) | 0.30 / 0.60 |
-| T4 | A-B | A (66.03, 71.23), tier 3 right edge | B (46.68, 36.51) | 2.46-3.00 | -2.5 (start invalid: B's LED_L2 track within 0.6 mm of the edge) | 2.82 MH2 (A), 2.74 D3 (B) | 0.30 / 0.60 |
+| T1 | A-B | NOT PLACED (planned A (44.6, 33.4), tier 2 right edge A14) | B | - | - | - | - |
+| T2 | A-B | NOT PLACED (planned A (51.7, 44.0), edge A14) | B | - | - | - | - |
+| T3 | A-B | A (60.18, 64.21), tier 3 right edge A18 | B local (51.77, 44.16) | 3.44-3.98 | 0.0 (committed build: -0.2) | 2.60 MH2 (A) | 0.30 / 0.60 |
+| T4 | A-B | A (66.41, 71.69), edge A18 | B (46.34, 36.01) | 2.40-2.93 | -1.9 (its start is blocked by B's LED_L2 F.Cu track; committed build: -2.5) | 2.40 D3 (B) | 0.30 / 0.60 |
 | T5 | A-rail | A (25.5, 105.0), trunk bottom | bottom rail | 3.00 | -0.3 (5.0 mm bridge) | 2.05 BT1 | 0.30 / 0.60 |
 | T6 | A-rail | A (44.5, 105.0), trunk bottom | bottom rail | 3.00 | +0.3 | 2.05 BT1 | 0.30 / 0.60 |
-| T7 | B-rail | B (25.5, 105.0), trunk bottom | top rail | 3.00 | -0.3 | 33 (nothing near) | 0.30 / 0.60 |
-| T8 | B-rail | B (44.5, 105.0), trunk bottom | top rail | 3.00 | +0.3 | 33 (nothing near) | 0.30 / 0.60 |
-Two tabs on one run keep their centres 8 mm apart (bridge + 3 mm; 10 mm left no valid pair on A's tier-3 edge). No tab end lies in an
-antenna keep-out (+1 mm) or the USB-C zone of either board (row). The numbers change when board A's routing changes: the rows of the
-hook are the current values.
+| T7 | B-rail | B (25.5, 105.0), trunk bottom | top rail | 3.00 | -0.3 | 33.08 MH3 | 0.30 / 0.60 |
+| T8 | B-rail | B (44.5, 105.0), trunk bottom | top rail | 3.00 | +0.3 | 32.89 R9 | 0.30 / 0.60 |
+The hook rows print the exact values (`tab T3 ..`, `tab edge ..`). Two tabs on one run keep their centres 8 mm apart (T3 to T4: 9.7 mm).
+
+### Edge A14 (T1, T2): why nothing fits, and what would
+A14 is A's tier-2 right edge (from A local (42.0, 29.6) to (57.0, 52.0), 27.0 mm); B faces it for centres s = 5.4 .. 17.5 mm from the top end with a bridge of
+at most 4.0 mm. Every centre in that range has routed copper inside the 0.6 mm band, at 5.0, 4.05 and 3.1 mm bridges (123 / 132 / 133 positions, all
+copper-blocked, none free). Blocking copper (A, board-local x y; intrusion of the copper edge into the 0.6 mm band):
+- `/mcu/SWDIO` track F.Cu at (46.2, 36.4), 0.06 mm; `/mcu/nRESET_TC` track F.Cu at (45.9, 36.5), 0.03 mm (centres s 5.5-8.0 meet only these)
+- `GND` via at (43.3, 32.9), 0.02 mm (centres s <= 6.6)
+- `/mcu/SWDCLK` F.Cu / B.Cu tracks and via at (48.0, 39.5) (s 8.4-14.6); via at (50.7, 43.5) up to 0.23 mm and `/leds/LED_L1` B.Cu track at (49.7, 42.0), 0.06 mm (s 11-17.5)
+The tracks run 0.54 mm from the outline (0.06 under the 0.6 mm rule); the vias are the deep ones.
+Smallest router-side changes (computed by the build, not applied; the boards are frozen):
+1. One tab (T1) at centre s 5.5-8.0 (A local about (45.9, 35.4)): move the two F.Cu tracks SWDIO and nRESET_TC near (46.2, 36.4) inward by 0.06 mm plus the
+   0.05 mm planning margin (about 0.11 mm).
+2. Both tabs: change 1 plus a longer bridge, up to 4.25 mm instead of 4.0 (a panel rule, not decided): T2 then fits copper-free at centres s 19.7-22.4
+   (A local about (53.0, 46.0) to (54.4, 48.2), bridge 3.69-4.23 mm long) with no further router change.
+3. T2 alone, no router change: only the longer bridge.
+Lowering the keep-out depth does not help: tried 0.60 down to 0.40 mm, still no 5-hole position (first single 3-hole position at 0.35 mm).
+No tab end lies in an antenna keep-out (+1 mm) or the USB-C zone of either board (row). The numbers change when board A's routing changes: the rows of the
+hook are the current values; rerun the build after each board change (the search moves the tabs back where copper allows).
 
 ## JLC rules used, with evidence (P = JLC page quote, S = search snippet of a JLC page, E = estimate / our own)
 | Rule | Value used | Evidence |
@@ -62,7 +91,7 @@ hook are the current values.
 | Hole position | centred on the board outline | P: "in the centerline of the board frame or extending one-third into the board" (same page) |
 | Where not | no vias, traces, holes or protruding parts at the tab | P: "If there are vias, traces, mounting holes, or protruding components along the board edge, avoid placing mouse bites in those areas" (same page); enforced by the keep-out bands and the tab rows |
 | Board gap | 2.0 mm | P: "typical spacing is 1.6 mm or 2 mm, with a minimum requirement of 1.2 mm" (same page) |
-| Sets per board | 6 per board (A: 4 to B + 2 to the rail; B: 4 to A + 2 to the rail) | P: "At least 2 symmetrically placed sets are needed for boards within 30 mm wide on both sides", "a set of mouse bites every 50-60 mm" (same page). A's left edges and B's right edges have no tab (nothing faces them): see open decision 1 |
+| Sets per board | today A: 2 to B (T3, T4) + 2 to the rail = 4; B: 2 to A + 2 to the rail = 4; planned 6 each (T1/T2 not placed: A's upper right slope has none, see Edge A14) | P: "At least 2 symmetrically placed sets are needed for boards within 30 mm wide on both sides", "a set of mouse bites every 50-60 mm" (same page). A's left edges and B's right edges have no tab (nothing faces them): see open decision 1 |
 | Bridge width | 5.0 mm | E: the page does not give one ("Not specified" in the fetch); research digest "tab 4-5 mm" |
 | Edge rails | 5 mm | P: "The minimum width of edge rails should be at least 5 mm" ([edge rails article](https://jlcpcb.com/help/article/how-to-add-edge-rails-fiducials-for-pcb-assembly-order), updated 2026-09-09); P: "we recommend 5 mm process edges" ([process edges article](https://jlcpcb.com/help/article/specifications-for-adding-process-edges-and-positioning-holes)); S: a capabilities table gives 3 mm minimum (search snippet only) |
 | Rails required | yes for Standard PCBA | P: Standard PCBA edge rails "Necessary", fiducials "Necessary" ([assembly capabilities](https://jlcpcb.com/capabilities/pcb-assembly-capabilities)) |
@@ -92,8 +121,7 @@ hook are the current values.
 - Zones are refilled with kicad-cli in a copy of the panel PROJECT (net classes and rule areas apply); `pcbnew_safe.fill_zones_cli`
   copies the bare board and would fill with default rules.
 - DRC (`--severity-all --refill-zones`, no schematic parity): an item counts as inherited when the board file's own DRC has the same
-  type at the transformed positions, unconnected items per net. 2026-11-25: panel-own 0 violations, 0 unconnected; inherited 34 / 101
-  (all board A, in routing).
+  type at the transformed positions, unconnected items per net. 2026-11-25 (second build, A frozen): panel-own 0 violations, 0 unconnected; inherited 12 / 0 (all board A: lib_footprint_mismatch).
 
 ## Net classes of the two boards (differing classes; engineer's decision 2026-11-25: both boards keep their own)
 Since board A's option b (Default and Power class clearance 0.10, Default track 0.127) the Default classes differ (A 0.127 / 0.10, B
@@ -161,10 +189,14 @@ assembled bottom part (A's D9-D16, B's J4): bottom-side CPL rows are not handled
 
 - 2026-11-25 (engineer): both boards keep their own net classes in the panel (A_ / B_ prefix, patterns, lower floors, bite test); the
   generator no longer stops on differing classes. Why: board A's option b made the Default classes differ (0.127 / 0.10 against 0.15 / 0.15).
+- 2026-11-25 (panel builder, open for confirmation): tab search with copper check (rows `tab edge ..`); T1/T2 not placed because A's routed copper
+  blocks every position of edge A14 (see "Edge A14"); for the engineer: longer bridge (tree_outline.TAB_MAX_LEN 4.0 -> 4.25 mm), nudge of two A tracks, or
+  accept 6 tabs. B is held by T7/T8 to the top rail and by T3/T4 to A; A by T5/T6 to the bottom rail and by T3/T4.
 
 ## History
 - 2026-11-25: panel rebuilt after board A's option b and the per-board net class change; hook rows `net classes ...`, `panel floors`,
   `fab rule files`, `net class bite test`.
+- 2026-11-25: tab search (copper-aware); rebuilt from board A routed and frozen; T1/T2 not placed, T3-T8 on copper-free positions.
 - 2026-11-23: NOT STARTED; arrangement and tab positions computed in `tree_outline.py` only.
 - 2026-11-24: first build (`gen/panel_pcb.py`), hook 70-panel, preview read.
 
@@ -178,4 +210,4 @@ assembled bottom part (A's D9-D16, B's J4): bottom-side CPL rows are not handled
 - A temp build must keep the `../lib` relation of `fp-lib-table`, or every tree: footprint shows lib_footprint_issues.
 - Pours of the boards run to 0.3 mm from the edge; without the keep-out bands they fill between the bite holes (copper at 0.27 mm from
   the outline, exposed when the tab breaks).
-- The board files change under the panel (board A in routing): the committed panel goes stale; the hook says so.
+- The board files change under the panel: the committed panel goes stale; the hook says so. Router copper near a tab edge moves or removes tabs; read the `tab edge` rows after each board change.
