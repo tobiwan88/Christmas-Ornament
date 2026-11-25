@@ -125,7 +125,8 @@ CART = {
     "Surface finish": "ENIG",
     "Outer copper weight": "1 oz",
     "Inner copper weight": "0.5 oz",
-    "Via covering": "Tented (as the mask layers are plotted)",
+    "Via covering": "Tented (form option; as the mask layers are plotted: the free vias are tented on both sides, the 22 exposed-pad vias "
+                    "under U1 and U2 are OPEN on top in one mask opening over the pad and tented on the bottom: ORDER.md 5b item 3)",
     "Min via hole size / diameter": "the option that allows a 0.20 mm hole (267 vias and 22 pad holes are 0.20 mm; the fab page: 0.15 mm / 0.25 mm "
                                     "is the multilayer capability, smaller than the default option 'will cost more', fee not published): read the quote",
     "Remove order number": "Yes (the fee, if any, is shown in the cart)",
@@ -603,6 +604,38 @@ def cart_check(facts: dict, ft: dict, layers: int) -> list[str]:
     return out
 
 
+def mask_silk_rows(facts: dict) -> list[str]:
+    """Report rows from pcb_facts (WARN only, never FAIL): via holes inside a mask opening with the paste coverage (so the wording
+    'tented' cannot drift away from the file) and silk strokes under the fab's 0.15 mm line width (JLC thickens or drops them)."""
+    rows = []
+    mo = facts.get("mask_openings")
+    if mo is not None:
+        ops = mo["openings"]
+        n_open = sum(o["holes"] for o in ops)
+        free = mo["free_vias"]
+        txt = (f"free vias {free}, tented front {mo['free_tented']['F']} / back {mo['free_tented']['B']}; " if free else "")
+        if ops:
+            parts = [f"{o['ref']} {o['holes']} holes open on {'top' if o['side'] == 'F' else 'bottom'} in one mask opening, "
+                     f"{o['under_paste']} under paste, paste {o['paste_mm2']:.2f} of {o['opening_mm2']:.2f} mm2 = "
+                     f"{100 * o['paste_mm2'] / o['opening_mm2']:.0f} %" for o in ops]
+            rows.append(f"WARN  via holes inside a mask opening (via in pad): {n_open} in total; {txt}" + "; ".join(parts)
+                        + " (so not tented on that side: ORDER.md 5b item 3 asks JLC)")
+        else:
+            rows.append(f"OK    no via hole inside a mask opening; {txt}".rstrip("; "))
+    sw = facts.get("silk_widths")
+    if sw is not None:
+        thin = {layer: {w: n for w, n in ws.items() if float(w) < 0.15} for layer, ws in sw.items()}
+        thin = {layer: ws for layer, ws in thin.items() if ws}
+        allw = "; ".join(f"{layer} " + ", ".join(f"{w} mm x{n}" for w, n in sorted(ws.items())) for layer, ws in sw.items() if ws)
+        if thin:
+            tn = "; ".join(f"{layer} " + ", ".join(f"{w} mm x{n}" for w, n in sorted(ws.items())) for layer, ws in thin.items())
+            rows.append(f"WARN  silk stroke width below 0.15 mm (JLC capability: line width >= 0.15 mm; JLC thickens or drops thinner strokes, "
+                        f"not a rejection): {tn}; all widths: {allw}")
+        else:
+            rows.append(f"OK    silk stroke width at least 0.15 mm everywhere: {allw}")
+    return rows
+
+
 def write_readme(out: Path, ctx: dict) -> None:
     lines = [
         f"JLCPCB order package: {ctx['name']}  (commit {ctx['sha']}, variant A: DNP parts are not in the BOM or CPL)",
@@ -703,6 +736,15 @@ def selftest() -> bool:
     rws, ext = stock_rows(bomr, stock, 5, {"C1": {"lcsc": "C9", "note": "other pads"}}, 1.53)
     check(any("C1" in r and r.startswith("FAIL") and "C9" in r for r in rws), f"out of stock must FAIL with the alternate: {rws}")
     check(any("C2" in r and r.startswith("WARN") for r in rws) and ext == {"C1"}, f"low stock WARN, preferred Extended free: {rws}")
+    # mask / silk report rows: WARN (never FAIL) with the numbers; clean input -> OK
+    mrow = mask_silk_rows({"mask_openings": {"free_vias": 10, "free_tented": {"F": 10, "B": 10},
+                                              "openings": [{"side": "F", "ref": "U9", "holes": 4, "under_paste": 2, "opening_mm2": 4.0, "paste_mm2": 2.0}]},
+                          "silk_widths": {"F.SilkS": {"0.120": 5, "0.150": 2}, "B.SilkS": {}}})
+    check(len(mrow) == 2 and all(r.startswith("WARN") for r in mrow) and "50 %" in mrow[0] and "U9 4 holes open on top" in mrow[0]
+          and "0.120 mm x5" in mrow[1], f"mask / silk WARN rows: {mrow}")
+    mrow = mask_silk_rows({"mask_openings": {"free_vias": 3, "free_tented": {"F": 3, "B": 3}, "openings": []},
+                           "silk_widths": {"F.SilkS": {"0.150": 2}, "B.SilkS": {}}})
+    check(len(mrow) == 2 and all(r.startswith("OK") for r in mrow), f"mask / silk OK rows: {mrow}")
     print(f"fab_package selftest: {'OK' if ok else 'FAILED'}")
     return ok
 
@@ -760,6 +802,7 @@ def main() -> None:
                 checks += stock_check(b, src)
         ft = pcb_facts_text(pcb)
         checks += cart_check(facts, ft, len(facts["copper_layers"]))
+        checks += mask_silk_rows(facts)
         import gerber_check
         grows, gok = gerber_check.check(out / "gerbers", facts, pcb.stem, out / "previews", rows)
         checks += [("OK    " if r.startswith("OK") else "FAIL  ") + r[5:] if r[:4] in ("OK  ", "FAIL") else r for r in grows]

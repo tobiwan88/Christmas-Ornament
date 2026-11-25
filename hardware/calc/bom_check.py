@@ -23,7 +23,9 @@ hardware/RESEARCH-2026-11-23.md, section JLCPCB):
                  $KICAD_FOOTPRINT_DIR; a line whose footprint is not found falls back to the connected pins in netlist.csv (a
                  lower bound, WARN). The fab's own counting rule is UNVERIFIED.
   PCB + shipping manual cart quote (a human step, ORDER.md): `fab.pcb_quote_usd` (null = MANUAL row: WARN, FAIL with --strict).
-                 `fab.pcb_estimate_usd: {value, source}` is shown as ESTIMATE only; null = MISSING estimate, never invented.
+                 `fab.pcb_estimate_usd: {value, source}` is shown as ESTIMATE only; null = MISSING estimate, never invented: the row
+                 "all-in ESTIMATE" then prints MISSING "NOT TESTED: PCB + shipping missing" with the margin left under the cap (a pass would
+                 hide the largest term). Optional `fab.pcb_quote_what` names the bare-PCB spec in that text (layers, size, finish, quantity).
   limit          `fab.order_limit_usd`: FAIL when the computed part (parts + fees, without PCB) already exceeds it, or when the
                  quote is present and parts + fees + quote exceed it
   variants       `fab.bom_variants: {<name>: <bom csv>}` runs the same order with that csv instead of bom.csv (rows that differ)
@@ -289,9 +291,13 @@ def order_rows(label: str, profile: dict, qty: int, extended: set, needs: dict, 
                                 f"${allin:.2f} = computed ${total:.2f} + bare PCB ESTIMATE ${est['value']:.2f} ({est.get('source', 'no source')}), "
                                 f"${allin / qty:.2f} per ornament; limit ${limit}{' EXCEEDED (estimate)' if over else ''}"))
                 else:
-                    out.append(("OK", f"all-in ESTIMATE{label}",
-                                f"at least ${total:.2f} (${total / qty:.2f} per ornament) before PCB + shipping; bare-PCB ESTIMATE MISSING "
-                                f"(fab.pcb_estimate_usd null: no research-digest row for this panel, never invented); limit ${limit}"))
+                    # No quote and no sourced estimate: the cap is NOT TESTED. A pass here would hide that the largest term is missing.
+                    margin = f"remaining margin ${limit - total:.2f} (${limit} - ${total:.2f}); " if limit is not None else ""
+                    what = fab.get("pcb_quote_what") or "the bare PCB of this order"
+                    out.append(("MISSING", f"all-in ESTIMATE{label}",
+                                f"NOT TESTED: PCB + shipping missing. Computed ${total:.2f} (${total / qty:.2f} per ornament) before PCB + shipping; "
+                                f"{margin}{what} plus shipping may exceed it (UNVERIFIED: bare-PCB ESTIMATE MISSING, fab.pcb_estimate_usd null, "
+                                f"no price invented); limit ${limit}. Get the cart quote (ORDER.md section 2), then rerun; fallbacks if over: ORDER.md section 6"))
             else:
                 allin = total + quote
                 st2 = "OK" if limit is None or allin <= limit else "FAIL"
@@ -437,7 +443,8 @@ def selftest() -> bool:
     ok &= "= $185.00 before PCB + shipping" in order and "price tier at the order quantity" in order
     # PCB + shipping is a human step: MANUAL row; the all-in ESTIMATE says MISSING unless the profile carries a sourced estimate
     ok &= txt["PCB + shipping"][0] == "MANUAL" and "manual cart quote, ORDER.md" in txt["PCB + shipping"][1]
-    ok &= "bare-PCB ESTIMATE MISSING" in txt["all-in ESTIMATE"][1]
+    ok &= "bare-PCB ESTIMATE MISSING" in txt["all-in ESTIMATE"][1] and txt["all-in ESTIMATE"][0] == "MISSING"
+    ok &= "NOT TESTED: PCB + shipping missing" in txt["all-in ESTIMATE"][1] and "remaining margin $815.00" in txt["all-in ESTIMATE"][1]
     fab["pcb_estimate_usd"] = {"value": 60.0, "source": "selftest"}
     res3 = {n: (s, d) for s, n, d in check(rows[:3], prof2, 5, stock1, [("b2", rows2, stock2)], joints={"n": 100, "note": "t"})}
     ok &= "bare PCB ESTIMATE $60.00 (selftest)" in res3["all-in ESTIMATE"][1] and "$49.00 per ornament" in res3["all-in ESTIMATE"][1]
